@@ -1,0 +1,30 @@
+{
+    "Map/SizeTest": {
+        "height": 4300,
+        "width": 2
+    },
+    "activeFile": "Dungeon_Autotiles.tsx",
+    "expandedProjectPaths": [
+        "."
+    ],
+    "file.lastUsedOpenFilter": "All Files (*)",
+    "fileStates": {
+        "Dungeon_Autotiles.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 5.5
+        }
+    },
+    "last.imagePath": "C:/Users/Warren/source/repos/Hearthvale/Hearthvale/Content/Tilesets/DampDungeons/Tiles",
+    "openFiles": [
+        "Dungeon_Autotiles.tsx"
+    ],
+    "project": "Hearthvale.tiled-project",
+    "recentFiles": [
+        "Dungeon_Autotiles.tsx"
+    ],
+    "tileset.lastUsedFormat": "tsx",
+    "tileset.tileSize": {
+        "height": 16,
+        "width": 16
+    }
+}
