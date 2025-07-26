@@ -16,25 +16,37 @@ using MonoGameLibrary.Input;
 using MonoGameLibrary.Scenes;
 using MonoGame.Extended.Tiled;
 using MonoGame.Extended.Tiled.Renderers;
-using Hearthvale.Content.Sprites;
-using MonoGame.Extended;
-using RenderingLibrary;
+using System.Diagnostics;
+using System.Linq;
+using System.Collections.Generic;
+using System.Threading;
 
 namespace Hearthvale.Scenes;
 
 public class GameScene : Scene
 {
     // Defines the slime animated sprite.
-    private AnimatedSprite _slime;
+    //private AnimatedSprite _slime;
 
     // Defines the bat animated sprite.
     private AnimatedSprite _bat;
 
     // Tracks the position of the slime.
-    private Vector2 _slimePosition;
+    //private Vector2 _slimePosition;
+    private Vector2 _heroPosition;
+
+    private Vector2 _playerStart;
+
+    AnimatedSprite _hero;
+
+    private NpcManager _npcManager;
+
+    private bool _facingRight = true;
+    private string _currentAnimationName = "Mage_Idle";
 
     // Speed multiplier when moving.
-    private const float MOVEMENT_SPEED = 5.0f;
+    private const float MOVEMENT_SPEED = 3.0f;
+    public float MovementSpeed => MOVEMENT_SPEED;
 
     // Tracks the position of the bat.
     private Vector2 _batPosition;
@@ -83,6 +95,8 @@ public class GameScene : Scene
     // are created.
     private TextureAtlas _atlas;
 
+    private TextureAtlas _heroAtlas;
+
     private TiledMap _map;
     private TiledMapRenderer _mapRenderer;
     int _mapWidthInPixels;
@@ -90,6 +104,10 @@ public class GameScene : Scene
 
     Viewport _viewport;
     Camera2D _camera;
+    private InputHandler _inputHandler;
+
+    private Texture2D _whitePixel;
+    
 
 
 
@@ -104,17 +122,13 @@ public class GameScene : Scene
 
         Rectangle screenBounds = Core.GraphicsDevice.PresentationParameters.Bounds;
 
-        _roomBounds = new Rectangle(
-             (int)0,
-             (int)0,
-             (int)_map.Width * 16,
-             (int)_map.Height * 16
-         );
-
+        _roomBounds = new Rectangle(0, 0, _map.Width * 16, _map.Height * 16);
+        
         // Initial slime position will be the center tile of the tile map.
         int centerRow = _map.Height / 2;
         int centerColumn = _map.Width / 2;
-        _slimePosition = new Vector2(centerColumn * _map.TileWidth, centerRow * _map.TileHeight);
+
+        _heroPosition = new Vector2(centerColumn * _map.TileWidth, centerRow * _map.TileHeight);
 
         // Initial bat position will the in the top left corner of the room.
         _batPosition = new Vector2(_roomBounds.Left, _roomBounds.Top);
@@ -127,12 +141,29 @@ public class GameScene : Scene
         float scoreTextYOrigin = _font.MeasureString("Score").Y * 0.5f;
         _scoreTextOrigin = new Vector2(0, scoreTextYOrigin);
 
-        // Assign the initial random velocity to the bat.
-        AssignRandomBatVelocity();
-
         InitializeUI();
 
         _camera = new Camera2D(Core.GraphicsDevice.Viewport);
+        _camera.Zoom = 3.0f; // Scale the whole world by 4x
+
+        _viewport = Core.GraphicsDevice.Viewport;
+
+        Debug.WriteLine($"Viewport size: {_viewport.Width} x {_viewport.Height}");
+
+        Debug.WriteLine($"Map size: {_map.Width}x{_map.Height} tiles");
+        Debug.WriteLine($"Map pixel size: {_map.Width * _map.TileWidth}x{_map.Height * _map.TileHeight}");
+        Debug.WriteLine($"Camera position: {_camera.Position}");
+        Debug.WriteLine($"Zoom: {_camera.Zoom}");
+
+        // Initialize InputHandler with callbacks
+        _inputHandler = new InputHandler(
+            _camera,
+            movementSpeed: MOVEMENT_SPEED,
+            pauseGameCallback: PauseGame,
+            moveHeroCallback: MoveHero,
+            spawnNpcCallback: () => _npcManager.SpawnNPC("merchant", _heroPosition + new Vector2(32, 0)),
+            quitCallback: () => Core.ChangeScene(new TitleScene())
+        );
 
     }
 
@@ -141,35 +172,50 @@ public class GameScene : Scene
         // Create the texture atlas from the XML configuration file.
         _atlas = TextureAtlas.FromFile(Core.Content, "images/atlas-definition.xml");
 
-        // Create the slime animated sprite from the atlas.
-        _slime = _atlas.CreateAnimatedSprite("slime-animation");
-        _slime.Scale = new Vector2(4.0f, 4.0f);
+        // Load the player slime animation from the atlas
 
-        // Create the bat animated sprite from the atlas.
-        //_bat = _atlas.CreateAnimatedSprite("bat-animation");
-        //_bat.Scale = new Vector2(4.0f, 4.0f);
+        _heroAtlas = TextureAtlas.FromFile(Core.Content, "images/npc-atlas.xml");
+        _hero = _heroAtlas.CreateAnimatedSprite("Mage_Idle");
 
-        // Create the tilemap from the XML configuration file.
-        //_tilemap = Tilemap.FromFile(Content, "images/tilemap-definition.xml");
+        // Optionally set scale if needed (4x for example)
+        _hero.Scale = new Vector2(1f, 1f);
+
+        // Load the map using MonoGame.Extended's TiledMap loader
         _map = Game1.Content.Load<TiledMap>("Tilesets/DampDungeons/Tiles/DungeonMap");
+        _mapRenderer = new TiledMapRenderer(Game1.GraphicsDevice, _map);
+
+        _roomBounds = new Rectangle(0, 0, _map.Width * 16, _map.Height * 16);
+
+        // Initialize NpcManager once _roomBounds and _heroAtlas are ready
+        _npcManager = new NpcManager(_heroAtlas, _roomBounds);
+
+        // Load NPCs using NpcManager
+        var entityLayer = _map.ObjectLayers.FirstOrDefault(layer => layer.Name == "Entities");
+        if (entityLayer != null)
+        {
+            _npcManager.LoadNPCs(entityLayer.Objects);
+        }
+
+
         _mapWidthInPixels = _map.WidthInPixels;
         _mapHeightInPixels = _map.HeightInPixels;
 
-        _mapRenderer = new TiledMapRenderer(Game1.GraphicsDevice, _map);
-
-        // Load the bounce sound effect.
+        // Load sounds
         _bounceSoundEffect = Content.Load<SoundEffect>("audio/bounce");
-
-        // Load the collect sound effect.
         _collectSoundEffect = Content.Load<SoundEffect>("audio/collect");
+        _uiSoundEffect = Core.Content.Load<SoundEffect>("audio/ui");
 
         // Load the font.
         _font = Core.Content.Load<SpriteFont>("fonts/04B_30");
         _debugFont = Content.Load<SpriteFont>("fonts/DebugFont");
 
-        // Load the sound effect to play when ui actions occur.
-        _uiSoundEffect = Core.Content.Load<SoundEffect>("audio/ui");
+        // White pixel texture used for debug drawing
+        _whitePixel = new Texture2D(Core.GraphicsDevice, 1, 1);
+        _whitePixel.SetData(new[] { Color.White });
 
+        // Find the player spawn point from Tiled object layer (uses Class == "Player")
+        FindPlayerSpawnPoint();
+        _heroPosition = _playerStart;
     }
 
     public override void Update(GameTime gameTime)
@@ -183,31 +229,45 @@ public class GameScene : Scene
         {
             return;
         }
-        // Update the slime animated sprite.
-        _slime.Update(gameTime);
 
-        // Update the bat animated sprite.
-        //_bat.Update(gameTime);
+        _hero.Update(gameTime);
 
+        _npcManager.Update(gameTime);
 
         _mapRenderer.Update(gameTime);
 
-        _camera.Follow(_slimePosition); // Typically the center of the player
-        //_camera.ClampToMap(_map.Width, _map.Height, _map.TileWidth); // Optional
+        // Ensure _viewport is valid and updated
+        UpdateViewport(Core.GraphicsDevice.Viewport);
 
-        UpdateViewport(_viewport);
+        _inputHandler.Update(gameTime);
 
-        // Check for keyboard input and handle it.
-        CheckKeyboardInput();
+        Vector2 heroCenter = _heroPosition + new Vector2(_hero.Width / 2f, _hero.Height / 2f);
 
-        // Check for gamepad input and handle it.
-        CheckGamePadInput();
+        int marginSizeX = (int)(100 / _camera.Zoom);
+        int marginSizeY = (int)(80 / _camera.Zoom);
+        // Calculate margin scaled by zoom to world units
+        Rectangle margin = new Rectangle(
+            (int)(100 / _camera.Zoom),
+            (int)(80 / _camera.Zoom),
+            (int)(_viewport.Width / _camera.Zoom) - (int)(200 / _camera.Zoom),
+            (int)(_viewport.Height / _camera.Zoom) - (int)(160 / _camera.Zoom)
+        );
 
-        // Creating a bounding circle for the slime.
+        //_camera.FollowWithMargin(slimeCenter, margin, 0.1f);
+        _camera.FollowWithMargin(heroCenter, margin, 0.1f);
+        _camera.ClampToMap(_map.Width, _map.Height, _map.TileWidth);
+
+        // Direct follow without margin or clamp
+        _camera.Update(gameTime);
+
+        UpdateViewport(Core.GraphicsDevice.Viewport);
+
+        UpdateHeroAnimation();
+
         Circle slimeBounds = new Circle(
-            (int)(_slimePosition.X + (_slime.Width * 0.5f)),
-            (int)(_slimePosition.Y + (_slime.Height * 0.5f)),
-            (int)(_slime.Width * 0.5f)
+            (int)(_heroPosition.X + (_hero.Width * 0.5f)),
+            (int)(_heroPosition.Y + (_hero.Height * 0.5f)),
+            (int)(_hero.Width * 0.5f)
         );
 
         // Use distance based checks to determine if the slime is within the
@@ -215,240 +275,28 @@ public class GameScene : Scene
         // move it back inside.
         if (slimeBounds.Left < _roomBounds.Left)
         {
-            _slimePosition.X = _roomBounds.Left;
+            _heroPosition.X = _roomBounds.Left;
         }
         else if (slimeBounds.Right > _roomBounds.Right)
         {
-            _slimePosition.X = _roomBounds.Right - _slime.Width;
+            _heroPosition.X = _roomBounds.Right - _hero.Width;
         }
 
         if (slimeBounds.Top < _roomBounds.Top)
         {
-            _slimePosition.Y = _roomBounds.Top;
+            _heroPosition.Y = _roomBounds.Top;
         }
         else if (slimeBounds.Bottom > _roomBounds.Bottom)
         {
-            _slimePosition.Y = _roomBounds.Bottom - _slime.Height;
+            _heroPosition.Y = _roomBounds.Bottom - _hero.Height;
         }
-
-        // Calculate the new position of the bat based on the velocity.
-        Vector2 newBatPosition = _batPosition + _batVelocity;
-
-        // Create a bounding circle for the bat.
-        //Circle batBounds = new Circle(
-        //    (int)(newBatPosition.X + (_bat.Width * 0.5f)),
-        //    (int)(newBatPosition.Y + (_bat.Height * 0.5f)),
-        //    (int)(_bat.Width * 0.5f)
-        //);
-
-        Vector2 normal = Vector2.Zero;
-
-        // Use distance based checks to determine if the bat is within the
-        // bounds of the game screen, and if it is outside that screen edge,
-        // reflect it about the screen edge normal.
-        //if (batBounds.Left < _roomBounds.Left)
-        //{
-        //    normal.X = Vector2.UnitX.X;
-        //    newBatPosition.X = _roomBounds.Left;
-        //}
-        //else if (batBounds.Right > _roomBounds.Right)
-        //{
-        //    normal.X = -Vector2.UnitX.X;
-        //    newBatPosition.X = _roomBounds.Right - _bat.Width;
-        //}
-
-        //if (batBounds.Top < _roomBounds.Top)
-        //{
-        //    normal.Y = Vector2.UnitY.Y;
-        //    newBatPosition.Y = _roomBounds.Top;
-        //}
-        //else if (batBounds.Bottom > _roomBounds.Bottom)
-        //{
-        //    normal.Y = -Vector2.UnitY.Y;
-        //    newBatPosition.Y = _roomBounds.Bottom - _bat.Height;
-        //}
-
-        // If the normal is anything but Vector2.Zero, this means the bat had
-        // moved outside the screen edge so we should reflect it about the
-        // normal.
-        if (normal != Vector2.Zero)
-        {
-            _batVelocity = Vector2.Reflect(_batVelocity, normal);
-
-            // Play the bounce sound effect.
-            Core.Audio.PlaySoundEffect(_bounceSoundEffect);
-        }
-
-        _batPosition = newBatPosition;
-
-        //if (slimeBounds.Intersects(batBounds))
-        //{
-        //    // Choose a random row and column based on the total number of each
-        //    int column = Random.Shared.Next(1, _map.TileWidth - 1);
-        //    int row = Random.Shared.Next(1, _map.TileHeight - 1);
-
-        //    // Change the bat position by setting the x and y values equal to
-        //    // the column and row multiplied by the width and height.
-        //    _batPosition = new Vector2(column * _bat.Width, row * _bat.Height);
-
-        //    // Assign a new random velocity to the bat.
-        //    AssignRandomBatVelocity();
-
-        //    // Play the collect sound effect.
-        //    Core.Audio.PlaySoundEffect(_collectSoundEffect);
-
-        //    // Increase the player's score.
-        //    _score += 100;
-        //}
+        _heroPosition.X = MathHelper.Clamp(_heroPosition.X, _roomBounds.Left, _roomBounds.Right - _hero.Width);
+        _heroPosition.Y = MathHelper.Clamp(_heroPosition.Y, _roomBounds.Top, _roomBounds.Bottom - _hero.Height);
     }
 
     public void UpdateViewport(Viewport viewport)
     {
         _viewport = viewport;
-    }
-
-    private void AssignRandomBatVelocity()
-    {
-        // Generate a random angle.
-        float angle = (float)(Random.Shared.NextDouble() * Math.PI * 2);
-
-        // Convert angle to a direction vector.
-        float x = (float)Math.Cos(angle);
-        float y = (float)Math.Sin(angle);
-        Vector2 direction = new Vector2(x, y);
-
-        // Multiply the direction vector by the movement speed
-        _batVelocity = direction * MOVEMENT_SPEED;
-    }
-
-    private void CheckKeyboardInput()
-    {
-        // Get a reference to the keyboard inof
-        KeyboardInfo keyboard = Core.Input.Keyboard;
-
-        // If the escape key is pressed, pause the game.
-        if (Core.Input.Keyboard.WasKeyJustPressed(Keys.Enter))
-        {
-            PauseGame();
-        }
-
-        // If the escape key is pressed, return to the title screen.
-        if (Core.Input.Keyboard.WasKeyJustPressed(Keys.Escape))
-        {
-            Core.ChangeScene(new TitleScene());
-        }
-
-        // If the space key is held down, the movement speed increases by 1.5
-        float speed = MOVEMENT_SPEED/2;
-
-        if (keyboard.IsKeyDown(Keys.Space))
-        {
-            speed *= 1.5f;
-        }
-
-        // If the W or Up keys are down, move the slime up on the screen.
-        if (keyboard.IsKeyDown(Keys.W) || keyboard.IsKeyDown(Keys.Up))
-        {
-            _slimePosition.Y -= speed;
-        }
-
-        // if the S or Down keys are down, move the slime down on the screen.
-        if (keyboard.IsKeyDown(Keys.S) || keyboard.IsKeyDown(Keys.Down))
-        {
-            _slimePosition.Y += speed;
-        }
-
-        // If the A or Left keys are down, move the slime left on the screen.
-        if (keyboard.IsKeyDown(Keys.A) || keyboard.IsKeyDown(Keys.Left))
-        {
-            _slimePosition.X -= speed;
-        }
-
-        // If the D or Right keys are down, move the slime right on the screen.
-        if (keyboard.IsKeyDown(Keys.D) || keyboard.IsKeyDown(Keys.Right))
-        {
-            _slimePosition.X += speed;
-        }
-
-        // If the M key is pressed, toggle mute state for audio.
-        if (keyboard.WasKeyJustPressed(Keys.M))
-        {
-            Core.Audio.ToggleMute();
-        }
-
-        // If the + button is pressed, increase the volume.
-        if (keyboard.WasKeyJustPressed(Keys.OemPlus))
-        {
-            Core.Audio.SongVolume += 0.1f;
-            Core.Audio.SoundEffectVolume += 0.1f;
-        }
-
-        // If the - button was pressed, decrease the volume.
-        if (keyboard.WasKeyJustPressed(Keys.OemMinus))
-        {
-            Core.Audio.SongVolume -= 0.1f;
-            Core.Audio.SoundEffectVolume -= 0.1f;
-        }
-    }
-
-    private void CheckGamePadInput()
-    {
-        // Get the gamepad info for gamepad one.
-        GamePadInfo gamePadOne = Core.Input.GamePads[(int)PlayerIndex.One];
-
-        // If the start button is pressed, pause the game
-        if (gamePadOne.WasButtonJustPressed(Buttons.Start))
-        {
-            PauseGame();
-        }
-
-        // If the A button is held down, the movement speed increases by 1.5
-        // and the gamepad vibrates as feedback to the player.
-        float speed = MOVEMENT_SPEED;
-        if (gamePadOne.IsButtonDown(Buttons.A))
-        {
-            speed *= 1.5f;
-            GamePad.SetVibration(PlayerIndex.One, 1.0f, 1.0f);
-        }
-        else
-        {
-            GamePad.SetVibration(PlayerIndex.One, 0.0f, 0.0f);
-        }
-
-        // Check thumbstick first since it has priority over which gamepad input
-        // is movement.  It has priority since the thumbstick values provide a
-        // more granular analog value that can be used for movement.
-        if (gamePadOne.LeftThumbStick != Vector2.Zero)
-        {
-            _slimePosition.X += gamePadOne.LeftThumbStick.X * speed;
-            _slimePosition.Y -= gamePadOne.LeftThumbStick.Y * speed;
-        }
-        else
-        {
-            // If DPadUp is down, move the slime up on the screen.
-            if (gamePadOne.IsButtonDown(Buttons.DPadUp))
-            {
-                _slimePosition.Y -= speed;
-            }
-
-            // If DPadDown is down, move the slime down on the screen.
-            if (gamePadOne.IsButtonDown(Buttons.DPadDown))
-            {
-                _slimePosition.Y += speed;
-            }
-
-            // If DPapLeft is down, move the slime left on the screen.
-            if (gamePadOne.IsButtonDown(Buttons.DPadLeft))
-            {
-                _slimePosition.X -= speed;
-            }
-
-            // If DPadRight is down, move the slime right on the screen.
-            if (gamePadOne.IsButtonDown(Buttons.DPadRight))
-            {
-                _slimePosition.X += speed;
-            }
-        }
     }
 
     public override void Draw(GameTime gameTime)
@@ -460,19 +308,16 @@ public class GameScene : Scene
 
         // Begin the sprite batch to prepare for rendering.
         //Moves with camera
-        Core.SpriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
-        // Draw the tilemap
-        //_tilemap.Draw(Core.SpriteBatch);
-        Matrix transform =
-        Matrix.CreateTranslation(new Vector3(-_camera.Position, 0f)) * // move the world
-        Matrix.CreateScale(4f) *                                        // scale tiles 4x
-        Matrix.CreateTranslation(new Vector3(_viewport.Width / 2f, _viewport.Height / 2f, 0f)); // center camera
+        Matrix transform = _camera.GetViewMatrix();
+        Core.SpriteBatch.Begin(transformMatrix: transform, samplerState: SamplerState.PointClamp);
 
         _mapRenderer.Draw(transform);
 
         // Draw the slime sprite.
-        _slime.Draw(Core.SpriteBatch, _slimePosition);
+        _hero.Draw(Core.SpriteBatch, _heroPosition);
+
+        _npcManager.Draw(Core.SpriteBatch);
 
         Core.SpriteBatch.End();
         //End moves with camera
@@ -591,6 +436,57 @@ public class GameScene : Scene
         CreatePausePanel();
     }
 
+    private void UpdateHeroAnimation()
+    {
+        KeyboardInfo keyboard = Core.Input.Keyboard;
+        bool moving = keyboard.IsKeyDown(Keys.A) || keyboard.IsKeyDown(Keys.D) ||
+                      keyboard.IsKeyDown(Keys.Left) || keyboard.IsKeyDown(Keys.Right);
+
+        // Determine facing direction
+        if (keyboard.IsKeyDown(Keys.A) || keyboard.IsKeyDown(Keys.Left))
+            _facingRight = false;
+        else if (keyboard.IsKeyDown(Keys.D) || keyboard.IsKeyDown(Keys.Right))
+            _facingRight = true;
+
+        // Set animation state
+        string desiredAnimation = moving ? "Mage_Walk" : "Mage_Idle";
+        if (_currentAnimationName != desiredAnimation)
+        {
+            _hero.Animation = _heroAtlas.GetAnimation(desiredAnimation);
+            _currentAnimationName = desiredAnimation;
+        }
+
+        // Flip sprite based on direction
+        _hero.Effects = _facingRight ? SpriteEffects.None : SpriteEffects.FlipHorizontally;
+    }
+
+    private void MoveHero(Vector2 movement)
+    {
+        _heroPosition += movement;
+    }
+
+    private void FindPlayerSpawnPoint()
+    {
+        // Find the object layer named "Entities"
+        var entityLayer = _map.ObjectLayers.FirstOrDefault(layer => layer.Name == "Entities");
+
+        if (entityLayer == null)
+        {
+            throw new Exception("Entities layer not found in the map.");
+        }
+
+        // Find the first object with Class == "Player"
+        var playerObject = entityLayer.Objects.FirstOrDefault(obj => obj.Type == "Player");
+
+        if (playerObject == null)
+        {
+            throw new Exception("Player spawn point not found in Entities layer.");
+        }
+
+        // Set the player start position from the object position
+        _playerStart = new Vector2(playerObject.Position.X, playerObject.Position.Y);
+    }
+
     private void DrawDebugInfo(SpriteBatch spriteBatch, GameTime gameTime)
     {
         Vector2 position = new Vector2(20, 40);
@@ -599,7 +495,7 @@ public class GameScene : Scene
 
         string[] debugLines = new string[]
         {
-        $"Player Position: {_slimePosition}",
+        $"Player Position: {_heroPosition}",
         $"Camera Position: {_camera.Position}",
         $"Viewport Position: {_viewport.X} ,{_viewport.Y}",
         $"FPS: {fps:0.0}"
@@ -611,6 +507,5 @@ public class GameScene : Scene
             position.Y += _debugFont.LineSpacing;
         }
     }
-
 
 }

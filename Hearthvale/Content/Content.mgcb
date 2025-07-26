@@ -91,6 +91,9 @@
 /processorParam:TextureFormat=Color
 /build:images/background-pattern.png
 
+#begin images/hero-atlas.xml
+/copy:images/hero-atlas.xml
+
 #begin images/logo.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -102,6 +105,33 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:images/logo.png
+
+#begin images/npc-atlas.xml
+/copy:images/npc-atlas.xml
+
+#begin images/NPCSpriteSheet.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:images/NPCSpriteSheet.png
+
+#begin images/Soldier.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:images/Soldier.png
 
 #begin images/tilemap-definition.xml
 /copy:images/tilemap-definition.xml
@@ -127,4 +157,9 @@
 /importer:TiledMapImporter
 /processor:TiledMapProcessor
 /build:Tilesets/DampDungeons/Tiles/DungeonMap.tmx;Tilesets/DampDungeons/Tiles/DungeonMap
+
+#begin Tilesets/DampDungeons/Tiles/Player.tsx
+/importer:TiledMapTilesetImporter
+/processor:TiledMapTilesetProcessor
+/build:Tilesets/DampDungeons/Tiles/Player.tsx;Tilesets/DampDungeons/Tiles/Player
 

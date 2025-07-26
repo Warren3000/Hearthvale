@@ -5,7 +5,9 @@
     },
     "activeFile": "C:/Users/Warren/source/repos/Hearthvale/Hearthvale/Content/Tilesets/DampDungeons/Tiles/DungeonMap.tmx",
     "expandedProjectPaths": [
-        "."
+        "C:/Users/Warren/source/repos/Hearthvale/Hearthvale/Content/Tilesets/DampDungeons/Tiles",
+        ".",
+        "C:/Users/Warren/source/repos/Hearthvale/Hearthvale/Content/Tilesets/DampDungeons"
     ],
     "file.lastUsedOpenFilter": "All Files (*)",
     "fileStates": {
@@ -25,12 +27,24 @@
             "scaleInEditor": 1
         },
         "C:/Users/Warren/source/repos/Hearthvale/Hearthvale/Content/Tilesets/DampDungeons/Tiles/DungeonMap.tmx": {
-            "scale": 2,
-            "selectedLayer": 0,
+            "expandedObjectLayers": [
+                2
+            ],
+            "scale": 3,
+            "selectedLayer": 1,
             "viewCenter": {
-                "x": 473.25,
-                "y": 303
+                "x": 657.1666666666666,
+                "y": 285
             }
+        },
+        "C:/Users/Warren/source/repos/Hearthvale/Hearthvale/Content/Tilesets/DampDungeons/Tiles/NPC.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 2
+        },
+        "C:/Users/Warren/source/repos/Hearthvale/Hearthvale/Content/Tilesets/DampDungeons/Tiles/Player.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1,
+            "scaleInEditor": 1.5
         },
         "C:/Users/Warren/source/repos/Hearthvale/Hearthvale/Content/Tilesets/Dungeon_Autotiles.tsx": {
             "scaleInDock": 1,
@@ -41,27 +55,32 @@
             "scaleInEditor": 2
         }
     },
-    "last.imagePath": "C:/Users/Warren/source/repos/Hearthvale/Hearthvale/Content/Tilesets/DampDungeons/Tiles",
+    "last.externalTilesetPath": "C:/Users/Warren/source/repos/Hearthvale/Hearthvale/Content/Tilesets/DampDungeons/Tiles",
+    "last.imagePath": "C:/Users/Warren/source/repos/Hearthvale/Hearthvale/Content/images",
     "map.height": 40,
     "map.lastUsedFormat": "tmx",
     "map.tileHeight": 16,
     "map.tileWidth": 16,
     "map.width": 60,
     "openFiles": [
-        "C:/Users/Warren/source/repos/Hearthvale/Hearthvale/Content/Tilesets/DampDungeons/Tiles/Dungeon.tsx",
-        "C:/Users/Warren/source/repos/Hearthvale/Hearthvale/Content/Tilesets/DampDungeons/Tiles/DungeonMap.tmx"
+        "C:/Users/Warren/source/repos/Hearthvale/Hearthvale/Content/Tilesets/DampDungeons/Tiles/DungeonMap.tmx",
+        "C:/Users/Warren/source/repos/Hearthvale/Hearthvale/Content/Tilesets/DampDungeons/Tiles/NPC.tsx"
     ],
     "project": "Hearthvale.tiled-project",
+    "property.type": "int",
     "recentFiles": [
-        "C:/Users/Warren/source/repos/Hearthvale/Hearthvale/Content/Tilesets/DampDungeons/Tiles/Dungeon.tsx",
+        "C:/Users/Warren/source/repos/Hearthvale/Hearthvale/Content/Tilesets/DampDungeons/Tiles/NPC.tsx",
         "C:/Users/Warren/source/repos/Hearthvale/Hearthvale/Content/Tilesets/DampDungeons/Tiles/DungeonMap.tmx",
+        "C:/Users/Warren/source/repos/Hearthvale/Hearthvale/Content/Tilesets/DampDungeons/Tiles/Player.tsx",
+        "C:/Users/Warren/source/repos/Hearthvale/Hearthvale/Content/Tilesets/DampDungeons/Tiles/Dungeon.tsx",
         "C:/Users/Warren/source/repos/Hearthvale/Hearthvale/Content/Tilesets/DampDungeons/Tiles/Dungeon.tmx",
         "C:/Users/Warren/source/repos/Hearthvale/Hearthvale/Content/Tilesets/Dungeon_Autotiles.tsx",
         "Dungeon_Autotiles.tsx"
     ],
+    "tileset.lastUsedFilter": "Tiled tileset files (*.tsx *.xml)",
     "tileset.lastUsedFormat": "tsx",
     "tileset.tileSize": {
-        "height": 16,
-        "width": 16
+        "height": 32,
+        "width": 32
     }
 }

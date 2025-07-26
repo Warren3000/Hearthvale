@@ -1,0 +1,52 @@
+﻿<TextureAtlas>
+  <Texture>images/NPCSpriteSheet</Texture>
+
+  <Regions>
+    <Region name="Merchant_Idle_1" x="0" y="0" width="32" height="32" />
+    <Region name="Merchant_Idle_2" x="32" y="0" width="32" height="32" />
+    <Region name="Merchant_Idle_3" x="64" y="0" width="32" height="32" />
+    <Region name="Merchant_Idle_4" x="96" y="0" width="32" height="32" />
+
+    <Region name="Merchant_Walk_1" x="0" y="32" width="32" height="32" />
+    <Region name="Merchant_Walk_2" x="32" y="32" width="32" height="32" />
+    <Region name="Merchant_Walk_3" x="64" y="32" width="32" height="32" />
+    <Region name="Merchant_Walk_4" x="96" y="32" width="32" height="32" />
+
+    <Region name="Mage_Walk_1" x="0" y="64" width="32" height="32" />
+    <Region name="Mage_Walk_2" x="32" y="64" width="32" height="32" />
+    <Region name="Mage_Walk_3" x="64" y="64" width="32" height="32" />
+    <Region name="Mage_Walk_4" x="96" y="64" width="32" height="32" />
+
+    <Region name="Mage_Idle_1" x="0" y="96" width="32" height="32" />
+    <Region name="Mage_Idle_2" x="32" y="96" width="32" height="32" />
+    <Region name="Mage_Idle_3" x="64" y="96" width="32" height="32" />
+    <Region name="Mage_Idle_4" x="96" y="96" width="32" height="32" />
+    
+  </Regions>
+  <Animations>
+    <Animation name="Merchant_Idle" delay="120">
+      <Frame region="Merchant_Idle_1" />
+      <Frame region="Merchant_Idle_2" />
+      <Frame region="Merchant_Idle_3" />
+      <Frame region="Merchant_Idle_4" />
+    </Animation>
+    <Animation name="Merchant_Walk" delay="120">
+      <Frame region="Merchant_Walk_1" />
+      <Frame region="Merchant_Walk_2" />
+      <Frame region="Merchant_Walk_3" />
+      <Frame region="Merchant_Walk_4" />
+    </Animation>
+    <Animation name="Mage_Walk" delay="120">
+      <Frame region="Mage_Walk_1" />
+      <Frame region="Mage_Walk_2" />
+      <Frame region="Mage_Walk_3" />
+      <Frame region="Mage_Walk_4" />
+    </Animation>
+    <Animation name="Mage_Idle" delay="120">
+      <Frame region="Mage_Idle_1" />
+      <Frame region="Mage_Idle_2" />
+      <Frame region="Mage_Idle_3" />
+      <Frame region="Mage_Idle_4" />
+    </Animation>
+  </Animations>
+</TextureAtlas>
