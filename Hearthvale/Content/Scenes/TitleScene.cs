@@ -1,5 +1,4 @@
-﻿using System;
-using DungeonSlime.UI;
+﻿using DungeonSlime.UI;
 using Hearthvale.UI;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
@@ -11,6 +10,7 @@ using MonoGameGum.GueDeriving;
 using MonoGameLibrary;
 using MonoGameLibrary.Graphics;
 using MonoGameLibrary.Scenes;
+using System;
 
 namespace Hearthvale.Scenes;
 
@@ -121,6 +121,10 @@ public class TitleScene : Scene
 
         // Load the texture atlas from the xml configuration file.
         _atlas = TextureAtlas.FromFile(Core.Content, "images/atlas-definition.xml");
+
+#if DEBUG
+        Core.Audio.SongVolume = 0f;
+#endif
     }
 
     public override void Update(GameTime gameTime)

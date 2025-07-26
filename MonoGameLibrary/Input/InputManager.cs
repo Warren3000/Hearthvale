@@ -2,7 +2,8 @@
 
 namespace MonoGameLibrary.Input;
 
-public class InputManager {
+public class InputManager
+{
     /// <summary>
     /// Gets the state information of keyboard input.
     /// </summary>

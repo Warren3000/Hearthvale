@@ -6,7 +6,7 @@ namespace MonoGameLibrary.Graphics;
 /// <summary>
 /// Represents a rectangular region within a texture.
 /// </summary>
-public class TextureRegion 
+public class TextureRegion
 {
     /// <summary>
     /// Gets or Sets the source texture this texture region is part of.

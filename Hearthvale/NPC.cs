@@ -2,8 +2,6 @@
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGameLibrary.Graphics;
-using SharpDX.Direct2D1.Effects;
-using SharpDX.Direct3D9;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -43,7 +41,7 @@ public class NPC
     public bool FacingRight
     {
         get => Sprite.Effects != SpriteEffects.FlipHorizontally;
-        set => Sprite.Effects = value? SpriteEffects.None : SpriteEffects.FlipHorizontally;
+        set => Sprite.Effects = value ? SpriteEffects.None : SpriteEffects.FlipHorizontally;
     }
 
     public NPC(Dictionary<string, Animation> animations, Vector2 position, Rectangle bounds, SoundEffect soundEffect)
@@ -74,7 +72,7 @@ public class NPC
             FacingRight = false;
 
         _directionChangeTimer = 2f + (float)_random.NextDouble() * 3f;
-        
+
         Sprite.Animation = _animations["Walk"];
         _currentAnimationName = "Walk";
 

@@ -2,10 +2,6 @@
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Hearthvale.UI
 {
@@ -27,9 +23,9 @@ namespace Hearthvale.UI
             _viewport = viewport;
             _zoom = 1f;
             _rotation = 0f;
-            
+
         }
-        
+
 
         public Matrix GetViewMatrix()
         {
@@ -46,7 +42,7 @@ namespace Hearthvale.UI
             _position = target;
         }
 
-        public void FollowSmooth(Vector2 target, float smoothing = 0.1f)  
+        public void FollowSmooth(Vector2 target, float smoothing = 0.1f)
         {
             //smoothing should be between 0.05f (slow) and 0.2f (snappy). Lower = smoother.
             _position = Vector2.Lerp(_position, target, smoothing);

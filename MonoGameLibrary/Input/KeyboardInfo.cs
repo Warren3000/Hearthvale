@@ -2,7 +2,8 @@
 
 namespace MonoGameLibrary.Input;
 
-public class KeyboardInfo {
+public class KeyboardInfo
+{
     /// <summary>
     /// Gets the state of keyboard input during the previous update cycle.
     /// </summary>

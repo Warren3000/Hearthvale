@@ -5,7 +5,6 @@ using MonoGame.Extended.Tiled;
 using MonoGameLibrary;
 using MonoGameLibrary.Graphics;
 using System.Collections.Generic;
-using System.Diagnostics;
 
 
 namespace Hearthvale.Scenes
@@ -79,6 +78,6 @@ namespace Hearthvale.Scenes
                 npc.Draw(spriteBatch);
             }
         }
-       
+
     }
 }

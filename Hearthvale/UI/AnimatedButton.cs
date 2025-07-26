@@ -1,5 +1,4 @@
-﻿using System;
-using Gum.DataTypes;
+﻿using Gum.DataTypes;
 using Gum.DataTypes.Variables;
 using Gum.Graphics.Animation;
 using Gum.Managers;
@@ -7,6 +6,7 @@ using Microsoft.Xna.Framework.Input;
 using MonoGameGum.Forms.Controls;
 using MonoGameGum.GueDeriving;
 using MonoGameLibrary.Graphics;
+using System;
 
 namespace Hearthvale.UI;
 

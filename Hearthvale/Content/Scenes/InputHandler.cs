@@ -1,9 +1,9 @@
-﻿using Microsoft.Xna.Framework;
+﻿using Hearthvale.UI;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
-using MonoGameLibrary.Input;
 using MonoGameLibrary;
+using MonoGameLibrary.Input;
 using System;
-using Hearthvale.UI;
 
 namespace Hearthvale.Scenes
 {
