@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGameLibrary.Graphics;
 using SharpDX.Direct2D1.Effects;
@@ -12,6 +13,7 @@ public class NPC
     public AnimatedSprite Sprite;
     public Vector2 Position;
     private Dictionary<string, Animation> _animations;
+    private Rectangle _bounds;
     private string _currentAnimationName;
 
     private Vector2 _velocity;
@@ -21,9 +23,22 @@ public class NPC
     private float _idleTimer;
     private bool _isIdle;
 
-    private Rectangle _bounds;
+    private int _maxHealth = 10;
+    private int _currentHealth;
+    public int Health => _currentHealth;
+    private bool _isDefeated = false;
+    public bool IsDefeated => _isDefeated;
+    private SoundEffect _defeatSound;
+
 
     private Random _random = new Random();
+
+    public Rectangle Bounds => new Rectangle(
+        (int)Position.X,
+        (int)Position.Y,
+        (int)Sprite.Width,
+        (int)Sprite.Height
+    );
 
     public bool FacingRight
     {
@@ -31,13 +46,16 @@ public class NPC
         set => Sprite.Effects = value? SpriteEffects.None : SpriteEffects.FlipHorizontally;
     }
 
-    public NPC(Dictionary<string, Animation> animations, Vector2 position, Rectangle bounds)
+    public NPC(Dictionary<string, Animation> animations, Vector2 position, Rectangle bounds, SoundEffect soundEffect)
     {
         _animations = animations;
-        Sprite = new AnimatedSprite(_animations["Idle"]);
-        _currentAnimationName = "Idle"; // track current animation name
         Position = position;
         _bounds = bounds;
+        _currentHealth = _maxHealth;
+        _defeatSound = soundEffect;
+
+        // Initialize Sprite with the Idle animation
+        Sprite = new AnimatedSprite(_animations["Idle"]);
 
         SetIdle();
     }
@@ -116,5 +134,32 @@ public class NPC
     public void Draw(SpriteBatch spriteBatch)
     {
         Sprite.Draw(spriteBatch, Position);
+    }
+
+    public void TakeDamage(int amount)
+    {
+        if (IsDefeated) return;
+        _currentHealth -= amount;
+        if (_currentHealth <= 0)
+        {
+            _currentHealth = 0;
+            OnDefeated();
+        }
+    }
+    private void OnDefeated()
+    {
+        _isDefeated = true;
+
+        // Example: Play defeat animation if you have one
+        if (_animations.ContainsKey("Defeated") && _animations["Defeated"] != null)
+        {
+            Sprite.Animation = _animations["Defeated"];
+            _currentAnimationName = "Defeated";
+        }
+
+        // Example: Play a sound effect (pseudo-code, depends on your audio system)
+        // Core.Audio.PlaySoundEffect(Core.Content.Load<SoundEffect>("audio/npc_defeat"));
+
+        // Optionally: spawn particles or effects here
     }
 }

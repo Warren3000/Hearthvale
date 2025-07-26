@@ -1,0 +1,101 @@
+﻿Hearthvale Project Plan
+
+1. Combat System
+•	Add player attacks and enemy/NPC reactions.
+•	Implement health, damage, and defeat logic.
+•	Visual and audio feedback for hits.
+2. Weapon Leveling
+•	Track weapon XP and stats.
+•	Allow weapons to gain experience and level up.
+•	Simple UI to show weapon progress.
+3. Dungeon Interactivity
+•	Add items to collect (e.g., keys, loot).
+•	Simple puzzles or locked doors.
+•	Enemy types with different behaviors.
+4. City Building (Georama) Prototype
+•	Allow the player to place or move objects/buildings in a town area.
+•	Simple UI for selecting and placing objects.
+5. Time/Story Progression
+•	Implement a day/night cycle.
+•	Trigger events or dialogue based on time or player actions.
+---
+Recommended order:
+1.	Combat system
+2.	Weapon leveling
+3.	Dungeon interactivity
+4.	City building prototype
+5.	Time/story progression
+
+---
+1.Combat System
+1. Player Attacks
+•	Decide on attack type (melee, ranged, or both).
+•	Add input handling for attack actions (e.g., key press or button).
+2. NPC/Enemy Health
+•	Add a Health property to your NPC class.
+•	Implement logic to reduce health when hit.
+3. Damage & Defeat
+•	Add a method to apply damage to NPCs.
+•	Handle NPC defeat (e.g., play animation, remove from scene).
+4. Collision/Hit Detection
+•	Detect when an attack hits an NPC (simple rectangle or circle overlap to start).
+5. Feedback
+•	Play sound and show visual effect on hit.
+
+---
+2. Weapon Leveling
+1.	Weapon Experience
+•	Define a Weapon class with XP and level properties.
+•	Grant XP to weapons when defeating enemies.
+2.	Weapon Stats & Growth
+•	Increase weapon stats (damage, speed, etc.) as they level up.
+•	Allow for branching upgrade paths or evolution.
+3.	Weapon UI
+•	Display weapon XP, level, and stats in the UI.
+•	Show progress toward next level.
+4.	Weapon Management
+•	Allow equipping, unequipping, and switching weapons.
+•	Support for multiple weapon types.
+---
+3. Dungeon Interactivity
+1.	Collectible Items
+•	Place items (keys, loot, health) in the dungeon.
+•	Allow the player to pick up and use items.
+2.	Puzzles & Obstacles
+•	Add simple puzzles (e.g., switches, locked doors).
+•	Require items or actions to progress.
+3.	Enemy Variety
+•	Implement different enemy types with unique behaviors.
+•	Add patrols, ranged attacks, or special abilities.
+4.	Environmental Hazards
+•	Include traps or hazards (spikes, pits, etc.).
+•	Provide visual cues and feedback.
+---
+4. City Building (Georama) Prototype
+1.	Placement System
+•	Allow the player to select and place buildings/objects in a town area.
+•	Show placement preview and validate positions.
+2.	Object Management
+•	Enable moving, rotating, or removing placed objects.
+•	Track placed objects for town goals.
+3.	UI for Building
+•	Create a simple menu for selecting objects to place.
+•	Display requirements or costs for placement.
+4.	Town Progression
+•	Track town goals or population.
+•	Unlock new objects as the town grows.
+---
+5. Time/Story Progression
+1.	Day/Night Cycle
+•	Implement a timer for day/night transitions.
+•	Change lighting, music, or NPC behavior based on time.
+2.	Scheduled Events
+•	Trigger story events or cutscenes at certain times or after actions.
+•	Allow for recurring or one-time events.
+3.	NPC Schedules
+•	Give NPCs routines that change with the time of day.
+•	Enable dialogue or quests that depend on time.
+4.	Story Advancement
+•	Track story progress and unlock new areas or features.
+•	Display story objectives or logs in the UI.
+---

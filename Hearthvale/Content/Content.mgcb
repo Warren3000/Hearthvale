@@ -10,9 +10,9 @@
 
 #-------------------------------- References --------------------------------#
 
-/reference:..\ContentPipeline\MonoGame.Extended.Content.Pipeline.dll
+/reference:..\ContentPipeline\MonoGame.Extended.dll
 /reference:..\ContentPipeline\TiledSharp.dll
-/reference:..\ContentPipeline\MonoGame.Extended.Tiled.dll
+/reference:..\ContentPipeline\MonoGame.Extended.Content.Pipeline.dll
 
 #---------------------------------- Content ---------------------------------#
 
@@ -27,6 +27,12 @@
 /processor:SoundEffectProcessor
 /processorParam:Quality=Best
 /build:audio/collect.wav
+
+#begin audio/npc_defeat.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:audio/npc_defeat.wav
 
 #begin audio/theme.ogg
 /importer:OggImporter

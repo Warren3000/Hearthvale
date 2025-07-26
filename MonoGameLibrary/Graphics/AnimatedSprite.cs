@@ -8,6 +8,7 @@ public class AnimatedSprite : Sprite
     private int _currentFrame;
     private TimeSpan _elapsed;
     private Animation _animation;
+    public Vector2 Position { get; set; }
 
     /// <summary>
     /// Gets or Sets the animation for this animated sprite.

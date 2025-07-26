@@ -1,10 +1,11 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.Tiled;
+using MonoGameLibrary;
 using MonoGameLibrary.Graphics;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 
 
 namespace Hearthvale.Scenes
@@ -14,6 +15,7 @@ namespace Hearthvale.Scenes
         private readonly List<NPC> _npcs = new();
         private readonly Rectangle _bounds;
         private readonly TextureAtlas _heroAtlas;
+        public IEnumerable<NPC> Npcs => _npcs;
 
         public NpcManager(TextureAtlas heroAtlas, Rectangle bounds)
         {
@@ -40,16 +42,17 @@ namespace Hearthvale.Scenes
             {
                 "merchant" => "Merchant",
                 "mage" => "Mage",
-                _ => "Mage"
+                _ => "Merchant"
             };
 
             var animations = new Dictionary<string, Animation>
             {
                 ["Idle"] = _heroAtlas.GetAnimation($"{animationPrefix}_Idle"),
-                ["Walk"] = _heroAtlas.GetAnimation($"{animationPrefix}_Walk")
+                ["Walk"] = _heroAtlas.GetAnimation($"{animationPrefix}_Walk"),
+                //["Defeated"] = _heroAtlas.GetAnimation($"{animationPrefix}_Defeated")
             };
-
-            NPC npc = new NPC(animations, position, _bounds);
+            SoundEffect defeatSound = Core.Content.Load<SoundEffect>("audio/npc_defeat");
+            NPC npc = new NPC(animations, position, _bounds, defeatSound);
 
             // Optional: Default facing direction can be set here if needed
             npc.FacingRight = false;
@@ -59,10 +62,14 @@ namespace Hearthvale.Scenes
 
         public void Update(GameTime gameTime)
         {
+            // Update all NPCs
             foreach (var npc in _npcs)
             {
                 npc.Update(gameTime);
             }
+
+            // Remove defeated NPCs
+            _npcs.RemoveAll(npc => npc.IsDefeated);
         }
 
         public void Draw(SpriteBatch spriteBatch)
@@ -72,5 +79,6 @@ namespace Hearthvale.Scenes
                 npc.Draw(spriteBatch);
             }
         }
+       
     }
 }

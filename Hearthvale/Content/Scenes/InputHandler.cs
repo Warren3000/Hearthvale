@@ -37,6 +37,10 @@ namespace Hearthvale.Scenes
             // Handle gamepad input
             HandleGamePad(gamePadOne);
         }
+        public static bool IsKeyPressed(Keys key)
+        {
+            return Keyboard.GetState().IsKeyDown(key);
+        }
 
         private void HandleKeyboard(KeyboardInfo keyboard)
         {
