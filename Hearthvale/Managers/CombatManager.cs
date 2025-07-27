@@ -14,6 +14,9 @@ public class CombatManager
 
     private float _attackCooldown = 0.5f; // seconds between attacks
     private float _attackTimer = 0f;
+    private float _playerDamageCooldown = 1.0f; // seconds of immunity after being hit
+    private float _playerDamageTimer = 0f;
+
 
     public CombatManager(
         NpcManager npcManager,
@@ -35,8 +38,28 @@ public class CombatManager
     {
         if (_attackTimer > 0)
             _attackTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+        if (_playerDamageTimer > 0)
+            _playerDamageTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+        foreach (var npc in _npcManager.Npcs)
+        {
+            if (!npc.IsDefeated && npc.Bounds.Intersects(_player.Bounds))
+            {
+                TryDamagePlayer(1); // or npc.AttackPower
+            }
+        }
     }
     public bool CanAttack => _attackTimer <= 0f;
+    public void TryDamagePlayer(int amount)
+    {
+        if (_playerDamageTimer > 0 || _player.IsDefeated)
+            return;
+
+        _player.TakeDamage(amount);
+        _playerDamageTimer = _playerDamageCooldown;
+        // Optionally: play sound, trigger effects, etc.
+    }
     public void HandlePlayerAttack(int playerAttackPower)
     {
         if (!CanAttack)

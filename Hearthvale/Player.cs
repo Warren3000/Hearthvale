@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGameLibrary.Graphics;
+using System;
 
 namespace Hearthvale
 {
@@ -19,6 +20,19 @@ namespace Hearthvale
         public bool FacingRight => _facingRight;
         public bool IsAttacking { get; set; }
 
+        private int _maxHealth = 10;
+        private int _currentHealth;
+        public int MaxHealth => _maxHealth;
+        public int CurrentHealth => _currentHealth;
+        public bool IsDefeated => _currentHealth <= 0;
+
+        public Rectangle Bounds => new Rectangle(
+            (int)Position.X + 8,
+            (int)Position.Y + 16,
+            (int)Sprite.Width / 2,
+            (int)Sprite.Height / 2
+        );
+
         public Player(TextureAtlas atlas, Vector2 startPosition, float movementSpeed = 3.0f)
         {
             _atlas = atlas;
@@ -26,6 +40,7 @@ namespace Hearthvale
             _sprite.Scale = new Vector2(1f, 1f);
             _position = startPosition;
             MovementSpeed = movementSpeed;
+            _currentHealth = _maxHealth;
         }
 
         public void Update(GameTime gameTime, KeyboardState keyboard)
@@ -59,7 +74,12 @@ namespace Hearthvale
             _sprite.Effects = _facingRight ? SpriteEffects.None : SpriteEffects.FlipHorizontally;
             _sprite.Update(gameTime);
         }
-
+        public void ClampToBounds(Rectangle bounds)
+        {
+            float clampedX = MathHelper.Clamp(Position.X, bounds.Left, bounds.Right - Sprite.Width);
+            float clampedY = MathHelper.Clamp(Position.Y, bounds.Top, bounds.Bottom - Sprite.Height);
+            SetPosition(new Vector2(clampedX, clampedY));
+        }
         private void UpdateAnimation(KeyboardState keyboard, bool moving)
         {
             string desiredAnimation = moving ? "Mage_Walk" : "Mage_Idle";
@@ -83,6 +103,15 @@ namespace Hearthvale
                 roomBounds.Bottom - spriteHeight
             );
             SetPosition(new Vector2(clampedX, clampedY));
+        }
+        public void TakeDamage(int amount)
+        {
+            _currentHealth = Math.Max(0, _currentHealth - amount);
+            // Optionally: trigger effects, invulnerability, etc.
+        }
+        public void Heal(int amount)
+        {
+            _currentHealth = Math.Min(_maxHealth, _currentHealth + amount);
         }
         public void SetPosition(Vector2 pos)
         {

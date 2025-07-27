@@ -44,10 +44,10 @@ public class NPC
     private Color _originalColor = Color.White;
 
     public Rectangle Bounds => new Rectangle(
-        (int)Position.X,
-        (int)Position.Y,
-        (int)Sprite.Width,
-        (int)Sprite.Height
+        (int)Position.X+8,
+        (int)Position.Y+16,
+        (int)Sprite.Width/2,
+        (int)Sprite.Height/2
     );
 
     public bool FacingRight

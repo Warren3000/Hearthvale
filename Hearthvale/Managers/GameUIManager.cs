@@ -2,6 +2,7 @@
 using Gum.Managers;
 using Gum.Wireframe;
 using Hearthvale.Scenes;
+using Hearthvale.UI;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
@@ -11,8 +12,9 @@ using MonoGameGum.GueDeriving;
 using MonoGameLibrary;
 using MonoGameLibrary.Graphics;
 using System;
+using System.Collections.Generic;
 
-namespace Hearthvale.UI
+namespace Hearthvale.Managers
 {
     public class GameUIManager
     {
@@ -27,6 +29,7 @@ namespace Hearthvale.UI
         private Panel _dialogPanel;
         private TextRuntime _dialogText;
         private bool _isDialogOpen = false;
+        private Texture2D _whitePixel;
 
         public bool IsDialogOpen => _isDialogOpen;
         public bool IsPausePanelVisible => _pausePanel?.IsVisible ?? false;
@@ -46,6 +49,8 @@ namespace Hearthvale.UI
             GumService.Default.Root.Children.Clear();
             CreateDialogPanel();
             CreatePausePanel();
+            _whitePixel = new Texture2D(Core.GraphicsDevice, 1, 1);
+            _whitePixel.SetData(new[] { Color.White });
         }
         public void PauseGame()
         {
@@ -62,6 +67,20 @@ namespace Hearthvale.UI
         {
             Core.Audio.PlaySoundEffect(uiSoundEffect);
             changeSceneCallback?.Invoke();
+        }
+        public void DrawPlayerHealthBar(SpriteBatch spriteBatch, Player player, Vector2 position, Vector2 size)
+        {
+            int health = player.CurrentHealth;
+            int maxHealth = player.MaxHealth;
+            float percent = (float)health / maxHealth;
+
+            // Background
+            spriteBatch.Draw(_whitePixel, new Rectangle((int)position.X, (int)position.Y, (int)size.X, (int)size.Y), Color.DarkRed);
+            // Foreground
+            spriteBatch.Draw(_whitePixel, new Rectangle((int)position.X, (int)position.Y, (int)(size.X * percent), (int)size.Y), Color.LimeGreen);
+
+            // Optional: Draw border or text
+            // spriteBatch.DrawString(_font, $"{health}/{maxHealth}", position + new Vector2(2, 2), Color.White);
         }
 
         private void CreatePausePanel()
@@ -156,6 +175,30 @@ namespace Hearthvale.UI
         public void HidePausePanel()
         {
             _pausePanel.IsVisible = false;
+        }
+
+        public void DrawCollisionBoxes(SpriteBatch spriteBatch, Player player, IEnumerable<NPC> npcs)
+        {
+            // Draw player bounds (green)
+            DrawRect(spriteBatch, player.Bounds, _whitePixel, Color.LimeGreen * 0.5f);
+
+            // Draw NPC bounds (red)
+            foreach (var npc in npcs)
+            {
+                DrawRect(spriteBatch, npc.Bounds, _whitePixel, Color.Red * 0.5f);
+            }
+        }
+
+        private void DrawRect(SpriteBatch spriteBatch, Rectangle rect, Texture2D texture, Color color)
+        {
+            // Top
+            spriteBatch.Draw(texture, new Rectangle(rect.X, rect.Y, rect.Width, 1), color);
+            // Left
+            spriteBatch.Draw(texture, new Rectangle(rect.X, rect.Y, 1, rect.Height), color);
+            // Right
+            spriteBatch.Draw(texture, new Rectangle(rect.Right - 1, rect.Y, 1, rect.Height), color);
+            // Bottom
+            spriteBatch.Draw(texture, new Rectangle(rect.X, rect.Bottom - 1, rect.Width, 1), color);
         }
 
         public void DrawDebugInfo(SpriteBatch spriteBatch, GameTime gameTime, Vector2 heroPosition, Vector2 cameraPosition, Viewport viewport)

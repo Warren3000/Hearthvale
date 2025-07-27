@@ -42,7 +42,7 @@ public class GameScene : Scene
     private Viewport _viewport;
     private Camera2D _camera;
     private InputHandler _inputHandler;
-    private Texture2D _whitePixel;
+    
 
     // handlers
     private NpcManager _npcManager;
@@ -54,25 +54,20 @@ public class GameScene : Scene
     private CombatEffectsManager _combatEffectsManager;
     private CombatManager _combatManager;
     private DialogManager _dialogManager;
+    private CameraManager _cameraManager;
 
     public override void Initialize()
     {
         base.Initialize();
         Core.ExitOnEscape = false;
 
-        _camera = new Camera2D(Core.GraphicsDevice.Viewport);
-        _combatEffectsManager = new CombatEffectsManager(_camera);
-        _camera.Zoom = 3.0f;
-        //_viewport = Core.GraphicsDevice.Viewport;
-
-        // MapManager must be initialized in LoadContent after content is loaded
     }
 
     public override void LoadContent()
     {
         _camera = new Camera2D(Core.GraphicsDevice.Viewport);
         _camera.Zoom = 3.0f;
-        _combatEffectsManager = new CombatEffectsManager(_camera);
+        _cameraManager = new CameraManager(_camera);
 
         _atlas = TextureAtlas.FromFile(Core.Content, "images/atlas-definition.xml");
         _heroAtlas = TextureAtlas.FromFile(Core.Content, "images/npc-atlas.xml");
@@ -101,13 +96,12 @@ public class GameScene : Scene
         _debugFont = Content.Load<SpriteFont>("fonts/DebugFont");
 
         // Score display
-        _scoreTextPosition = new Vector2(_mapManager.RoomBounds.Left, _mapManager.TileHeight * 0.5f);
+        _scoreTextPosition = new Vector2(_mapManager.RoomBounds.Left, _mapManager.TileHeight * 1f);
         float scoreTextYOrigin = _font.MeasureString("Score").Y * 0.5f;
         _scoreTextOrigin = new Vector2(0, scoreTextYOrigin);
         _scoreManager = new ScoreManager(_font, _scoreTextPosition, _scoreTextOrigin);
 
-        _whitePixel = new Texture2D(Core.GraphicsDevice, 1, 1);
-        _whitePixel.SetData(new[] { Color.White });
+        
 
         _playerStart = _mapManager.GetPlayerSpawnPoint();
 
@@ -179,32 +173,24 @@ public class GameScene : Scene
         UpdateViewport(Core.GraphicsDevice.Viewport);
         _inputHandler.Update(gameTime);
 
-        // Clamp player position to room bounds
-        float clampedX = MathHelper.Clamp(
-            _player.Position.X,
-            _mapManager.RoomBounds.Left,
-            _mapManager.RoomBounds.Right - _player.Sprite.Width
-        );
-        float clampedY = MathHelper.Clamp(
-            _player.Position.Y,
-            _mapManager.RoomBounds.Top,
-            _mapManager.RoomBounds.Bottom - _player.Sprite.Height
-        );
-        _player.SetPosition(new Vector2(clampedX, clampedY));
+        _player.ClampToBounds(_mapManager.RoomBounds);
 
-        // Camera follow (use player center)
-        Vector2 playerCenter = _player.Position + new Vector2(_player.Sprite.Width / 2f, _player.Sprite.Height / 2f);
-
+        // Calculate the margin rectangle as before
         Rectangle margin = new Rectangle(
-            (int)(100 / _camera.Zoom),
-            (int)(80 / _camera.Zoom),
-            (int)(_viewport.Width / _camera.Zoom) - (int)(200 / _camera.Zoom),
-            (int)(_viewport.Height / _camera.Zoom) - (int)(160 / _camera.Zoom)
+            (int)(100 / _cameraManager.Zoom),
+            (int)(80 / _cameraManager.Zoom),
+            (int)(_viewport.Width / _cameraManager.Zoom) - (int)(200 / _cameraManager.Zoom),
+            (int)(_viewport.Height / _cameraManager.Zoom) - (int)(160 / _cameraManager.Zoom)
         );
 
-        _camera.FollowWithMargin(playerCenter, margin, 0.1f);
-        _camera.ClampToMap(_mapManager.Map.Width, _mapManager.Map.Height, _mapManager.TileWidth);
-        _camera.Update(gameTime);
+        // Call CameraManager to update the camera
+        _cameraManager.UpdateCamera(
+           _player.Position,
+           new Point((int)_player.Sprite.Width, (int)_player.Sprite.Height),
+           margin,
+           _mapManager,
+           gameTime
+       );
 
         UpdateViewport(Core.GraphicsDevice.Viewport);
     }
@@ -224,19 +210,18 @@ public class GameScene : Scene
         _mapManager.Draw(transform);
         _player.Sprite.Draw(Core.SpriteBatch, _player.Position);
         _npcManager.Draw(Core.SpriteBatch);
+        _uiManager.DrawCollisionBoxes(Core.SpriteBatch, _player, _npcManager.Npcs);
         _combatEffectsManager.Draw(Core.SpriteBatch, _font);
-
         Core.SpriteBatch.End();
 
         Core.SpriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
+        _uiManager.DrawPlayerHealthBar(Core.SpriteBatch, _player, new Vector2(20, 20), new Vector2(100, 12));
         _scoreManager.Draw(Core.SpriteBatch);
-
         _uiManager.DrawDebugInfo(Core.SpriteBatch, gameTime, _player.Position, _camera.Position, _viewport);
 
         Core.SpriteBatch.End();
 
         GumService.Default.Draw();
     }
-
 }
