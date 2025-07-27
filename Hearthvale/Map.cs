@@ -1,6 +1,0 @@
-﻿namespace Hearthvale
-{
-    class Map
-    {
-    }
-}

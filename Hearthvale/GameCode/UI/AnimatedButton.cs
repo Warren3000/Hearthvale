@@ -8,7 +8,7 @@ using MonoGameGum.GueDeriving;
 using MonoGameLibrary.Graphics;
 using System;
 
-namespace Hearthvale.UI;
+namespace Hearthvale.GameCode.UI;
 
 /// <summary>
 /// A custom button implementation that inherits from Gum's Button class to provide
@@ -102,12 +102,12 @@ internal class AnimatedButton : Button
 
         // Create a state category for button states
         StateSaveCategory category = new StateSaveCategory();
-        category.Name = Button.ButtonCategoryName;
+        category.Name = ButtonCategoryName;
         topLevelContainer.AddCategory(category);
 
         // Create the enabled (default/unfocused) state
         StateSave enabledState = new StateSave();
-        enabledState.Name = FrameworkElement.EnabledStateName;
+        enabledState.Name = EnabledStateName;
         enabledState.Apply = () =>
         {
             // When enabled but not focused, use the unfocused animation
@@ -117,7 +117,7 @@ internal class AnimatedButton : Button
 
         // Create the focused state
         StateSave focusedState = new StateSave();
-        focusedState.Name = FrameworkElement.FocusedStateName;
+        focusedState.Name = FocusedStateName;
         focusedState.Apply = () =>
         {
             // When focused, use the focused animation and enable animation playback
@@ -129,13 +129,13 @@ internal class AnimatedButton : Button
         // Create the highlighted+focused state (for mouse hover while focused)
         // by cloning the focused state since they appear the same
         StateSave highlightedFocused = focusedState.Clone();
-        highlightedFocused.Name = FrameworkElement.HighlightedFocusedStateName;
+        highlightedFocused.Name = HighlightedFocusedStateName;
         category.States.Add(highlightedFocused);
 
         // Create the highlighted state (for mouse hover)
         // by cloning the enabled state since they appear the same
         StateSave highlighted = enabledState.Clone();
-        highlighted.Name = FrameworkElement.HighlightedStateName;
+        highlighted.Name = HighlightedStateName;
         category.States.Add(highlighted);
 
         // Add event handlers for keyboard input.

@@ -1,9 +1,10 @@
-﻿using Hearthvale.Managers;
+﻿using Hearthvale.GameCode.Entities;
+using Hearthvale.GameCode.Managers;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using System;
 
-namespace Hearthvale
+namespace Hearthvale.GameCode.Input
 {
     public class GameInputHandler
     {

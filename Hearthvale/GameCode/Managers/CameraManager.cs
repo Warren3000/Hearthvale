@@ -1,7 +1,7 @@
-﻿using Microsoft.Xna.Framework;
-using Hearthvale.UI;
+﻿using Hearthvale.GameCode.UI;
+using Microsoft.Xna.Framework;
 
-namespace Hearthvale.Managers
+namespace Hearthvale.GameCode.Managers
 {
     public class CameraManager
     {

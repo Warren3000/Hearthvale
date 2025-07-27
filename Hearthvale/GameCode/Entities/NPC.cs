@@ -1,10 +1,11 @@
-﻿using Microsoft.Xna.Framework;
+﻿using Hearthvale.Content.NPC;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGameLibrary.Graphics;
 using System.Collections.Generic;
 
-namespace Hearthvale;
+namespace Hearthvale.GameCode.Entities;
 public class NPC
 {
     // --- Controllers ---

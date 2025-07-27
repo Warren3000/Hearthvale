@@ -3,7 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended;
 using System;
 
-namespace Hearthvale.UI
+namespace Hearthvale.GameCode.UI
 {
     public class Camera2D
     {

@@ -1,13 +1,15 @@
+using Hearthvale.GameCode.UI;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Collections.Generic;
 
+namespace Hearthvale.GameCode.Managers;
 public class CombatEffectsManager
 {
-    private readonly Hearthvale.UI.Camera2D _camera;
+    private readonly Camera2D _camera;
     private readonly List<DamageNumber> _damageNumbers = new();
 
-    public CombatEffectsManager(Hearthvale.UI.Camera2D camera)
+    public CombatEffectsManager(Camera2D camera)
     {
         _camera = camera;
     }

@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿using Hearthvale.GameCode.Entities;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.Tiled;
@@ -7,7 +8,7 @@ using MonoGameLibrary.Graphics;
 using System.Collections.Generic;
 
 
-namespace Hearthvale.Managers
+namespace Hearthvale.GameCode.Managers
 {
     public class NpcManager
     {

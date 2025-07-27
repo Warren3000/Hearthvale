@@ -5,7 +5,7 @@ using MonoGameLibrary.Graphics;
 using System;
 using System.Collections.Generic;
 
-namespace Hearthvale
+namespace Hearthvale.GameCode.Entities
 {
     public class Player
     {

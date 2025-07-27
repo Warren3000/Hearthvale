@@ -1,8 +1,9 @@
-using Hearthvale;
-using Hearthvale.Managers;
+using Hearthvale.GameCode.Entities;
+using Hearthvale.GameCode.Managers;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 
+namespace Hearthvale.GameCode.Managers;
 public class CombatManager
 {
     private readonly NpcManager _npcManager;

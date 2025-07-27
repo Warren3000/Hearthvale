@@ -12,25 +12,28 @@
     <ApplicationIcon>Icon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Remove="Content\bin\**" />
-    <Compile Remove="Content\obj\**" />
-    <EmbeddedResource Remove="Content\bin\**" />
-    <EmbeddedResource Remove="Content\obj\**" />
-    <None Remove="Content\bin\**" />
-    <None Remove="Content\obj\**" />
+    <Compile Remove="GameCode\bin\**" />
+    <Compile Remove="GameCode\obj\**" />
+    <Compile Remove="Map\**" />
+    <EmbeddedResource Remove="GameCode\bin\**" />
+    <EmbeddedResource Remove="GameCode\obj\**" />
+    <EmbeddedResource Remove="Map\**" />
+    <None Remove="GameCode\bin\**" />
+    <None Remove="GameCode\obj\**" />
+    <None Remove="Map\**" />
   </ItemGroup>
   <ItemGroup>
-    <None Remove="Content\Tilesets\DampDungeons\Tiles\DungeonDecorations.png" />
-    <None Remove="Content\Tilesets\DampDungeons\Tiles\Dungeon_Autotiles.png" />
-    <None Remove="Content\Tilesets\DampDungeons\Tiles\Dungeon_WallsAndFloors.png" />
-    <None Remove="Content\Tilesets\DampDungeons\Tiles\Dungeon_WaterAnimation.png" />
+    <None Remove="GameCode\Tilesets\DampDungeons\Tiles\DungeonDecorations.png" />
+    <None Remove="GameCode\Tilesets\DampDungeons\Tiles\Dungeon_Autotiles.png" />
+    <None Remove="GameCode\Tilesets\DampDungeons\Tiles\Dungeon_WallsAndFloors.png" />
+    <None Remove="GameCode\Tilesets\DampDungeons\Tiles\Dungeon_WaterAnimation.png" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Content\Tilesets\DampDungeons\Tiles\DungeonDecorations.png" />
-    <Content Include="Content\Tilesets\DampDungeons\Tiles\Dungeon_Autotiles.png" />
-    <Content Include="Content\Tilesets\DampDungeons\Tiles\Dungeon.tsx" />
-    <Content Include="Content\Tilesets\DampDungeons\Tiles\Dungeon_WallsAndFloors.png" />
-    <Content Include="Content\Tilesets\DampDungeons\Tiles\Dungeon_WaterAnimation.png" />
+    <Content Include="GameCode\Tilesets\DampDungeons\Tiles\DungeonDecorations.png" />
+    <Content Include="GameCode\Tilesets\DampDungeons\Tiles\Dungeon_Autotiles.png" />
+    <Content Include="GameCode\Tilesets\DampDungeons\Tiles\Dungeon.tsx" />
+    <Content Include="GameCode\Tilesets\DampDungeons\Tiles\Dungeon_WallsAndFloors.png" />
+    <Content Include="GameCode\Tilesets\DampDungeons\Tiles\Dungeon_WaterAnimation.png" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Gum.MonoGame" Version="2025.5.1.1" />
@@ -43,9 +46,6 @@
   <ItemGroup>
 
     <ProjectReference Include="..\MonoGameLibrary\MonoGameLibrary.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Map\" />
   </ItemGroup>
   <Target Name="RestoreDotnetTools" BeforeTargets="CollectPackageReferences">
     <Message Text="Restoring dotnet tools (this might take a while depending on your internet speed and should only happen upon building your project for the first time, or after upgrading MonoGame, or clearing your nuget cache)" Importance="High" />

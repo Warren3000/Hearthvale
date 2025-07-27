@@ -1,8 +1,8 @@
 ﻿using Gum.DataTypes;
 using Gum.Managers;
 using Gum.Wireframe;
-using Hearthvale.Scenes;
-using Hearthvale.UI;
+using Hearthvale.GameCode.Entities;
+using Hearthvale.GameCode.UI;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
@@ -14,7 +14,8 @@ using MonoGameLibrary.Graphics;
 using System;
 using System.Collections.Generic;
 
-namespace Hearthvale.Managers
+
+namespace Hearthvale.GameCode.Managers
 {
     public class GameUIManager
     {

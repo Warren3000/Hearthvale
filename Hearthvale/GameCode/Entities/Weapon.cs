@@ -1,4 +1,5 @@
-﻿public class Weapon
+﻿namespace Hearthvale.GameCode.Entities;
+public class Weapon
 {
     public string Name { get; }
     public int Level { get; private set; }

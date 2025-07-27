@@ -1,6 +1,6 @@
 using Microsoft.Xna.Framework.Audio;
 
-namespace Hearthvale;
+namespace Hearthvale.Content.NPC;
 public class NpcHealthController
 {
     private int _maxHealth;

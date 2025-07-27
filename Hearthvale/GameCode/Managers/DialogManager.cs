@@ -1,9 +1,10 @@
-﻿using Hearthvale;
-using Hearthvale.Managers;
-using Hearthvale.Scenes;
+﻿using Hearthvale.GameCode.Entities;
+using Hearthvale.GameCode.Input;
+using Hearthvale.GameCode.Managers;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 
+namespace Hearthvale.GameCode.Managers;
 public class DialogManager
 {
     private readonly GameUIManager _uiManager;

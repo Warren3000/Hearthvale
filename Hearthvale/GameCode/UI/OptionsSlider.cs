@@ -7,7 +7,7 @@ using MonoGameGum.GueDeriving;
 using MonoGameLibrary.Graphics;
 using System;
 
-namespace DungeonSlime.UI;
+namespace Hearthvale.GameCode.UI;
 
 /// <summary>
 /// A custom slider control that inherits from Gum's Slider class.
@@ -166,12 +166,12 @@ public class OptionsSlider : Slider
 
         // Create slider state category - Slider.SliderCategoryName is the required name
         StateSaveCategory sliderCategory = new StateSaveCategory();
-        sliderCategory.Name = Slider.SliderCategoryName;
+        sliderCategory.Name = SliderCategoryName;
         topLevelContainer.AddCategory(sliderCategory);
 
         // Create the enabled (default/unfocused) state
         StateSave enabled = new StateSave();
-        enabled.Name = FrameworkElement.EnabledStateName;
+        enabled.Name = EnabledStateName;
         enabled.Apply = () =>
         {
             // When enabled but not focused, use gray coloring for all elements
@@ -186,7 +186,7 @@ public class OptionsSlider : Slider
 
         // Create the focused state
         StateSave focused = new StateSave();
-        focused.Name = FrameworkElement.FocusedStateName;
+        focused.Name = FocusedStateName;
         focused.Apply = () =>
         {
             // When focused, use white coloring for all elements
@@ -201,12 +201,12 @@ public class OptionsSlider : Slider
 
         // Create the highlighted+focused state by cloning the focused state
         StateSave highlightedFocused = focused.Clone();
-        highlightedFocused.Name = FrameworkElement.HighlightedFocusedStateName;
+        highlightedFocused.Name = HighlightedFocusedStateName;
         sliderCategory.States.Add(highlightedFocused);
 
         // Create the highlighted state by cloning the enabled state
         StateSave highlighted = enabled.Clone();
-        highlighted.Name = FrameworkElement.HighlightedStateName;
+        highlighted.Name = HighlightedStateName;
         sliderCategory.States.Add(highlighted);
 
         // Assign the configured container as this slider's visual

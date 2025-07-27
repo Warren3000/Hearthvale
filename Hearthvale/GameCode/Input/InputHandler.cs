@@ -1,11 +1,11 @@
-﻿using Hearthvale.UI;
+﻿using Hearthvale.GameCode.UI;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using MonoGameLibrary;
 using MonoGameLibrary.Input;
 using System;
 
-namespace Hearthvale.Scenes
+namespace Hearthvale.GameCode.Input
 {
     public class InputHandler
     {

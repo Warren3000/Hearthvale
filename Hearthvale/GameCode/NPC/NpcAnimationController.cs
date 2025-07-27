@@ -1,8 +1,8 @@
-﻿using MonoGameLibrary.Graphics;
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
+using MonoGameLibrary.Graphics;
 using System.Collections.Generic;
 
-namespace Hearthvale
+namespace Hearthvale.Content.NPC
 {
     internal class NpcAnimationController
     {

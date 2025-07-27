@@ -1,5 +1,4 @@
-﻿using DungeonSlime.UI;
-using Hearthvale.UI;
+﻿using Hearthvale.GameCode.UI;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;

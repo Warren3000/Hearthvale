@@ -1,8 +1,7 @@
 using Microsoft.Xna.Framework;
 using System;
-using System.Collections.Generic;
 
-namespace Hearthvale;
+namespace Hearthvale.Content.NPC;
 public class NpcMovementController
 {
     private Vector2 _velocity;

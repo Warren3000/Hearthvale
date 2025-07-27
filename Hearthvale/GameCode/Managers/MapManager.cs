@@ -6,7 +6,7 @@ using MonoGame.Extended.Tiled.Renderers;
 using System;
 using System.Linq;
 
-namespace Hearthvale.Managers
+namespace Hearthvale.GameCode.Managers
 {
     public class MapManager
     {

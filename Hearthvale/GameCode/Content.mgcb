@@ -70,12 +70,6 @@
 /processorParam:TextureFormat=Compressed
 /build:fonts/DebugFont.spritefont
 
-#begin images/atlas-definition.xml
-/copy:images/atlas-definition.xml
-
-#begin images/hero-atlas.xml
-/copy:images/hero-atlas.xml
-
 #begin images/logo.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -117,6 +111,18 @@
 
 #begin images/tilemap-definition.xml
 /copy:images/tilemap-definition.xml
+
+#begin images/WeaponsSpriteSheet.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:images/WeaponsSpriteSheet.png
 
 #begin Tilesets/DampDungeons/Tiles/Dungeon_Autotiles.png
 /importer:TextureImporter

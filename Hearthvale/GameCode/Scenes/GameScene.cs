@@ -1,5 +1,7 @@
-﻿using Hearthvale.Managers;
-using Hearthvale.UI;
+﻿using Hearthvale.GameCode.Entities;
+using Hearthvale.GameCode.Input;
+using Hearthvale.GameCode.Managers;
+using Hearthvale.GameCode.UI;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
@@ -8,9 +10,6 @@ using MonoGameGum;
 using MonoGameLibrary;
 using MonoGameLibrary.Graphics;
 using MonoGameLibrary.Scenes;
-using System;
-using System.Diagnostics;
-using System.Linq;
 
 namespace Hearthvale.Scenes;
 
@@ -19,7 +18,7 @@ public class GameScene : Scene
     private Vector2 _playerStart;
 
     private const float dialogDistance = 40f;
-    
+
     private bool _isPlayerAttacking;
     public bool IsPlayerAttacking => _isPlayerAttacking;
 
@@ -42,7 +41,7 @@ public class GameScene : Scene
     private Viewport _viewport;
     private Camera2D _camera;
     private InputHandler _inputHandler;
-    
+
 
     // handlers
     private NpcManager _npcManager;
@@ -102,7 +101,7 @@ public class GameScene : Scene
         _scoreTextOrigin = new Vector2(0, scoreTextYOrigin);
         _scoreManager = new ScoreManager(_font, _scoreTextPosition, _scoreTextOrigin);
 
-        
+
 
         _playerStart = _mapManager.GetPlayerSpawnPoint();
 
@@ -135,10 +134,10 @@ public class GameScene : Scene
             () => Core.ChangeScene(new TitleScene())
         );
         _gameInputHandler = new GameInputHandler(
-            _player, 
-            _npcManager, 
-            _uiManager, 
-            () => _uiManager.PauseGame(), 
+            _player,
+            _npcManager,
+            _uiManager,
+            () => _uiManager.PauseGame(),
             () => Core.ChangeScene(new TitleScene()));
     }
 
@@ -155,7 +154,7 @@ public class GameScene : Scene
             return;
 
         _player.Update(gameTime, Keyboard.GetState());
-        _npcManager.Update(gameTime,_player);
+        _npcManager.Update(gameTime, _player);
 
         KeyboardState keyboardState = Keyboard.GetState();
         _isPlayerAttacking = keyboardState.IsKeyDown(Keys.Space);
