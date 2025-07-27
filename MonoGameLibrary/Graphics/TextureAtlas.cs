@@ -17,6 +17,7 @@ public class TextureAtlas
     /// Gets or Sets the source texture represented by this texture atlas.
     /// </summary>
     public Texture2D Texture { get; set; }
+    public bool HasAnimation(string name) => _animations.ContainsKey(name);
 
     // Stores animations added to this atlas.
     private Dictionary<string, Animation> _animations;

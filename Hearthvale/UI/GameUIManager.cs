@@ -1,11 +1,14 @@
 ﻿using Gum.DataTypes;
 using Gum.Managers;
 using Gum.Wireframe;
+using Hearthvale.Scenes;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGameGum;
 using MonoGameGum.Forms.Controls;
 using MonoGameGum.GueDeriving;
+using MonoGameLibrary;
 using MonoGameLibrary.Graphics;
 using System;
 
@@ -43,6 +46,22 @@ namespace Hearthvale.UI
             GumService.Default.Root.Children.Clear();
             CreateDialogPanel();
             CreatePausePanel();
+        }
+        public void PauseGame()
+        {
+            ShowPausePanel();
+        }
+
+        public void ResumeGame(SoundEffect uiSoundEffect)
+        {
+            Core.Audio.PlaySoundEffect(uiSoundEffect);
+            HidePausePanel();
+        }
+
+        public void QuitGame(SoundEffect uiSoundEffect, Action changeSceneCallback)
+        {
+            Core.Audio.PlaySoundEffect(uiSoundEffect);
+            changeSceneCallback?.Invoke();
         }
 
         private void CreatePausePanel()

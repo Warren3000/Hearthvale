@@ -1,7 +1,7 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Hearthvale
+namespace Hearthvale.Managers
 {
     public class ScoreManager
     {

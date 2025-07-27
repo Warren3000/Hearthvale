@@ -3,9 +3,10 @@ using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.Tiled;
 using MonoGame.Extended.Tiled.Renderers;
+using System;
 using System.Linq;
 
-namespace Hearthvale
+namespace Hearthvale.Managers
 {
     public class MapManager
     {
@@ -31,6 +32,18 @@ namespace Hearthvale
         public void Draw(Matrix transform)
         {
             _mapRenderer.Draw(transform);
+        }
+        public Vector2 GetPlayerSpawnPoint()
+        {
+            var entityLayer = GetObjectLayer("Entities");
+            if (entityLayer == null)
+                throw new Exception("Entities layer not found in the map.");
+
+            var playerObject = entityLayer.Objects.FirstOrDefault(obj => obj.Type == "Player");
+            if (playerObject == null)
+                throw new Exception("Player spawn point not found in Entities layer.");
+
+            return new Vector2(playerObject.Position.X, playerObject.Position.Y);
         }
 
         public TiledMapObjectLayer GetObjectLayer(string name)

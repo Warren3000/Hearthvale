@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
+using MonoGameLibrary;
 using MonoGameLibrary.Graphics;
 using System;
 using System.Collections.Generic;
@@ -25,11 +26,22 @@ public class NPC
     private int _currentHealth;
     public int Health => _currentHealth;
     private bool _isDefeated = false;
+
     public bool IsDefeated => _isDefeated;
     private SoundEffect _defeatSound;
+    private float _defeatTimer = 0f;
+    private float _stunTimer = 0f;
+    public bool IsReadyToRemove { get; private set; } = false;
 
+    public string DialogText { get; set; } = "Hello, adventurer!";
 
     private Random _random = new Random();
+
+    // --- Flash effect fields ---
+    private float _flashTimer = 0f;
+    private static readonly Color HitFlashColor = Color.Red;
+    private static readonly float FlashDuration = 0.15f;
+    private Color _originalColor = Color.White;
 
     public Rectangle Bounds => new Rectangle(
         (int)Position.X,
@@ -54,6 +66,7 @@ public class NPC
 
         // Initialize Sprite with the Idle animation
         Sprite = new AnimatedSprite(_animations["Idle"]);
+        _originalColor = Sprite.Color;
 
         SetIdle();
     }
@@ -75,7 +88,6 @@ public class NPC
 
         Sprite.Animation = _animations["Walk"];
         _currentAnimationName = "Walk";
-
     }
 
     private void SetIdle()
@@ -97,6 +109,60 @@ public class NPC
     {
         float elapsed = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
+        // Handle flash effect
+        if (_flashTimer > 0)
+        {
+            _flashTimer -= elapsed;
+            if (_flashTimer <= 0)
+            {
+                Sprite.Color = _originalColor;
+            }
+        }
+
+        if (_isDefeated)
+        {
+            if (_defeatTimer > 0)
+            {
+                _defeatTimer -= elapsed;
+                if (_defeatTimer <= 0)
+                {
+                    IsReadyToRemove = true; // Mark for removal after defeat animation
+                }
+            }
+            Sprite.Update(gameTime);
+            return;
+        }
+
+        if (_stunTimer > 0)
+        {
+            _stunTimer -= elapsed;
+            Position += _velocity * elapsed * 30f; // move with knockback
+            _velocity *= 0.8f; // dampen knockback
+            Sprite.Update(gameTime);
+            // Early return while stunned
+            return;
+        }
+        else if (_currentAnimationName == "Hit")
+        {
+            // After stun, return to idle or walk
+            if (_isIdle)
+            {
+                if (_animations.ContainsKey("Idle") && _animations["Idle"] != null)
+                {
+                    Sprite.Animation = _animations["Idle"];
+                    _currentAnimationName = "Idle";
+                }
+            }
+            else
+            {
+                if (_animations.ContainsKey("Walk") && _animations["Walk"] != null)
+                {
+                    Sprite.Animation = _animations["Walk"];
+                    _currentAnimationName = "Walk";
+                }
+            }
+        }
+
         if (_isIdle)
         {
             _idleTimer -= elapsed;
@@ -104,7 +170,6 @@ public class NPC
             {
                 _isIdle = false;
                 SetRandomDirection();
-                // Optionally switch sprite animation to "walk"
             }
         }
         else
@@ -134,30 +199,55 @@ public class NPC
         Sprite.Draw(spriteBatch, Position);
     }
 
-    public void TakeDamage(int amount)
+    // Call this when hit for a flash effect
+    public void Flash()
+    {
+        Sprite.Color = HitFlashColor;
+        _flashTimer = FlashDuration;
+    }
+
+    public void TakeDamage(int amount, Vector2? knockback = null)
     {
         if (IsDefeated) return;
         _currentHealth -= amount;
+        if (knockback.HasValue)
+            _velocity = knockback.Value;
+        _stunTimer = 0.3f; // 0.3 seconds stun
+
+        Flash(); // Trigger visual feedback
+
+        // Set hit animation if available
+        if (_animations.ContainsKey("Hit") && _animations["Hit"] != null)
+        {
+            Sprite.Animation = _animations["Hit"];
+            _currentAnimationName = "Hit";
+        }
+
         if (_currentHealth <= 0)
         {
             _currentHealth = 0;
+            _isDefeated = true;
             OnDefeated();
         }
     }
+
     private void OnDefeated()
     {
         _isDefeated = true;
 
-        // Example: Play defeat animation if you have one
+        // Check for "Defeated" animation
         if (_animations.ContainsKey("Defeated") && _animations["Defeated"] != null)
         {
             Sprite.Animation = _animations["Defeated"];
             _currentAnimationName = "Defeated";
+            _defeatTimer = 1.0f; // seconds to show defeat animation
+        }
+        else
+        {
+            // No animation: remove immediately
+            IsReadyToRemove = true;
         }
 
-        // Example: Play a sound effect (pseudo-code, depends on your audio system)
-        // Core.Audio.PlaySoundEffect(Core.Content.Load<SoundEffect>("audio/npc_defeat"));
-
-        // Optionally: spawn particles or effects here
+        Core.Audio.PlaySoundEffect(Core.Content.Load<SoundEffect>("audio/npc_defeat"));
     }
 }

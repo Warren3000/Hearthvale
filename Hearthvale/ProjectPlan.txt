@@ -1,5 +1,15 @@
 ﻿Hearthvale Project Plan
 
+
+| Feature Area         | Status      | Notes                                   | 
+|----------------------|-------------|------------------------------------------| 
+| Combat System        | ⏳ Incomplete| Basic attacks and defeat; missing feedback, sound, and reactions | 
+| Weapon Leveling      | ⏳ Pending   | Not started                             | 
+| Dungeon Interactivity| ⏳ Pending   | Not started                             | 
+| City Building        | ⏳ Pending   | Not started                             | 
+| Time/Story           | ⏳ Pending   | Not started                             |
+
+
 1. Combat System
 •	Add player attacks and enemy/NPC reactions.
 •	Implement health, damage, and defeat logic.
@@ -99,3 +109,5 @@ Recommended order:
 •	Track story progress and unlock new areas or features.
 •	Display story objectives or logs in the UI.
 ---
+
+

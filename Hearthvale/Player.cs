@@ -69,7 +69,21 @@ namespace Hearthvale
                 _currentAnimationName = desiredAnimation;
             }
         }
-
+        public void Move(Vector2 movement, Rectangle roomBounds, float spriteWidth, float spriteHeight)
+        {
+            Vector2 newPosition = Position + movement;
+            float clampedX = MathHelper.Clamp(
+                newPosition.X,
+                roomBounds.Left,
+                roomBounds.Right - spriteWidth
+            );
+            float clampedY = MathHelper.Clamp(
+                newPosition.Y,
+                roomBounds.Top,
+                roomBounds.Bottom - spriteHeight
+            );
+            SetPosition(new Vector2(clampedX, clampedY));
+        }
         public void SetPosition(Vector2 pos)
         {
             _position = pos;

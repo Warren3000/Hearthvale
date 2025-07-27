@@ -1,4 +1,5 @@
-﻿using Hearthvale.UI;
+﻿using Hearthvale.Managers;
+using Hearthvale.UI;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
@@ -23,6 +24,8 @@ public class GameScene : Scene
     public bool IsPlayerAttacking => _isPlayerAttacking;
 
     private const float MOVEMENT_SPEED = 1.0f;
+    private const int PlayerAttackPower = 1;
+
     public float MovementSpeed => MOVEMENT_SPEED;
 
     private SoundEffect _bounceSoundEffect;
@@ -48,6 +51,9 @@ public class GameScene : Scene
     private GameInputHandler _gameInputHandler;
     private ScoreManager _scoreManager;
     private MapManager _mapManager;
+    private CombatEffectsManager _combatEffectsManager;
+    private CombatManager _combatManager;
+    private DialogManager _dialogManager;
 
     public override void Initialize()
     {
@@ -55,18 +61,19 @@ public class GameScene : Scene
         Core.ExitOnEscape = false;
 
         _camera = new Camera2D(Core.GraphicsDevice.Viewport);
+        _combatEffectsManager = new CombatEffectsManager(_camera);
         _camera.Zoom = 3.0f;
-        _viewport = Core.GraphicsDevice.Viewport;
-
-        Debug.WriteLine($"Viewport size: {_viewport.Width} x {_viewport.Height}");
-        Debug.WriteLine($"Camera position: {_camera.Position}");
-        Debug.WriteLine($"Zoom: {_camera.Zoom}");
+        //_viewport = Core.GraphicsDevice.Viewport;
 
         // MapManager must be initialized in LoadContent after content is loaded
     }
 
     public override void LoadContent()
     {
+        _camera = new Camera2D(Core.GraphicsDevice.Viewport);
+        _camera.Zoom = 3.0f;
+        _combatEffectsManager = new CombatEffectsManager(_camera);
+
         _atlas = TextureAtlas.FromFile(Core.Content, "images/atlas-definition.xml");
         _heroAtlas = TextureAtlas.FromFile(Core.Content, "images/npc-atlas.xml");
 
@@ -80,8 +87,13 @@ public class GameScene : Scene
         if (entityLayer != null)
         {
             _npcManager.LoadNPCs(entityLayer.Objects);
-        }
 
+            foreach (var npc in _npcManager.Npcs)
+            {
+                npc.DialogText = "I am a friendly NPC!";
+                // You can customize per NPC type or from map data
+            }
+        }
         _bounceSoundEffect = Content.Load<SoundEffect>("audio/bounce");
         _collectSoundEffect = Content.Load<SoundEffect>("audio/collect");
         _uiSoundEffect = Core.Content.Load<SoundEffect>("audio/ui");
@@ -97,22 +109,42 @@ public class GameScene : Scene
         _whitePixel = new Texture2D(Core.GraphicsDevice, 1, 1);
         _whitePixel.SetData(new[] { Color.White });
 
-        FindPlayerSpawnPoint();
+        _playerStart = _mapManager.GetPlayerSpawnPoint();
 
         // Initialize UI manager
-        _uiManager = new GameUIManager(_atlas, _font, _debugFont, HandleResumeButtonClicked, HandleQuitButtonClicked);
+        _uiManager = new GameUIManager(
+            _atlas,
+            _font,
+            _debugFont,
+            () => _uiManager.ResumeGame(_uiSoundEffect),
+            () => _uiManager.QuitGame(_uiSoundEffect, () => Core.ChangeScene(new TitleScene()))
+        );
         _player = new Player(_heroAtlas, _playerStart, MOVEMENT_SPEED);
+        _combatEffectsManager = new CombatEffectsManager(_camera);
+        _dialogManager = new DialogManager(_uiManager, _player, _npcManager, dialogDistance);
+        _combatManager = new CombatManager(
+            _npcManager,
+            _player,
+            _scoreManager,
+            _combatEffectsManager,
+            _bounceSoundEffect,
+            _collectSoundEffect
+        );
 
         _inputHandler = new InputHandler(
             _camera,
             MOVEMENT_SPEED,
-            PauseGame,
-            MoveHero,
+            () => _uiManager.PauseGame(),
+            movement => _player.Move(movement, _mapManager.RoomBounds, _player.Sprite.Width, _player.Sprite.Height),
             () => _npcManager.SpawnNPC("DefaultNPCType", _player.Position),
             () => Core.ChangeScene(new TitleScene())
         );
-
-        _gameInputHandler = new GameInputHandler(_player, _npcManager, _uiManager, PauseGame, () => Core.ChangeScene(new TitleScene()));
+        _gameInputHandler = new GameInputHandler(
+            _player, 
+            _npcManager, 
+            _uiManager, 
+            () => _uiManager.PauseGame(), 
+            () => Core.ChangeScene(new TitleScene()));
     }
 
     public override void Update(GameTime gameTime)
@@ -133,28 +165,15 @@ public class GameScene : Scene
         KeyboardState keyboardState = Keyboard.GetState();
         _isPlayerAttacking = keyboardState.IsKeyDown(Keys.Space);
 
-        if (IsPlayerAttacking)
-        {
-            Rectangle attackArea = _player.GetAttackArea();
-            foreach (var npc in _npcManager.Npcs)
-            {
-                if (npc.Bounds.Intersects(attackArea))
-                {
-                    //npc.TakeDamage(PlayerAttackPower);
-                }
-            }
-        }
+        _combatManager.Update(gameTime);
 
-        foreach (var npc in _npcManager.Npcs)
+        if (IsPlayerAttacking && _combatManager.CanAttack)
         {
-            if (Vector2.Distance(_player.Position, npc.Position) < dialogDistance)
-            {
-                if (InputHandler.IsKeyPressed(Keys.E))
-                {
-                    _uiManager.ShowDialog($"Hello, I am {npc.GetType().Name}!");
-                }
-            }
+            _combatManager.HandlePlayerAttack(PlayerAttackPower);
         }
+        _combatEffectsManager.Update(gameTime);
+
+        _dialogManager.Update();
 
         _mapManager.Update(gameTime);
         UpdateViewport(Core.GraphicsDevice.Viewport);
@@ -205,6 +224,7 @@ public class GameScene : Scene
         _mapManager.Draw(transform);
         _player.Sprite.Draw(Core.SpriteBatch, _player.Position);
         _npcManager.Draw(Core.SpriteBatch);
+        _combatEffectsManager.Draw(Core.SpriteBatch, _font);
 
         Core.SpriteBatch.End();
 
@@ -219,52 +239,4 @@ public class GameScene : Scene
         GumService.Default.Draw();
     }
 
-    private void PauseGame()
-    {
-        _uiManager.ShowPausePanel();
-    }
-
-    private void HandleResumeButtonClicked()
-    {
-        Core.Audio.PlaySoundEffect(_uiSoundEffect);
-        _uiManager.HidePausePanel();
-    }
-
-    private void HandleQuitButtonClicked()
-    {
-        Core.Audio.PlaySoundEffect(_uiSoundEffect);
-        Core.ChangeScene(new TitleScene());
-    }
-
-    private void MoveHero(Vector2 movement)
-    {
-        Vector2 newPosition = _player.Position + movement;
-
-        // Clamp to room bounds
-        float clampedX = MathHelper.Clamp(
-            newPosition.X,
-            _mapManager.RoomBounds.Left,
-            _mapManager.RoomBounds.Right - _player.Sprite.Width
-        );
-        float clampedY = MathHelper.Clamp(
-            newPosition.Y,
-            _mapManager.RoomBounds.Top,
-            _mapManager.RoomBounds.Bottom - _player.Sprite.Height
-        );
-
-        _player.SetPosition(new Vector2(clampedX, clampedY));
-    }
-
-    private void FindPlayerSpawnPoint()
-    {
-        var entityLayer = _mapManager.GetObjectLayer("Entities");
-        if (entityLayer == null)
-            throw new Exception("Entities layer not found in the map.");
-
-        var playerObject = entityLayer.Objects.FirstOrDefault(obj => obj.Type == "Player");
-        if (playerObject == null)
-            throw new Exception("Player spawn point not found in Entities layer.");
-
-        _playerStart = new Vector2(playerObject.Position.X, playerObject.Position.Y);
-    }
 }

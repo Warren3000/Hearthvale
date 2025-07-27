@@ -7,7 +7,7 @@ using MonoGameLibrary.Graphics;
 using System.Collections.Generic;
 
 
-namespace Hearthvale.Scenes
+namespace Hearthvale.Managers
 {
     public class NpcManager
     {
@@ -21,7 +21,6 @@ namespace Hearthvale.Scenes
             _heroAtlas = heroAtlas;
             _bounds = bounds;
         }
-
         public void LoadNPCs(IEnumerable<TiledMapObject> npcObjects)
         {
             foreach (var obj in npcObjects)
@@ -34,7 +33,6 @@ namespace Hearthvale.Scenes
                 }
             }
         }
-
         public void SpawnNPC(string npcType, Vector2 position)
         {
             string animationPrefix = npcType switch
@@ -47,30 +45,30 @@ namespace Hearthvale.Scenes
             var animations = new Dictionary<string, Animation>
             {
                 ["Idle"] = _heroAtlas.GetAnimation($"{animationPrefix}_Idle"),
-                ["Walk"] = _heroAtlas.GetAnimation($"{animationPrefix}_Walk"),
-                //["Defeated"] = _heroAtlas.GetAnimation($"{animationPrefix}_Defeated")
+                ["Walk"] = _heroAtlas.GetAnimation($"{animationPrefix}_Walk")
             };
+
+            // Only add "Defeated" if it exists in the atlas
+            string defeatedKey = $"{animationPrefix}_Defeated";
+            if (_heroAtlas.HasAnimation(defeatedKey))
+            {
+                animations["Defeated"] = _heroAtlas.GetAnimation(defeatedKey);
+            }
+
             SoundEffect defeatSound = Core.Content.Load<SoundEffect>("audio/npc_defeat");
             NPC npc = new NPC(animations, position, _bounds, defeatSound);
 
-            // Optional: Default facing direction can be set here if needed
             npc.FacingRight = false;
-
             _npcs.Add(npc);
         }
-
         public void Update(GameTime gameTime)
         {
-            // Update all NPCs
             foreach (var npc in _npcs)
-            {
                 npc.Update(gameTime);
-            }
 
-            // Remove defeated NPCs
-            _npcs.RemoveAll(npc => npc.IsDefeated);
+            // Remove NPCs that are ready to be removed (e.g., after defeat animation)
+            _npcs.RemoveAll(npc => npc.IsReadyToRemove);
         }
-
         public void Draw(SpriteBatch spriteBatch)
         {
             foreach (var npc in _npcs)

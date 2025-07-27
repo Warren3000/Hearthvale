@@ -1,4 +1,4 @@
-﻿using Hearthvale.Scenes;
+﻿using Hearthvale.Managers;
 using Hearthvale.UI;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
