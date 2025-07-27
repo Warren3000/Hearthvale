@@ -77,6 +77,7 @@ public class GameScene : Scene
 
         // Use MapManager for bounds and NPCs
         _npcManager = new NpcManager(_heroAtlas, _mapManager.RoomBounds);
+        _npcManager.SpawnAllNpcTypesTest();
 
         var entityLayer = _mapManager.GetObjectLayer("Entities");
         if (entityLayer != null)
@@ -129,7 +130,7 @@ public class GameScene : Scene
             _camera,
             MOVEMENT_SPEED,
             () => _uiManager.PauseGame(),
-            movement => _player.Move(movement, _mapManager.RoomBounds, _player.Sprite.Width, _player.Sprite.Height),
+            movement => _player.Move(movement, _mapManager.RoomBounds, _player.Sprite.Width, _player.Sprite.Height, _npcManager.Npcs),
             () => _npcManager.SpawnNPC("DefaultNPCType", _player.Position),
             () => Core.ChangeScene(new TitleScene())
         );
@@ -154,7 +155,7 @@ public class GameScene : Scene
             return;
 
         _player.Update(gameTime, Keyboard.GetState());
-        _npcManager.Update(gameTime);
+        _npcManager.Update(gameTime,_player);
 
         KeyboardState keyboardState = Keyboard.GetState();
         _isPlayerAttacking = keyboardState.IsKeyDown(Keys.Space);

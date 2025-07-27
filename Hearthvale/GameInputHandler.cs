@@ -12,6 +12,7 @@ namespace Hearthvale
         private readonly GameUIManager _uiManager;
         private readonly Action PauseGame;
         private readonly Action QuitGame;
+        private KeyboardState _previousKeyboard;
 
         public GameInputHandler(Player player, NpcManager npcManager, GameUIManager uiManager, Action pauseGame, Action quitGame)
         {
@@ -34,8 +35,13 @@ namespace Hearthvale
             if (keyboard.IsKeyDown(Keys.F10))
                 QuitGame?.Invoke();
 
-            // Player attack
-            _player.IsAttacking = keyboard.IsKeyDown(Keys.Space);
+            //player attack
+            // Attack: only trigger on key down event
+            if (keyboard.IsKeyDown(Keys.Space) && !_previousKeyboard.IsKeyDown(Keys.Space) && !_player.IsAttacking)
+            {
+                _player.StartAttack();
+            }
+            _previousKeyboard = keyboard;
 
             // Interact with NPCs
             if (keyboard.IsKeyDown(Keys.E))

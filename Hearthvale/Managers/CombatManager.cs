@@ -44,9 +44,10 @@ public class CombatManager
 
         foreach (var npc in _npcManager.Npcs)
         {
-            if (!npc.IsDefeated && npc.Bounds.Intersects(_player.Bounds))
+            if (!npc.IsDefeated && npc.Bounds.Intersects(_player.Bounds) && npc.CanAttack)
             {
-                TryDamagePlayer(1); // or npc.AttackPower
+                TryDamagePlayer(npc.AttackPower);
+                npc.ResetAttackTimer();
             }
         }
     }
@@ -71,7 +72,7 @@ public class CombatManager
             if (npc.Bounds.Intersects(attackArea))
             {
                 Vector2 knockback = Vector2.Normalize(npc.Position - _player.Position) * 2f;
-                npc.TakeDamage(playerAttackPower, knockback);
+                npc.TakeDamage(_player.Weapon.Damage, knockback);
 
                 _hitSound?.Play();
                 if (npc.IsDefeated)

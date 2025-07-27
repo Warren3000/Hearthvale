@@ -39,14 +39,29 @@ namespace Hearthvale.Managers
             {
                 "merchant" => "Merchant",
                 "mage" => "Mage",
+                "archer" => "Archer",
+                "blacksmith" => "Blacksmith",
+                "knight" => "Knight",
+                "heavyknight" => "HeavyKnight",
+                "fatnun" => "FatNun",
                 _ => "Merchant"
             };
 
-            var animations = new Dictionary<string, Animation>
+            var animations = new Dictionary<string, Animation>();
+
+            // Check for combined Idle+Walk animation first
+            string combinedKey = $"{animationPrefix}_Idle+Walk";
+            if (_heroAtlas.HasAnimation(combinedKey))
             {
-                ["Idle"] = _heroAtlas.GetAnimation($"{animationPrefix}_Idle"),
-                ["Walk"] = _heroAtlas.GetAnimation($"{animationPrefix}_Walk")
-            };
+                var combinedAnim = _heroAtlas.GetAnimation(combinedKey);
+                animations["Idle"] = combinedAnim;
+                animations["Walk"] = combinedAnim;
+            }
+            else
+            {
+                animations["Idle"] = _heroAtlas.GetAnimation($"{animationPrefix}_Idle");
+                animations["Walk"] = _heroAtlas.GetAnimation($"{animationPrefix}_Walk");
+            }
 
             // Only add "Defeated" if it exists in the atlas
             string defeatedKey = $"{animationPrefix}_Defeated";
@@ -61,10 +76,10 @@ namespace Hearthvale.Managers
             npc.FacingRight = false;
             _npcs.Add(npc);
         }
-        public void Update(GameTime gameTime)
+        public void Update(GameTime gameTime, Player player)
         {
             foreach (var npc in _npcs)
-                npc.Update(gameTime);
+                npc.Update(gameTime, _npcs, player);
 
             // Remove NPCs that are ready to be removed (e.g., after defeat animation)
             _npcs.RemoveAll(npc => npc.IsReadyToRemove);
@@ -76,6 +91,30 @@ namespace Hearthvale.Managers
                 npc.Draw(spriteBatch);
             }
         }
+        public void SpawnAllNpcTypesTest()
+        {
+            // List of all supported NPC types (add more as needed)
+            var npcTypes = new[]
+            {
+                "merchant",
+                "mage",
+                "archer",
+                "blacksmith",
+                "knight",
+                "heavyknight",
+                "fatnun"
+            };
 
+            // Spread them horizontally across the map, near the top
+            int startX = _bounds.Left + 32;
+            int y = _bounds.Top + 32;
+            int spacing = 64;
+
+            for (int i = 0; i < npcTypes.Length; i++)
+            {
+                Vector2 pos = new Vector2(startX + i * spacing, y);
+                SpawnNPC(npcTypes[i], pos);
+            }
+        }
     }
 }

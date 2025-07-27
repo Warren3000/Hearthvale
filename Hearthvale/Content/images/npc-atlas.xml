@@ -2,28 +2,74 @@
   <Texture>images/NPCSpriteSheet</Texture>
 
   <Regions>
+    <!--Merchant-->
     <Region name="Merchant_Idle_1" x="0" y="0" width="32" height="32" />
     <Region name="Merchant_Idle_2" x="32" y="0" width="32" height="32" />
     <Region name="Merchant_Idle_3" x="64" y="0" width="32" height="32" />
     <Region name="Merchant_Idle_4" x="96" y="0" width="32" height="32" />
-
     <Region name="Merchant_Walk_1" x="0" y="32" width="32" height="32" />
     <Region name="Merchant_Walk_2" x="32" y="32" width="32" height="32" />
     <Region name="Merchant_Walk_3" x="64" y="32" width="32" height="32" />
     <Region name="Merchant_Walk_4" x="96" y="32" width="32" height="32" />
-
+    <!--Mage-->
     <Region name="Mage_Walk_1" x="0" y="64" width="32" height="32" />
     <Region name="Mage_Walk_2" x="32" y="64" width="32" height="32" />
     <Region name="Mage_Walk_3" x="64" y="64" width="32" height="32" />
     <Region name="Mage_Walk_4" x="96" y="64" width="32" height="32" />
-
     <Region name="Mage_Idle_1" x="0" y="96" width="32" height="32" />
     <Region name="Mage_Idle_2" x="32" y="96" width="32" height="32" />
     <Region name="Mage_Idle_3" x="64" y="96" width="32" height="32" />
     <Region name="Mage_Idle_4" x="96" y="96" width="32" height="32" />
-    
+    <!--Blacksmith-->
+    <Region name="Blacksmith_Walk_1" x="0" y="128" width="32" height="32" />
+    <Region name="Blacksmith_Walk_2" x="32" y="128" width="32" height="32" />
+    <Region name="Blacksmith_Walk_3" x="64" y="128" width="32" height="32" />
+    <Region name="Blacksmith_Walk_4" x="96" y="128" width="32" height="32" />
+    <Region name="Blacksmith_Idle_1" x="0" y="160" width="32" height="32" />
+    <Region name="Blacksmith_Idle_2" x="32" y="160" width="32" height="32" />
+    <Region name="Blacksmith_Idle_3" x="64" y="160" width="32" height="32" />
+    <Region name="Blacksmith_Idle_4" x="96" y="160" width="32" height="32" />
+    <!--Archer-->
+    <Region name="Archer_Walk_1" x="0" y="192" width="32" height="32" />
+    <Region name="Archer_Walk_2" x="32" y="192" width="32" height="32" />
+    <Region name="Archer_Walk_3" x="64" y="192" width="32" height="32" />
+    <Region name="Archer_Walk_4" x="96" y="192" width="32" height="32" />
+    <Region name="Archer_Idle_1" x="0" y="224" width="32" height="32" />
+    <Region name="Archer_Idle_2" x="32" y="224" width="32" height="32" />
+    <Region name="Archer_Idle_3" x="64" y="224" width="32" height="32" />
+    <Region name="Archer_Idle_4" x="96" y="224" width="32" height="32" />
+    <!--Magic Shopkeeper-->
+    <Region name="Mage_Idle+Walk_1" x="0" y="256" width="32" height="32" />
+    <Region name="Mage_Idle+Walk_2" x="32" y="256" width="32" height="32" />
+    <Region name="Mage_Idle+Walk_3" x="64" y="256" width="32" height="32" />
+    <Region name="Mage_Idle+Walk_4" x="96" y="256" width="32" height="32" />
+    <!--Knight-->
+    <Region name="Knight_Walk_1" x="0" y="288" width="32" height="32" />
+    <Region name="Knight_Walk_2" x="32" y="288" width="32" height="32" />
+    <Region name="Knight_Walk_3" x="64" y="288" width="32" height="32" />
+    <Region name="Knight_Walk_4" x="96" y="288" width="32" height="32" />
+    <Region name="Knight_Idle_1" x="0" y="320" width="32" height="32" />
+    <Region name="Knight_Idle_2" x="32" y="320" width="32" height="32" />
+    <Region name="Knight_Idle_3" x="64" y="320" width="32" height="32" />
+    <Region name="Knight_Idle_4" x="96" y="320" width="32" height="32" />
+    <!--HeavyKnight-->
+    <Region name="HeavyKnight_Walk_1" x="0" y="352" width="32" height="32" />
+    <Region name="HeavyKnight_Walk_2" x="32" y="352" width="32" height="32" />
+    <Region name="HeavyKnight_Walk_3" x="64" y="352" width="32" height="32" />
+    <Region name="HeavyKnight_Walk_4" x="96" y="352" width="32" height="32" />
+    <Region name="HeavyKnight_Idle_1" x="0" y="384" width="32" height="32" />
+    <Region name="HeavyKnight_Idle_2" x="32" y="384" width="32" height="32" />
+    <Region name="HeavyKnight_Idle_3" x="64" y="384" width="32" height="32" />
+    <Region name="HeavyKnight_Idle_4" x="96" y="384" width="32" height="32" />
+    <!--FatNun-->
+    <Region name="FatNun_Idle+Walk_1" x="0" y="416" width="32" height="32" />
+    <Region name="FatNun_Idle+Walk_2" x="32" y="416" width="32" height="32" />
+    <Region name="FatNune_Idle+Walk_3" x="64" y="416" width="32" height="32" />
+    <Region name="FatNun_Idle+Walk_4" x="96" y="416" width="32" height="32" />
   </Regions>
+
   <Animations>
+    <!-- Merchant -->
     <Animation name="Merchant_Idle" delay="120">
       <Frame region="Merchant_Idle_1" />
       <Frame region="Merchant_Idle_2" />
@@ -36,17 +82,84 @@
       <Frame region="Merchant_Walk_3" />
       <Frame region="Merchant_Walk_4" />
     </Animation>
+    <!-- Mage -->
+    <Animation name="Mage_Idle" delay="120">
+      <Frame region="Mage_Idle_1" />
+      <Frame region="Mage_Idle_2" />
+      <Frame region="Mage_Idle_3" />
+      <Frame region="Mage_Idle_4" />
+    </Animation>
     <Animation name="Mage_Walk" delay="120">
       <Frame region="Mage_Walk_1" />
       <Frame region="Mage_Walk_2" />
       <Frame region="Mage_Walk_3" />
       <Frame region="Mage_Walk_4" />
     </Animation>
-    <Animation name="Mage_Idle" delay="120">
-      <Frame region="Mage_Idle_1" />
-      <Frame region="Mage_Idle_2" />
-      <Frame region="Mage_Idle_3" />
-      <Frame region="Mage_Idle_4" />
+    <!-- Blacksmith -->
+    <Animation name="Blacksmith_Idle" delay="120">
+      <Frame region="Blacksmith_Idle_1" />
+      <Frame region="Blacksmith_Idle_2" />
+      <Frame region="Blacksmith_Idle_3" />
+      <Frame region="Blacksmith_Idle_4" />
+    </Animation>
+    <Animation name="Blacksmith_Walk" delay="120">
+      <Frame region="Blacksmith_Walk_1" />
+      <Frame region="Blacksmith_Walk_2" />
+      <Frame region="Blacksmith_Walk_3" />
+      <Frame region="Blacksmith_Walk_4" />
+    </Animation>
+    <!-- Archer -->
+    <Animation name="Archer_Idle" delay="120">
+      <Frame region="Archer_Idle_1" />
+      <Frame region="Archer_Idle_2" />
+      <Frame region="Archer_Idle_3" />
+      <Frame region="Archer_Idle_4" />
+    </Animation>
+    <Animation name="Archer_Walk" delay="120">
+      <Frame region="Archer_Walk_1" />
+      <Frame region="Archer_Walk_2" />
+      <Frame region="Archer_Walk_3" />
+      <Frame region="Archer_Walk_4" />
+    </Animation>
+    <!-- Magic Shopkeeper (Mage_Idle+Walk) -->
+    <Animation name="Mage_Idle+Walk" delay="120">
+      <Frame region="Mage_Idle+Walk_1" />
+      <Frame region="Mage_Idle+Walk_2" />
+      <Frame region="Mage_Idle+Walk_3" />
+      <Frame region="Mage_Idle+Walk_4" />
+    </Animation>
+    <!-- Knight -->
+    <Animation name="Knight_Idle" delay="120">
+      <Frame region="Knight_Idle_1" />
+      <Frame region="Knight_Idle_2" />
+      <Frame region="Knight_Idle_3" />
+      <Frame region="Knight_Idle_4" />
+    </Animation>
+    <Animation name="Knight_Walk" delay="120">
+      <Frame region="Knight_Walk_1" />
+      <Frame region="Knight_Walk_2" />
+      <Frame region="Knight_Walk_3" />
+      <Frame region="Knight_Walk_4" />
+    </Animation>
+    <!-- HeavyKnight -->
+    <Animation name="HeavyKnight_Idle" delay="120">
+      <Frame region="HeavyKnight_Idle_1" />
+      <Frame region="HeavyKnight_Idle_2" />
+      <Frame region="HeavyKnight_Idle_3" />
+      <Frame region="HeavyKnight_Idle_4" />
+    </Animation>
+    <Animation name="HeavyKnight_Walk" delay="120">
+      <Frame region="HeavyKnight_Walk_1" />
+      <Frame region="HeavyKnight_Walk_2" />
+      <Frame region="HeavyKnight_Walk_3" />
+      <Frame region="HeavyKnight_Walk_4" />
+    </Animation>
+    <!-- FatNun -->
+    <Animation name="FatNun_Idle+Walk" delay="120">
+      <Frame region="FatNun_Idle+Walk_1" />
+      <Frame region="FatNun_Idle+Walk_2" />
+      <Frame region="FatNune_Idle+Walk_3" />
+      <Frame region="FatNun_Idle+Walk_4" />
     </Animation>
   </Animations>
 </TextureAtlas>

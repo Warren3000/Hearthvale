@@ -1,40 +1,56 @@
 ﻿Hearthvale Project Plan
 
-
 | Feature Area         | Status      | Notes                                   | 
 |----------------------|-------------|------------------------------------------| 
-| Combat System        | ⏳ Incomplete| Basic attacks and defeat; missing feedback, sound, and reactions | 
+| Combat System        | ⏳ Incomplete| Basic attacks and defeat; missing feedback, sound, and reactions. Player and NPC health implemented. Player health bar added. | 
 | Weapon Leveling      | ⏳ Pending   | Not started                             | 
 | Dungeon Interactivity| ⏳ Pending   | Not started                             | 
 | City Building        | ⏳ Pending   | Not started                             | 
 | Time/Story           | ⏳ Pending   | Not started                             |
 
-
 1. Combat System
-•	Add player attacks and enemy/NPC reactions.
-•	Implement health, damage, and defeat logic.
-•	Visual and audio feedback for hits.
+✓ Add player attacks and enemy/NPC reactions.
+✓ Implement health, damage, and defeat logic.
+✓ Visual and audio feedback for hits.
+    ✓ Play hit sound effects when the player or NPC is damaged.
+    ✓ Play defeat sound when an NPC or player is defeated.
+    ✓ Show visual hit effects (e.g., screen shake, damage numbers, flash sprite color) on successful attacks.
+    ✓ Animate NPCs and player when hit (e.g., "Hit" or "Hurt" animation).
+    ✓ Animate NPCs and player on defeat (e.g., "Defeated" animation, fade out, or removal).
+    ✓ Optionally, add knockback or stun effects when hit.
+    ✓ Optionally, add invulnerability visual cues (e.g., blinking) during damage cooldown.
+    ✓ Optionally, add camera shake or UI feedback for critical hits or special events.
+✓ Player health and health bar implemented.
+✓ Player takes damage with cooldown (limited immunity).
+✓ NPCs have health and defeat logic.
+✓ Collision boxes can be visualized for debugging.
+
 2. Weapon Leveling
 •	Track weapon XP and stats.
 •	Allow weapons to gain experience and level up.
 •	Simple UI to show weapon progress.
+
 3. Dungeon Interactivity
 •	Add items to collect (e.g., keys, loot).
 •	Simple puzzles or locked doors.
 •	Enemy types with different behaviors.
+
 4. City Building (Georama) Prototype
 •	Allow the player to place or move objects/buildings in a town area.
 •	Simple UI for selecting and placing objects.
+
 5. Time/Story Progression
 •	Implement a day/night cycle.
 •	Trigger events or dialogue based on time or player actions.
+
 ---
 Recommended order:
-1.	Combat system
+1.	Combat system (player/NPC health, health bar, damage cooldown, feedback)
 2.	Weapon leveling
 3.	Dungeon interactivity
 4.	City building prototype
 5.	Time/story progression
+---
 
 ---
 1.Combat System

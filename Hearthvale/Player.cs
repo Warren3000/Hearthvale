@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGameLibrary.Graphics;
 using System;
+using System.Collections.Generic;
 
 namespace Hearthvale
 {
@@ -19,12 +20,20 @@ namespace Hearthvale
         public Vector2 Position => _position;
         public bool FacingRight => _facingRight;
         public bool IsAttacking { get; set; }
+        private float _attackTimer = 0f;
+        private const float AttackDuration = 0.3f;
 
         private int _maxHealth = 10;
         private int _currentHealth;
         public int MaxHealth => _maxHealth;
         public int CurrentHealth => _currentHealth;
         public bool IsDefeated => _currentHealth <= 0;
+        private Weapon _weapon;
+        public Weapon Weapon
+        {
+            get => _weapon;
+            set => _weapon = value;
+        }
 
         public Rectangle Bounds => new Rectangle(
             (int)Position.X + 8,
@@ -67,6 +76,15 @@ namespace Hearthvale
                 movement.Normalize();
                 _position += movement * MovementSpeed;
             }
+            if (IsAttacking)
+            {
+                _attackTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+                if (_attackTimer <= 0f)
+                {
+                    IsAttacking = false;
+                    UpdateAnimation(keyboard, false); // revert to idle/walk
+                }
+            }
 
             UpdateAnimation(keyboard, movement != Vector2.Zero);
 
@@ -82,14 +100,25 @@ namespace Hearthvale
         }
         private void UpdateAnimation(KeyboardState keyboard, bool moving)
         {
-            string desiredAnimation = moving ? "Mage_Walk" : "Mage_Idle";
+            string desiredAnimation;
+
+            if (IsAttacking)
+            {
+                // Use your attack animation name here
+                desiredAnimation = "Mage_Attack"; // or "Sword_Swing" if you have it
+            }
+            else
+            {
+                desiredAnimation = moving ? "Mage_Walk" : "Mage_Idle";
+            }
+
             if (_currentAnimationName != desiredAnimation)
             {
                 _sprite.Animation = _atlas.GetAnimation(desiredAnimation);
                 _currentAnimationName = desiredAnimation;
             }
         }
-        public void Move(Vector2 movement, Rectangle roomBounds, float spriteWidth, float spriteHeight)
+        public void Move(Vector2 movement, Rectangle roomBounds, float spriteWidth, float spriteHeight, IEnumerable<NPC> npcs)
         {
             Vector2 newPosition = Position + movement;
             float clampedX = MathHelper.Clamp(
@@ -102,7 +131,32 @@ namespace Hearthvale
                 roomBounds.Top,
                 roomBounds.Bottom - spriteHeight
             );
-            SetPosition(new Vector2(clampedX, clampedY));
+            Vector2 candidate = new Vector2(clampedX, clampedY);
+
+            // Check collision with NPCs
+            Rectangle candidateBounds = new Rectangle(
+                (int)candidate.X + 8,
+                (int)candidate.Y + 16,
+                (int)Sprite.Width / 2,
+                (int)Sprite.Height / 2
+            );
+            foreach (var npc in npcs)
+            {
+                if (candidateBounds.Intersects(npc.Bounds))
+                    return; // Block movement if collision
+            }
+
+            SetPosition(candidate);
+        }
+        public void StartAttack()
+        {
+            if (_attackTimer <= 0f)
+            {
+                IsAttacking = true;
+                _attackTimer = AttackDuration;
+                _sprite.Animation = _atlas.GetAnimation("Mage_Attack"); // or "Sword_Swing"
+                _currentAnimationName = "Mage_Attack";
+            }
         }
         public void TakeDamage(int amount)
         {
