@@ -1,0 +1,23 @@
+﻿<TextureAtlas>
+  <Texture>images/NPCSpriteSheet</Texture>
+  <Regions>
+    <!--Dagger-->
+    <Region name="Dagger" x="0" y="0" width="64" height="64" />
+    <!--Steel Dagger-->
+    <Region name="Dagger-Steel" x="0" y="64" width="64" height="64" />
+    <!--Copper Dagger-->
+    <Region name="Dagger-Copper" x="0" y="128" width="64" height="64" />
+    <!--Cold Dagger-->
+    <Region name="Dagger-Cold" x="0" y="192" width="64" height="64" />
+    <!--Obsidian Dagger-->
+    <Region name="Dagger-Obsidian" x="0" y="256" width="64" height="64" />
+    <!--Holy Dagger-->
+    <Region name="Dagger-Holy" x="0" y="320" width="64" height="64" />
+    <!--Gold Dagger-->
+    <Region name="Dagger-Gold" x="0" y="384" width="64" height="64" />
+    <!--Fire Dagger-->
+    <Region name="Dagger-Fire" x="64" y="0" width="64" height="64" />
+    <!--Fire Dagger-->
+    <Region name="Dagger-Dark" x="64" y="64" width="64" height="64" />
+  </Regions>
+</TextureAtlas>

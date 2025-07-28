@@ -23,17 +23,17 @@
     <None Remove="Map\**" />
   </ItemGroup>
   <ItemGroup>
-    <None Remove="GameCode\Tilesets\DampDungeons\Tiles\DungeonDecorations.png" />
-    <None Remove="GameCode\Tilesets\DampDungeons\Tiles\Dungeon_Autotiles.png" />
-    <None Remove="GameCode\Tilesets\DampDungeons\Tiles\Dungeon_WallsAndFloors.png" />
-    <None Remove="GameCode\Tilesets\DampDungeons\Tiles\Dungeon_WaterAnimation.png" />
+    <None Remove="Content\Tilesets\DampDungeons\Tiles\DungeonDecorations.png" />
+    <None Remove="Content\Tilesets\DampDungeons\Tiles\Dungeon_Autotiles.png" />
+    <None Remove="Content\Tilesets\DampDungeons\Tiles\Dungeon_WallsAndFloors.png" />
+    <None Remove="Content\Tilesets\DampDungeons\Tiles\Dungeon_WaterAnimation.png" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="GameCode\Tilesets\DampDungeons\Tiles\DungeonDecorations.png" />
-    <Content Include="GameCode\Tilesets\DampDungeons\Tiles\Dungeon_Autotiles.png" />
-    <Content Include="GameCode\Tilesets\DampDungeons\Tiles\Dungeon.tsx" />
-    <Content Include="GameCode\Tilesets\DampDungeons\Tiles\Dungeon_WallsAndFloors.png" />
-    <Content Include="GameCode\Tilesets\DampDungeons\Tiles\Dungeon_WaterAnimation.png" />
+    <Content Include="Content\Tilesets\DampDungeons\Tiles\DungeonDecorations.png" />
+    <Content Include="Content\Tilesets\DampDungeons\Tiles\Dungeon_Autotiles.png" />
+    <Content Include="Content\Tilesets\DampDungeons\Tiles\Dungeon.tsx" />
+    <Content Include="Content\Tilesets\DampDungeons\Tiles\Dungeon_WallsAndFloors.png" />
+    <Content Include="Content\Tilesets\DampDungeons\Tiles\Dungeon_WaterAnimation.png" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Gum.MonoGame" Version="2025.5.1.1" />
