@@ -53,77 +53,134 @@ Recommended order:
 ---
 
 ---
-1.Combat System
-1. Player Attacks
-•	Decide on attack type (melee, ranged, or both).
-•	Add input handling for attack actions (e.g., key press or button).
-2. NPC/Enemy Health
-•	Add a Health property to your NPC class.
-•	Implement logic to reduce health when hit.
-3. Damage & Defeat
-•	Add a method to apply damage to NPCs.
-•	Handle NPC defeat (e.g., play animation, remove from scene).
-4. Collision/Hit Detection
-•	Detect when an attack hits an NPC (simple rectangle or circle overlap to start).
-5. Feedback
-•	Play sound and show visual effect on hit.
+### Milestone 1: Combat System v1 (3–4 weeks)
+**Goal:** Implement basic combat framework for player and NPCs.
+**Tasks:**
+- Player attack input & animation
+- NPC health, basic damage logic
+- Enemy defeat logic (death state, respawn, remove)
+- Player health bar UI
+- Basic feedback: hit animation, simple sound effect
+- Simple enemy AI (move towards player, basic attack)
+- Test and refine core loop
+
+**Dependencies:** None
 
 ---
-2. Weapon Leveling
-1.	Weapon Experience
-•	Define a Weapon class with XP and level properties.
-•	Grant XP to weapons when defeating enemies.
-2.	Weapon Stats & Growth
-•	Increase weapon stats (damage, speed, etc.) as they level up.
-•	Allow for branching upgrade paths or evolution.
-3.	Weapon UI
-•	Display weapon XP, level, and stats in the UI.
-•	Show progress toward next level.
-4.	Weapon Management
-•	Allow equipping, unequipping, and switching weapons.
-•	Support for multiple weapon types.
+
+### Milestone 2: Weapon Leveling v1 (2 weeks)
+**Goal:** Add weapon experience and progression.
+**Tasks:**
+- Weapon XP tracking (per weapon or globally)
+- Level-up logic (stats, abilities)
+- UI for weapon progress & upgrades
+- Basic upgrade options (attack speed, power)
+- Save/load weapon state
+
+**Dependencies:** Combat System v1
+
 ---
-3. Dungeon Interactivity
-1.	Collectible Items
-•	Place items (keys, loot, health) in the dungeon.
-•	Allow the player to pick up and use items.
-2.	Puzzles & Obstacles
-•	Add simple puzzles (e.g., switches, locked doors).
-•	Require items or actions to progress.
-3.	Enemy Variety
-•	Implement different enemy types with unique behaviors.
-•	Add patrols, ranged attacks, or special abilities.
-4.	Environmental Hazards
-•	Include traps or hazards (spikes, pits, etc.).
-•	Provide visual cues and feedback.
+
+### Milestone 3: Dungeon Interactivity v1 (5–6 weeks)
+**Goal:** Make dungeons engaging with puzzles, hazards, and loot.
+**Tasks:**
+- Collectible items (keys, loot, health pickups)
+- Puzzle mechanics (switches, locked doors)
+- Hazards (traps, spikes, environmental dangers)
+- Enemy variety (different behaviors)
+- Dungeon map UI
+- Dungeon entry/exit system
+- Playtest dungeon flow
+
+**Dependencies:** Combat System v1
+
 ---
-4. City Building (Georama) Prototype
-1.	Placement System
-•	Allow the player to select and place buildings/objects in a town area.
-•	Show placement preview and validate positions.
-2.	Object Management
-•	Enable moving, rotating, or removing placed objects.
-•	Track placed objects for town goals.
-3.	UI for Building
-•	Create a simple menu for selecting objects to place.
-•	Display requirements or costs for placement.
-4.	Town Progression
-•	Track town goals or population.
-•	Unlock new objects as the town grows.
+
+### Milestone 4: Combat System v2 (2–3 weeks)
+**Goal:** Enhance and polish combat using dungeon feedback.
+**Tasks:**
+- Advanced enemy AI (patterns, evasion, special moves)
+- Combat effects (camera shake, particle effects, improved SFX)
+- Defensive mechanics (blocking, dodging, invulnerability frames)
+- Add new attack types (charged, combo, ranged/magic)
+- Balance weapons and enemy difficulty
+- Integrate dungeon hazards into combat
+- Polish combat UI
+
+**Dependencies:** Dungeon Interactivity v1
+
 ---
-5. Time/Story Progression
-1.	Day/Night Cycle
-•	Implement a timer for day/night transitions.
-•	Change lighting, music, or NPC behavior based on time.
-2.	Scheduled Events
-•	Trigger story events or cutscenes at certain times or after actions.
-•	Allow for recurring or one-time events.
-3.	NPC Schedules
-•	Give NPCs routines that change with the time of day.
-•	Enable dialogue or quests that depend on time.
-4.	Story Advancement
-•	Track story progress and unlock new areas or features.
-•	Display story objectives or logs in the UI.
+
+### Milestone 5: City Building Prototype (3–4 weeks)
+**Goal:** Implement basic city/town management.
+**Tasks:**
+- Town map setup (define boundaries, base tiles)
+- Placement/movement of buildings and objects
+- UI for object selection/placement
+- Simple town progress tracking (population, unlocked buildings)
+- Save/load town state
+- Test interaction and flow
+
+**Dependencies:** Combat System v2 (optional), can run in parallel if needed
+
 ---
+
+### Milestone 6: Time/Story Progression v1 (3–4 weeks)
+**Goal:** Add world time and trigger basic story events.
+**Tasks:**
+- Day/night cycle (visuals, time logic)
+- Event system (trigger events based on time/player actions)
+- NPC schedules/behaviors
+- Story state tracking (flags, progression)
+- UI for objectives/quests
+- Playtest for pacing and triggers
+
+**Dependencies:** Dungeon Interactivity v1, City Building Prototype
+
+---
+
+### Milestone 7: Alpha Release (1 week)
+**Goal:** Integrate systems, fix critical bugs, internal playtest.
+**Tasks:**
+- Merge all features
+- Major bug fixes
+- Internal playtesting
+- Document known issues
+
+**Dependencies:** All previous milestones
+
+---
+
+### Milestone 8: Beta Release (2 weeks)
+**Goal:** Polish, balance, and finalize for external playtesting.
+**Tasks:**
+- Polish UI/UX, sound, and visuals
+- Refine balancing based on feedback
+- Add accessibility options if possible
+- External playtest (friends, community)
+- Final bug fixing
+- Prepare launch materials
+
+**Dependencies:** Alpha Release
+
+---
+
+## 4. Additional Recommendations
+- **Parallel Tasks:** Art/music/story assets, documentation, and marketing can progress alongside coding.
+- **Documentation:** Maintain design docs and changelogs for each system.
+- **Playtesting:** Schedule periodic playtests after major milestones.
+
+Timeline
+---
+| Milestone                  | Est. Duration      | Start Date  |   End Date   |
+|----------------------------|--------------------|-------------|--------------|
+| Combat System v1           | 4–5 weeks          | 07/01/2025  |  08/01/2025  |
+| Weapon Leveling v1         | 2.5–3 weeks        | 08/02/2025  |  08/21/2025  |
+| Dungeon Interactivity v1   | 6–7 weeks          | 08/22/2025  |  10/10/2025  |
+| Combat System v2           | 2.5–3.5 weeks      | 10/11/2025  |  11/03/2025  |
+| City Building Prototype    | 4–5 weeks          | 11/04/2025  |  12/08/2025  |
+| Time/Story Progression v1  | 4–5 weeks          | 12/09/2025  |  01/12/2026  |
+| Alpha Release              | 1 week             | 01/13/2026  |  01/19/2026  |
+| Beta Release               | 2.5 weeks          | 01/20/2026  |  02/06/2026  |
 
 
