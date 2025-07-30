@@ -1,164 +1,143 @@
 ﻿Hearthvale Project Plan
 
-| Feature Area         | Status       | Notes                                                                 | 
-|----------------------|--------------|-----------------------------------------------------------------------| 
-| Combat System        | ⏳ Incomplete| Refactored: Combat and movement logic now use controllers.            |
-|                      |              | Player attacks, NPC reactions, health, and defeat logic implemented.  |
-|                      |              | CombatEffectsManager integrated for hit effects and damage text.      |
-|                      |              | Player health bar and collision box visualization present.            |
-|                      |              | Sound and advanced feedback partially implemented.                    | 
-| Weapon Leveling      | ⏳ Pending   | Weapon class exists. No XP, leveling, or UI yet.                      | 
-| Dungeon Interactivity| ⏳ Pending   | Not started                                                           | 
-| City Building        | ⏳ Pending   | Not started                                                           | 
-| Time/Story           | ⏳ Pending   | Not started                                                           |
-
-1. Combat System
-Status: ⏳ Incomplete
-Progress:
-•	Implemented:
-    •	Player and NPC health, damage, and defeat logic.
-    •	Player health bar and cooldown (immunity) logic.
-    •	Combat and movement refactored into PlayerCombatController and PlayerMovementController.
-    •	Visual feedback: hit effects, damage text, defeat animations, collision box visualization.
-    •	Sound effects for hit and defeat events.
-    •	Game loop updated: Player receives CombatEffectsManager and NPC list for attack resolution.
-•	Missing/To Do:
-    •	Advanced feedback (camera shake for critical hits, invulnerability cues, etc.).
-    •	Knockback/stun effects and UI feedback for special events.
-    •	Weapon XP, leveling, and UI.
-    •	Expanded NPC reactions and behaviors.
-
-2. Weapon Leveling
-Status: ⏳ Pending
-Progress:
-•	Weapon class exists.
-•	No weapon XP, leveling, or UI for weapon progress yet.
-
-3. Dungeon Interactivity
-Status: ⏳ Pending
-Progress:
-•	Not started.
-
-4. City Building (Georama) Prototype
-Status: ⏳ Pending
-Progress:
-•	Not started.
-
-5. Time/Story Progression
-Status: ⏳ Pending
-Progress:
-•	Not started.
-•	No day/night cycle, scheduled events, or NPC routines.
----
-Summary of Solution Progress
-•	Combat System: Substantially implemented, with core gameplay and feedback present. Some polish and advanced features remain.
-•	Other Features: Weapon leveling, dungeon interactivity, city building, and time/story progression are planned but not yet started in code.
-Next recommended steps:
-•	Finalize and polish combat feedback (visuals, sound, advanced effects).
-•	Begin weapon leveling system (XP, UI, stat growth).
-•	Progress to dungeon interactivity and other features as outlined in your plan.
+| Feature Area                     | Status      | Notes                                           | 
+|----------------------------------|-------------|--------------------------------------------------| 
+| Combat System                    | ⏳ Incomplete| Basic attacks and defeat; missing feedback, sound, and reactions. Player and NPC health implemented. Player health bar added. | 
+| Weapon Leveling                  | ⏳ Pending   | Not started                                     | 
+| Dungeon Interactivity            | ⏳ Pending   | Not started                                     | 
+| City Building                    | ⏳ Pending   | Not started                                     | 
+| Time/Story                       | ⏳ Pending   | Not started                                     |
+| Global Game State & Save/Load    | ⏳ Pending   | Unified save/load for player, town, quests, etc. |
+| Bosses & Advanced AI             | ⏳ Pending   | Unique boss fights and AI behaviors              |
+| Dungeon Secrets & Lore           | ⏳ Pending   | Secret rooms, collectibles, lore                 |
+| Town Events & NPCs               | ⏳ Pending   | Town festivals, NPC recruitment                  |
+| Accessibility & Polish           | ⏳ Pending   | UX, controller support, save/load, etc.          |
+| Launch & Marketing               | ⏳ Pending   | Demo, trailer, Steam integration, etc.           |
 
 ---
-1.Combat System
-1. Player Attacks
-•	Decide on attack type (melee, ranged, or both).
-•	Add input handling for attack actions (e.g., key press or button).
-2. NPC/Enemy Health
-•	Add a Health property to your NPC class.
-•	Implement logic to reduce health when hit.
-3. Damage & Defeat
-•	Add a method to apply damage to NPCs.
-•	Handle NPC defeat (e.g., play animation, remove from scene).
-4. Collision/Hit Detection
-•	Detect when an attack hits an NPC (simple rectangle or circle overlap to start).
-5. Feedback
-•	Play sound and show visual effect on hit.
+
+## Milestone Details
+
+### Milestone 1: Combat System v1 (6–7 weeks)
+- Implement player and NPC health/damage systems
+- Add health bar UI for player
+- Basic attack mechanics (melee, ranged if possible)
+- Damage feedback (visual/sound)
+- Basic enemy defeat logic
+
+### Milestone 2: Weapon Leveling v1 (4 weeks)
+- Weapon XP and level system
+- Weapon stat progression
+- Save/load weapon state
+- UI for weapon stats and progression
+
+### Milestone 3: Dungeon Interactivity v1 (9–10 weeks)
+- Interactive dungeon elements (doors, traps, switches)
+- Basic puzzle mechanics
+- Dungeon loot system
+- Enemy encounters and spawners
+
+### Milestone 4: Combat System v2 (4–5 weeks)
+- Add advanced combat moves/combos
+- Special weapon abilities
+- Status effects (poison, stun, etc.)
+- Enemy variety improvements
+
+### Milestone 5: City Building Prototype (6–7 weeks)
+- Placeable building system in town
+- Resource collection mechanics
+- Save/load town state
+- Basic town upgrade logic
+
+### Milestone 6: Time/Story Progression v1 (6 weeks)
+- Story events and progression triggers
+- Quest system (main and side quests)
+- Time-of-day system
+- Event scheduling
+
+### Milestone 7: Global Game State & Save/Load System (3 weeks)
+**Goal:** Implement a robust global game state system and unified save/load functionality.
+
+**Tasks:**
+- Design a global game state structure:
+  - Player stats, inventory, equipment
+  - Weapon state
+  - Town/building state
+  - Quest and story flags
+  - NPC states and relationships
+  - Dungeon progress, secrets found
+  - Time-of-day, world events
+- Implement serialization/deserialization (JSON or binary)
+- Integrate save/load logic for all major systems
+- Add UI for save/load slots and autosave
+- Error handling for corrupted/missing saves
+- Playtesting and validation for edge cases
+
+### Milestone 8: Bosses & Advanced AI (3 weeks)
+- Implement at least 2 unique boss fights (multi-phase)
+- Advanced enemy AI behaviors (evasion, combos, spells)
+- Visual/sound polish for boss attacks/cues
+- Boss health bars, intro animations
+
+### Milestone 9: Dungeon Secrets & Lore (3 weeks)
+- Secret rooms, hidden puzzles, rare collectibles
+- Lore pickups (diaries, relics, ancient books)
+- UI for discovered secrets/collectibles
+
+### Milestone 10: Town Events & NPCs (3 weeks)
+- Town events (festivals, merchant visits, attacks)
+- Recruitable NPCs (specialists, shopkeepers, quest givers)
+- NPC schedule system
+- Town reputation/affinity mechanics
+
+### Milestone 11: Accessibility & Polish (3 weeks)
+- Custom keybindings/controller support
+- Save/load UI polish (linked to global system)
+- Difficulty settings and assist modes
+- UI/sound/menu polish
+
+### Milestone 12: Launch & Marketing (3 weeks)
+- Build and distribute demo
+- Prepare trailer and promotional materials
+- Achievements/trophies (Steam, PC)
+- Steamworks integration (if applicable)
+- Localization (if feasible)
+- Launch and post-release support
+
+### Milestone 13: Alpha Release (1 week)
+- Internal testing and feedback
+- Collect bug reports and iterate
+
+### Milestone 14: Beta Release (3 weeks)
+- Public playtesting
+- Final bug fixes and polish
+- Prepare for launch
 
 ---
-2. Weapon Leveling
-1.	Weapon Experience
-•	Define a Weapon class with XP and level properties.
-•	Grant XP to weapons when defeating enemies.
-2.	Weapon Stats & Growth
-•	Increase weapon stats (damage, speed, etc.) as they level up.
-•	Allow for branching upgrade paths or evolution.
-3.	Weapon UI
-•	Display weapon XP, level, and stats in the UI.
-•	Show progress toward next level.
-4.	Weapon Management
-•	Allow equipping, unequipping, and switching weapons.
-•	Support for multiple weapon types.
----
-3. Dungeon Interactivity
-1.	Collectible Items
-•	Place items (keys, loot, health) in the dungeon.
-•	Allow the player to pick up and use items.
-2.	Puzzles & Obstacles
-•	Add simple puzzles (e.g., switches, locked doors).
-•	Require items or actions to progress.
-3.	Enemy Variety
-•	Implement different enemy types with unique behaviors.
-•	Add patrols, ranged attacks, or special abilities.
-4.	Environmental Hazards
-•	Include traps or hazards (spikes, pits, etc.).
-•	Provide visual cues and feedback.
----
-4. City Building (Georama) Prototype
-1.	Placement System
-•	Allow the player to select and place buildings/objects in a town area.
-•	Show placement preview and validate positions.
-2.	Object Management
-•	Enable moving, rotating, or removing placed objects.
-•	Track placed objects for town goals.
-3.	UI for Building
-•	Create a simple menu for selecting objects to place.
-•	Display requirements or costs for placement.
-4.	Town Progression
-•	Track town goals or population.
-•	Unlock new objects as the town grows.
----
-5. Time/Story Progression
-1.	Day/Night Cycle
-•	Implement a timer for day/night transitions.
-•	Change lighting, music, or NPC behavior based on time.
-2.	Scheduled Events
-•	Trigger story events or cutscenes at certain times or after actions.
-•	Allow for recurring or one-time events.
-3.	NPC Schedules
-•	Give NPCs routines that change with the time of day.
-•	Enable dialogue or quests that depend on time.
-4.	Story Advancement
-•	Track story progress and unlock new areas or features.
-•	Display story objectives or logs in the UI.
+
+## Timeline
+
+| Milestone                      | Est. Duration | Start Date  | End Date    |
+|------------------------------- |-------------- |-------------|-------------|
+| Combat System v1               | 6–7 weeks     | 07/15/2025  | 09/02/2025  |
+| Weapon Leveling v1             | 4 weeks       | 09/03/2025  | 09/30/2025  |
+| Dungeon Interactivity v1       | 9–10 weeks    | 10/01/2025  | 12/09/2025  |
+| Combat System v2               | 4–5 weeks     | 12/10/2025  | 01/13/2026  |
+| City Building Prototype        | 6–7 weeks     | 01/14/2026  | 03/04/2026  |
+| Time/Story Progression v1      | 6 weeks       | 03/05/2026  | 04/15/2026  |
+| Global Game State & Save/Load  | 3 weeks       | 04/16/2026  | 05/06/2026  |
+| Bosses & Advanced AI           | 3 weeks       | 05/07/2026  | 05/27/2026  |
+| Dungeon Secrets & Lore         | 3 weeks       | 05/28/2026  | 06/17/2026  |
+| Town Events & NPCs             | 3 weeks       | 06/18/2026  | 07/08/2026  |
+| Accessibility & Polish         | 3 weeks       | 07/09/2026  | 07/29/2026  |
+| Launch & Marketing             | 3 weeks       | 07/30/2026  | 08/19/2026  |
+| Alpha Release                  | 1 week        | 08/20/2026  | 08/26/2026  |
+| Beta Release                   | 3 weeks       | 08/27/2026  | 09/16/2026  |
+
 ---
 
-
-# Project Plan Update - July 28, 2025
-
-## Refactored Player Architecture
-- Extracted movement logic into PlayerMovementController.
-- Extracted combat logic into PlayerCombatController.
-- Player now delegates movement and combat to respective controllers.
-
-## Combat Effects Integration
-- Integrated CombatEffectsManager for hit effects and damage text.
-- PlayerCombatController now receives CombatEffectsManager via constructor.
-- Damage text and screen shake are triggered when NPCs are hit.
-
-## Attack & Damage Flow
-- Player.Update now passes NPC list to PlayerCombatController.
-- PlayerCombatController checks for attack collisions and applies damage to NPCs.
-- Damage is applied only once per attack swing.
-
-## Game Loop Changes
-- GameScene now instantiates Player with CombatEffectsManager.
-- GameScene passes NPCs to Player.Update for combat resolution.
-
-## Codebase Modernization
-- All code updated to C# 12 and .NET 8.
-- Improved encapsulation and separation of concerns for maintainability.
-
-## Next Steps
-- Add more weapon types and attack animations.
-- Expand NPC behaviors and reactions to being hit.
-- Polish UI feedback for combat and health changes.
+## Additional Recommendations
+- Playtest after major milestones and before launch.
+- Regular code refactoring (20 min/day) included in schedule.
+- Document all features and systems for future support and updates.
+- Adjust milestone durations as you progress and gain confidence.
