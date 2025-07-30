@@ -1,4 +1,5 @@
-﻿using Hearthvale.GameCode.Entities;
+﻿using Hearthvale.GameCode.Entities.NPCs;
+using Hearthvale.GameCode.Entities.Players;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
@@ -72,7 +73,16 @@ namespace Hearthvale.GameCode.Managers
             }
 
             SoundEffect defeatSound = Core.Content.Load<SoundEffect>("audio/npc_defeat");
-            NPC npc = new NPC(animations, position, _bounds, defeatSound);
+
+            int npcHealth = npcType switch
+            {
+                "merchant" => 8,
+                "knight" => 20,
+                "mage" => 12,
+                // ... other types
+                _ => 10
+            };
+            NPC npc = new NPC(animations, position, _bounds, defeatSound, npcHealth);
 
             npc.FacingRight = false;
             _npcs.Add(npc);
@@ -85,11 +95,15 @@ namespace Hearthvale.GameCode.Managers
             // Remove NPCs that are ready to be removed (e.g., after defeat animation)
             _npcs.RemoveAll(npc => npc.IsReadyToRemove);
         }
-        public void Draw(SpriteBatch spriteBatch)
+        public void Draw(SpriteBatch spriteBatch, GameUIManager uiManager)
         {
             foreach (var npc in _npcs)
             {
                 npc.Draw(spriteBatch);
+                // Draw health bar above NPC
+                Vector2 barOffset = new Vector2(npc.Sprite.Width / 4, -10); // Adjust as needed
+                Vector2 barSize = new Vector2(npc.Sprite.Width / 2, 6);
+                uiManager.DrawNpcHealthBar(spriteBatch, npc, barOffset, barSize);
             }
         }
         public void SpawnAllNpcTypesTest()

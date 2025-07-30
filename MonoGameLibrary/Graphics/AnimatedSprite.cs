@@ -58,7 +58,4 @@ public class AnimatedSprite : Sprite
             Region = _animation.Frames[_currentFrame];
         }
     }
-
-
-
 }

@@ -1,4 +1,4 @@
-﻿using Hearthvale.GameCode.Entities;
+﻿using Hearthvale.GameCode.Entities.Players;
 using Hearthvale.GameCode.Managers;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
@@ -11,15 +11,17 @@ namespace Hearthvale.GameCode.Input
         private readonly Player _player;
         private readonly NpcManager _npcManager;
         private readonly GameUIManager _uiManager;
+        private readonly CombatManager _combatManager;
         private readonly Action PauseGame;
         private readonly Action QuitGame;
         private KeyboardState _previousKeyboard;
 
-        public GameInputHandler(Player player, NpcManager npcManager, GameUIManager uiManager, Action pauseGame, Action quitGame)
+        public GameInputHandler(Player player, NpcManager npcManager, GameUIManager uiManager, CombatManager combatManager, Action pauseGame, Action quitGame)
         {
             _player = player;
             _npcManager = npcManager;
             _uiManager = uiManager;
+            _combatManager = combatManager;
             PauseGame = pauseGame;
             QuitGame = quitGame;
         }
@@ -38,10 +40,12 @@ namespace Hearthvale.GameCode.Input
 
             //player attack
             // Attack: only trigger on key down event
-            if (keyboard.IsKeyDown(Keys.Space) && !_previousKeyboard.IsKeyDown(Keys.Space) && !_player.IsAttacking)
-            {
-                _player.StartAttack();
-            }
+            if (keyboard.IsKeyDown(Keys.Space) && !_previousKeyboard.IsKeyDown(Keys.Space)
+            && _player.CombatController.IsAttacking == false
+            && _combatManager.CanAttack)
+                    {
+                        _player.CombatController.StartAttack();
+                    }
             _previousKeyboard = keyboard;
 
             // Interact with NPCs

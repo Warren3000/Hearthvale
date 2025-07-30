@@ -2,7 +2,7 @@
 using MonoGameLibrary.Graphics;
 using System.Collections.Generic;
 
-namespace Hearthvale.Content.NPC
+namespace Hearthvale.GameCode.Entities.NPCs
 {
     internal class NpcAnimationController
     {

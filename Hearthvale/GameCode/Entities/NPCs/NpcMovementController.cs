@@ -1,25 +1,28 @@
 using Microsoft.Xna.Framework;
 using System;
 
-namespace Hearthvale.Content.NPC;
+namespace Hearthvale.GameCode.Entities.NPCs;
 public class NpcMovementController
 {
     private Vector2 _velocity;
     private float _speed;
-    private Rectangle _bounds;
     private float _directionChangeTimer;
     private float _idleTimer;
     private bool _isIdle;
     private readonly Random _random = new();
-
-    public Vector2 Position { get; private set; }
+    public Rectangle Bounds;
+    public Vector2 Position { get; set; }
     public bool IsIdle => _isIdle;
+
+    // Knockback support
+    private float _knockbackTimer = 0f;
+    private const float KnockbackDuration = 0.2f; // seconds
 
     public NpcMovementController(Vector2 startPosition, float speed, Rectangle bounds)
     {
         Position = startPosition;
         _speed = speed;
-        _bounds = bounds;
+        Bounds = bounds;
     }
 
     public void SetRandomDirection()
@@ -32,13 +35,44 @@ public class NpcMovementController
 
     public void SetIdle()
     {
-        _velocity = Vector2.Zero;
-        _isIdle = true;
-        _idleTimer = 1f + (float)_random.NextDouble() * 2f;
+        // Only set idle if not in knockback
+        if (_knockbackTimer <= 0f)
+        {
+            _velocity = Vector2.Zero;
+            _isIdle = true;
+            _idleTimer = 1f + (float)_random.NextDouble() * 2f;
+        }
     }
 
     public void Update(float elapsed, Func<Vector2, bool> collisionCheck)
     {
+        // Handle knockback
+        if (_knockbackTimer > 0f)
+        {
+            _knockbackTimer -= elapsed;
+            Vector2 nextPosition = Position + _velocity * elapsed;
+            if (collisionCheck(nextPosition))
+            {
+                _velocity = Vector2.Zero;
+                _knockbackTimer = 0f;
+            }
+            else
+            {
+                Position = Vector2.Clamp(
+                    nextPosition,
+                    new Vector2(Bounds.Left, Bounds.Top),
+                    new Vector2(Bounds.Right, Bounds.Bottom)
+                );
+            }
+            if (_knockbackTimer <= 0f)
+            {
+                _velocity = Vector2.Zero;
+                _isIdle = true;
+                _idleTimer = 1f + (float)_random.NextDouble() * 2f;
+            }
+            return;
+        }
+
         if (_isIdle)
         {
             _idleTimer -= elapsed;
@@ -55,8 +89,8 @@ public class NpcMovementController
             }
             Position = Vector2.Clamp(
                 nextPosition,
-                new Vector2(_bounds.Left, _bounds.Top),
-                new Vector2(_bounds.Right, _bounds.Bottom)
+                new Vector2(Bounds.Left, Bounds.Top),
+                new Vector2(Bounds.Right, Bounds.Bottom)
             );
             _directionChangeTimer -= elapsed;
             if (_directionChangeTimer <= 0)
@@ -66,5 +100,10 @@ public class NpcMovementController
 
     public void SetPosition(Vector2 pos) => Position = pos;
     public Vector2 GetVelocity() => _velocity;
-    public void SetVelocity(Vector2 v) => _velocity = v;
+    public void SetVelocity(Vector2 v)
+    {
+        _velocity = v;
+        _knockbackTimer = KnockbackDuration;
+        _isIdle = false;
+    }
 }

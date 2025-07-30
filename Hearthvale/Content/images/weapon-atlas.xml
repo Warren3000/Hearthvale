@@ -1,5 +1,5 @@
 ﻿<TextureAtlas>
-  <Texture>images/NPCSpriteSheet</Texture>
+  <Texture>images/WeaponsSpriteSheet</Texture>
   <Regions>
     <!--Dagger-->
     <Region name="Dagger" x="0" y="0" width="64" height="64" />
@@ -20,4 +20,8 @@
     <!--Fire Dagger-->
     <Region name="Dagger-Dark" x="64" y="64" width="64" height="64" />
   </Regions>
+  <Animations>
+    <Animation name="Dagger_Attack" delay="120">
+    </Animation>
+  </Animations>
 </TextureAtlas>

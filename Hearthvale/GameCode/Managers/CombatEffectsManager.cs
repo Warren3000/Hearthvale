@@ -1,13 +1,14 @@
 using Hearthvale.GameCode.UI;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System;
 using System.Collections.Generic;
 
 namespace Hearthvale.GameCode.Managers;
 public class CombatEffectsManager
 {
     private readonly Camera2D _camera;
-    private readonly List<DamageNumber> _damageNumbers = new();
+    private readonly List<CombatTextEffect> _combatTexts = new();
 
     public CombatEffectsManager(Camera2D camera)
     {
@@ -19,50 +20,94 @@ public class CombatEffectsManager
         // Screen shake
         _camera.Shake(0.08f, 1.5f);
 
-        // Damage number
-        _damageNumbers.Add(new DamageNumber(position, damage));
+        // Damage number as CombatTextEffect (red, shorter duration)
+        _combatTexts.Add(new CombatTextEffect(
+            start: position,
+            end: position - new Vector2(0, 32),
+            duration: 0.7f,
+            text: damage.ToString(),
+            color: Color.Red
+        ));
+    }
+
+    public void ShowCombatText(Vector2 position, string text, Color color, float duration = 0.8f)
+    {
+        var effect = new CombatTextEffect(
+            start: position,
+            end: position - new Vector2(0, 32), // floats up
+            duration: duration,
+            text: text,
+            color: color
+        );
+        _combatTexts.Add(effect);
     }
 
     public void Update(GameTime gameTime)
     {
-        for (int i = _damageNumbers.Count - 1; i >= 0; i--)
+        float delta = (float)gameTime.ElapsedGameTime.TotalSeconds;
+        for (int i = _combatTexts.Count - 1; i >= 0; i--)
         {
-            _damageNumbers[i].Update(gameTime);
-            if (_damageNumbers[i].IsExpired)
-                _damageNumbers.RemoveAt(i);
+            _combatTexts[i].Update(delta);
+            if (_combatTexts[i].IsFinished)
+                _combatTexts.RemoveAt(i);
         }
     }
 
     public void Draw(SpriteBatch spriteBatch, SpriteFont font)
     {
-        foreach (var dmg in _damageNumbers)
-            dmg.Draw(spriteBatch, font);
-    }
+        foreach (var effect in _combatTexts)
+            effect.Draw(spriteBatch, font);
+    }   
 
-    // Simple floating damage number
-    private class DamageNumber
+    public class CombatTextEffect
     {
-        private Vector2 _position;
-        private float _timer = 0.7f;
-        private readonly int _damage;
-        public bool IsExpired => _timer <= 0;
+        public Vector2 StartPosition;
+        public Vector2 EndPosition;
+        public float Duration;
+        public float Elapsed;
+        public string Text;
+        public Color Color;
+        public float StartAlpha;
+        public float EndAlpha;
 
-        public DamageNumber(Vector2 position, int damage)
+        public CombatTextEffect(Vector2 start, Vector2 end, float duration, string text, Color color, float startAlpha = 1f, float endAlpha = 0f)
         {
-            _position = position;
-            _damage = damage;
+            StartPosition = start;
+            EndPosition = end;
+            Duration = duration;
+            Text = text;
+            Color = color;
+            StartAlpha = startAlpha;
+            EndAlpha = endAlpha;
+            Elapsed = 0f;
         }
 
-        public void Update(GameTime gameTime)
+        public CombatTextEffect(Vector2 position, int damage)
+            : this(position, position - new Vector2(0, 32), 0.7f, damage.ToString(), Color.Red)
         {
-            _timer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
-            _position.Y -= 30f * (float)gameTime.ElapsedGameTime.TotalSeconds;
+        }
+
+        public bool IsFinished => Elapsed >= Duration;
+
+        public void Update(float deltaTime)
+        {
+            Elapsed += deltaTime;
         }
 
         public void Draw(SpriteBatch spriteBatch, SpriteFont font)
         {
-            var color = Color.Lerp(Color.Red, Color.Transparent, 1 - (_timer / 0.7f));
-            spriteBatch.DrawString(font, _damage.ToString(), _position, color);
+            float t = MathHelper.Clamp(Elapsed / Duration, 0f, 1f);
+
+            // Smooth vertical float using sine ease
+            float verticalOffset = -32f * MathF.Sin(t * MathF.PI * 0.5f);
+
+            // Optional: small horizontal wobble for more natural look
+            float horizontalOffset = 4f * MathF.Sin(t * MathF.PI * 2f);
+
+            Vector2 position = StartPosition + new Vector2(horizontalOffset, verticalOffset);
+
+            float alpha = MathHelper.Lerp(StartAlpha, EndAlpha, t);
+            spriteBatch.DrawString(font, Text, position, Color * alpha);
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using Hearthvale.GameCode.Entities;
+using Hearthvale.GameCode.Entities.Players;
 using Hearthvale.GameCode.Input;
 using Hearthvale.GameCode.Managers;
 using Hearthvale.GameCode.UI;
@@ -10,6 +11,7 @@ using MonoGameGum;
 using MonoGameLibrary;
 using MonoGameLibrary.Graphics;
 using MonoGameLibrary.Scenes;
+using SharpDX.Direct2D1;
 
 namespace Hearthvale.Scenes;
 
@@ -38,6 +40,7 @@ public class GameScene : Scene
     private SoundEffect _uiSoundEffect;
     private TextureAtlas _atlas;
     private TextureAtlas _heroAtlas;
+    private TextureAtlas _weaponAtlas;
     private Viewport _viewport;
     private Camera2D _camera;
     private InputHandler _inputHandler;
@@ -70,6 +73,7 @@ public class GameScene : Scene
 
         _atlas = TextureAtlas.FromFile(Core.Content, "images/atlas-definition.xml");
         _heroAtlas = TextureAtlas.FromFile(Core.Content, "images/npc-atlas.xml");
+        _weaponAtlas = TextureAtlas.FromFile(Core.Content, "images/weapon-atlas.xml");
 
         // Initialize MapManager
         _mapManager = new MapManager(Game1.GraphicsDevice, Game1.Content, "Tilesets/DampDungeons/Tiles/DungeonMap");
@@ -89,6 +93,7 @@ public class GameScene : Scene
                 // You can customize per NPC type or from map data
             }
         }
+        
         _bounceSoundEffect = Content.Load<SoundEffect>("audio/bounce");
         _collectSoundEffect = Content.Load<SoundEffect>("audio/collect");
         _uiSoundEffect = Core.Content.Load<SoundEffect>("audio/ui");
@@ -101,8 +106,6 @@ public class GameScene : Scene
         _scoreTextOrigin = new Vector2(0, scoreTextYOrigin);
         _scoreManager = new ScoreManager(_font, _scoreTextPosition, _scoreTextOrigin);
 
-
-
         _playerStart = _mapManager.GetPlayerSpawnPoint();
 
         // Initialize UI manager
@@ -113,8 +116,12 @@ public class GameScene : Scene
             () => _uiManager.ResumeGame(_uiSoundEffect),
             () => _uiManager.QuitGame(_uiSoundEffect, () => Core.ChangeScene(new TitleScene()))
         );
-        _player = new Player(_heroAtlas, _playerStart, MOVEMENT_SPEED);
         _combatEffectsManager = new CombatEffectsManager(_camera);
+        _player = new Player(_heroAtlas, _playerStart, _combatEffectsManager, MOVEMENT_SPEED);
+        var sword = new Weapon("Dagger", baseDamage: 5, _weaponAtlas);
+        sword.Scale = 0.5f;
+        sword.ManualOffset = new Vector2(0, 0); // Move down and to the right
+        _player.EquipWeapon(sword);
         _dialogManager = new DialogManager(_uiManager, _player, _npcManager, dialogDistance);
         _combatManager = new CombatManager(
             _npcManager,
@@ -137,6 +144,7 @@ public class GameScene : Scene
             _player,
             _npcManager,
             _uiManager,
+            _combatManager,
             () => _uiManager.PauseGame(),
             () => Core.ChangeScene(new TitleScene()));
     }
@@ -153,15 +161,14 @@ public class GameScene : Scene
         if (_uiManager.IsPausePanelVisible)
             return;
 
-        _player.Update(gameTime, Keyboard.GetState());
-        _npcManager.Update(gameTime, _player);
+        _gameInputHandler.Update(gameTime);
 
-        KeyboardState keyboardState = Keyboard.GetState();
-        _isPlayerAttacking = keyboardState.IsKeyDown(Keys.Space);
+        _player.Update(gameTime, Keyboard.GetState(), _npcManager.Npcs);
+        _npcManager.Update(gameTime, _player);
 
         _combatManager.Update(gameTime);
 
-        if (IsPlayerAttacking && _combatManager.CanAttack)
+        if (_player.IsAttacking && _combatManager.CanAttack)
         {
             _combatManager.HandlePlayerAttack(PlayerAttackPower);
         }
@@ -208,8 +215,20 @@ public class GameScene : Scene
         Core.SpriteBatch.Begin(transformMatrix: transform, samplerState: SamplerState.PointClamp);
 
         _mapManager.Draw(transform);
-        _player.Sprite.Draw(Core.SpriteBatch, _player.Position);
-        _npcManager.Draw(Core.SpriteBatch);
+        // Determine if sword should be behind player
+        bool drawWeaponBehind = _player.LastMovementDirection.Y < 0; // moving up
+
+        if (drawWeaponBehind)
+        {
+            _player.EquippedWeapon?.Draw(Core.SpriteBatch, _player.Position);
+            _player.Sprite.Draw(Core.SpriteBatch, _player.Position);
+        }
+        else
+        {
+            _player.Sprite.Draw(Core.SpriteBatch, _player.Position);
+            _player.EquippedWeapon?.Draw(Core.SpriteBatch, _player.Position);
+        }
+        _npcManager.Draw(Core.SpriteBatch, _uiManager);
         _uiManager.DrawCollisionBoxes(Core.SpriteBatch, _player, _npcManager.Npcs);
         _combatEffectsManager.Draw(Core.SpriteBatch, _font);
         Core.SpriteBatch.End();

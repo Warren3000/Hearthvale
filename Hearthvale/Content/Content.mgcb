@@ -139,6 +139,9 @@
 #begin images/tilemap-definition.xml
 /copy:images/tilemap-definition.xml
 
+#begin images/weapon-atlas.xml
+/copy:images/weapon-atlas.xml
+
 #begin images/WeaponsSpriteSheet.png
 /importer:TextureImporter
 /processor:TextureProcessor

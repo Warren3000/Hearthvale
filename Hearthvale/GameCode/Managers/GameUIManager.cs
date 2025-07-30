@@ -1,7 +1,8 @@
 ﻿using Gum.DataTypes;
 using Gum.Managers;
 using Gum.Wireframe;
-using Hearthvale.GameCode.Entities;
+using Hearthvale.GameCode.Entities.NPCs;
+using Hearthvale.GameCode.Entities.Players;
 using Hearthvale.GameCode.UI;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
@@ -83,7 +84,20 @@ namespace Hearthvale.GameCode.Managers
             // Optional: Draw border or text
             // spriteBatch.DrawString(_font, $"{health}/{maxHealth}", position + new Vector2(2, 2), Color.White);
         }
+        public void DrawNpcHealthBar(SpriteBatch spriteBatch, NPC npc, Vector2 offset, Vector2 size)
+        {
+            int health = npc.Health;
+            int maxHealth = npc.MaxHealth > 0 ? npc.MaxHealth : 1; // Use MaxHealth, not Health
+            if (npc.IsDefeated) return; // Don't draw for defeated NPCs
 
+            float percent = (float)health / maxHealth;
+            Vector2 barPos = npc.Position + offset;
+
+            // Background
+            spriteBatch.Draw(_whitePixel, new Rectangle((int)barPos.X, (int)barPos.Y, (int)size.X, (int)size.Y), Color.DarkRed);
+            // Foreground (green portion)
+            spriteBatch.Draw(_whitePixel, new Rectangle((int)barPos.X, (int)barPos.Y, (int)(size.X * percent), (int)size.Y), Color.LimeGreen);
+        }
         private void CreatePausePanel()
         {
             _pausePanel = new Panel();

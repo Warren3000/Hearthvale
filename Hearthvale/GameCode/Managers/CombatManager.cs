@@ -1,7 +1,9 @@
-using Hearthvale.GameCode.Entities;
+using Hearthvale.GameCode.Entities.NPCs;
+using Hearthvale.GameCode.Entities.Players;
 using Hearthvale.GameCode.Managers;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
+using System.Diagnostics;
 
 namespace Hearthvale.GameCode.Managers;
 public class CombatManager
@@ -53,6 +55,7 @@ public class CombatManager
         }
     }
     public bool CanAttack => _attackTimer <= 0f;
+
     public void TryDamagePlayer(int amount)
     {
         if (_playerDamageTimer > 0 || _player.IsDefeated)
@@ -60,7 +63,7 @@ public class CombatManager
 
         _player.TakeDamage(amount);
         _playerDamageTimer = _playerDamageCooldown;
-        // Optionally: play sound, trigger effects, etc.
+        _effectsManager.ShowCombatText(_player.Position, amount.ToString(), Color.Yellow);
     }
     public void HandlePlayerAttack(int playerAttackPower)
     {
@@ -72,16 +75,27 @@ public class CombatManager
         {
             if (npc.Bounds.Intersects(attackArea))
             {
-                Vector2 knockback = Vector2.Normalize(npc.Position - _player.Position) * 2f;
-                npc.TakeDamage(_player.Weapon.Damage, knockback);
+                // Calculate knockback direction and magnitude
+                Vector2 direction = Vector2.Normalize(npc.Position - _player.Position);
+                float knockbackStrength = 150f; // Adjust this value for desired pushback
+                Vector2 knockback = direction * knockbackStrength;
 
+                if (_player.EquippedWeapon == null)
+                    return;
+                if (_player.EquippedWeapon != null)
+                {
+                    npc.TakeDamage(_player.EquippedWeapon.Damage, knockback);
+                    _effectsManager.ShowCombatText(npc.Position, _player.EquippedWeapon.Damage.ToString(), Color.Yellow);
+                }
                 _hitSound?.Play();
                 if (npc.IsDefeated)
                     _defeatSound?.Play();
                 _scoreManager.Add(1);
                 npc.Flash();
-
-                _effectsManager.PlayHitEffects(npc.Position, playerAttackPower);
+                if (_player.EquippedWeapon == null)
+                {
+                    Debug.WriteLine("Player has no equipped weapon to attack with.");
+                }
             }
         }
 
