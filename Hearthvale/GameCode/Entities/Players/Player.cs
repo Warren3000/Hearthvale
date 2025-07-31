@@ -196,5 +196,35 @@ namespace Hearthvale.GameCode.Entities.Players
         }
 
         public PlayerCombatController CombatController => _combatController;
+
+        public override void Draw(SpriteBatch spriteBatch)
+        {
+            Color originalColor = _sprite.Color;
+            Color weaponOriginalColor = EquippedWeapon != null ? EquippedWeapon.Sprite.Color : Color.White;
+            float alpha = 1f;
+            if (IsDefeated)
+            {
+                // Fade out when defeated
+                alpha = 0.5f; // You may want to use a timer for smooth fade-out
+            }
+            _sprite.Color = Color.White * alpha;
+            if (EquippedWeapon != null)
+                EquippedWeapon.Sprite.Color = Color.White * alpha;
+
+            bool drawWeaponBehind = _lastMovementDirection.Y < 0;
+            if (drawWeaponBehind)
+            {
+                EquippedWeapon?.Draw(spriteBatch, Position);
+                _sprite.Draw(spriteBatch, Position);
+            }
+            else
+            {
+                _sprite.Draw(spriteBatch, Position);
+                EquippedWeapon?.Draw(spriteBatch, Position);
+            }
+            _sprite.Color = originalColor;
+            if (EquippedWeapon != null)
+                EquippedWeapon.Sprite.Color = weaponOriginalColor;
+        }
     }
 }

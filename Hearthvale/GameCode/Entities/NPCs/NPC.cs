@@ -60,8 +60,24 @@ public class NPC : Character
     }
     public override void Draw(SpriteBatch spriteBatch)
     {
+        Color originalColor = _sprite.Color;
+        Color weaponOriginalColor = EquippedWeapon != null ? EquippedWeapon.Sprite.Color : Color.White;
+        float alpha = 1f;
+        if (IsDefeated && IsReadyToRemove == false)
+        {
+            float progress = _healthController.DefeatTimerProgress;
+            alpha = MathHelper.Clamp(progress, 0f, 1f);
+            _sprite.Color = Color.White * alpha;
+            if (EquippedWeapon != null)
+                EquippedWeapon.Sprite.Color = Color.White * alpha;
+        }
+        else
+        {
+            _sprite.Color = Color.White;
+            if (EquippedWeapon != null)
+                EquippedWeapon.Sprite.Color = Color.White;
+        }
         bool drawWeaponBehind = _movementController.GetVelocity().Y < 0;
-
         if (drawWeaponBehind)
         {
             EquippedWeapon?.Draw(spriteBatch, Position);
@@ -72,6 +88,9 @@ public class NPC : Character
             _sprite.Draw(spriteBatch, Position);
             EquippedWeapon?.Draw(spriteBatch, Position);
         }
+        _sprite.Color = originalColor;
+        if (EquippedWeapon != null)
+            EquippedWeapon.Sprite.Color = weaponOriginalColor;
     }
 
     public void EquipWeapon(Weapon weapon)

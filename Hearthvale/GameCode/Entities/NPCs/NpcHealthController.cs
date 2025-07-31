@@ -22,6 +22,15 @@ namespace Hearthvale.GameCode.Entities.NPCs
         public bool IsStunned => _stunTimer > 0f;
         public bool IsOnCooldown => _hitTimer > 0f || _stunTimer > 0f || _attackCooldownTimer > 0f;
 
+        public float DefeatTimerProgress
+        {
+            get
+            {
+                if (!_isDefeated || _defeatTimer <= 0f) return 0f;
+                return _defeatTimer;
+            }
+        }
+
         public NpcHealthController(int maxHealth, SoundEffect defeatSound)
         {
             _maxHealth = maxHealth;

@@ -4,38 +4,38 @@
 
 ## 📅 Timeline
 
-| Milestone                          | Est. Duration | Start Date  | Est. End Date |
-|-------------------------------------|--------------|-------------|---------------|
-| Combat System v1                    | 6–7 weeks    | 07/15/2025  | 09/02/2025    |
-| Weapon Leveling v1                  | 4 weeks      | 09/03/2025  | 09/30/2025    |
-| Dungeon Interactivity v1            | 9–10 weeks   | 10/01/2025  | 12/09/2025    |
-| Combat System v2                    | 4–5 weeks    | 12/10/2025  | 01/13/2026    |
-| Player Inventory & Stats Screen     | 2–3 weeks    | 01/14/2026  | 01/31/2026    |
-| Bosses & Advanced AI                | 3 weeks      | 02/01/2026  | 02/21/2026    |
-| City Building Prototype             | 6–7 weeks    | 02/22/2026  | 04/11/2026    |
-| Time/Story Progression v1           | 6 weeks      | 04/12/2026  | 05/23/2026    |
-| Global Game State & Save/Load       | 3 weeks      | 05/24/2026  | 06/13/2026    |
-| Dungeon Secrets & Lore              | 3 weeks      | 06/14/2026  | 07/04/2026    |
-| Town Events & NPCs                  | 3 weeks      | 07/05/2026  | 07/25/2026    |
-| Accessibility & Polish              | 3 weeks      | 07/26/2026  | 08/15/2026    |
-| Tutorial & Onboarding               | 1–2 weeks    | 08/16/2026  | 08/29/2026    |
-| Quest System & Journal              | 2–3 weeks    | 08/30/2026  | 09/19/2026    |
-| Map & Fast Travel                   | 2 weeks      | 09/20/2026  | 10/03/2026    |
-| Achievements & Progress Tracking    | 1–2 weeks    | 10/04/2026  | 10/17/2026    |
-| Endgame & Replayability             | 2–3 weeks    | 10/18/2026  | 11/07/2026    |
-| Multiplayer/Co-op Mode              | 4–6 weeks    | 11/08/2026  | 12/19/2026    |
-| Modding & Extensibility (Optional)  | 2–4 weeks    | 12/20/2026  | 01/16/2027    |
-| Live Events & Seasonal Content      | 2–3 weeks    | 01/17/2027  | 02/06/2027    |
-| Mini-Games & Side Activities        | 2–3 weeks    | 02/07/2027  | 02/27/2027    |
-| Relationship & Reputation System    | 2–3 weeks    | 02/28/2027  | 03/20/2027    |
-| Economy & Trading System            | 2–3 weeks    | 03/21/2027  | 04/10/2027    |
-| Procedural Generation               | 3–4 weeks    | 04/11/2027  | 05/08/2027    |
-| Expanded Lore & Storytelling        | 2–3 weeks    | 05/09/2027  | 05/29/2027    |
-| Endgame Raids & Challenges          | 2–3 weeks    | 05/30/2027  | 06/19/2027    |
-| Analytics & Telemetry (Optional)    | 1 week       | 06/20/2027  | 06/26/2027    |
-| Launch & Marketing                  | 3 weeks      | 06/27/2027  | 07/17/2027    |
-| Alpha Release                       | 1 week       | 07/18/2027  | 07/24/2027    |
-| Beta Release                        | 3 weeks      | 07/25/2027  | 08/14/2027    |
+| Milestone                          | Est. Duration | Start Date  | Est. End Date | Current End Date |
+|-------------------------------------|--------------|-------------|---------------|------------------|
+| Combat System v1                    | 6–7 weeks    | 07/15/2025  | 09/02/2025    | 08/12/2025       |
+| Weapon Leveling v1                  | 4 weeks      | 09/03/2025  | 09/30/2025    | 09/09/2025       |
+| Dungeon Interactivity v1            | 9–10 weeks   | 10/01/2025  | 12/09/2025    | 11/04/2025       |
+| Combat System v2                    | 4–5 weeks    | 12/10/2025  | 01/13/2026    | 12/09/2025       |
+| Player Inventory & Stats Screen     | 2–3 weeks    | 01/14/2026  | 01/31/2026    | 12/30/2025       |
+| Bosses & Advanced AI                | 3 weeks      | 02/01/2026  | 02/21/2026    | 01/20/2026       |
+| City Building Prototype             | 6–7 weeks    | 02/22/2026  | 04/11/2026    | 03/10/2026       |
+| Time/Story Progression v1           | 6 weeks      | 04/12/2026  | 05/23/2026    | 04/21/2026       |
+| Global Game State & Save/Load       | 3 weeks      | 05/24/2026  | 06/13/2026    | 05/12/2026       |
+| Dungeon Secrets & Lore              | 3 weeks      | 06/14/2026  | 07/04/2026    | 06/02/2026       |
+| Town Events & NPCs                  | 3 weeks      | 07/05/2026  | 07/25/2026    | 06/23/2026       |
+| Accessibility & Polish              | 3 weeks      | 07/26/2026  | 08/15/2026    | 07/14/2026       |
+| Tutorial & Onboarding               | 1–2 weeks    | 08/16/2026  | 08/29/2026    | 07/28/2026       |
+| Quest System & Journal              | 2–3 weeks    | 08/30/2026  | 09/19/2026    | 08/18/2026       |
+| Map & Fast Travel                   | 2 weeks      | 09/20/2026  | 10/03/2026    | 09/01/2026       |
+| Achievements & Progress Tracking    | 1–2 weeks    | 10/04/2026  | 10/17/2026    | 09/15/2026       |
+| Endgame & Replayability             | 2–3 weeks    | 10/18/2026  | 11/07/2026    | 10/06/2026       |
+| Multiplayer/Co-op Mode              | 4–6 weeks    | 11/08/2026  | 12/19/2026    | 11/10/2026       |
+| Modding & Extensibility (Optional)  | 2–4 weeks    | 12/20/2026  | 01/16/2027    | 12/01/2026       |
+| Live Events & Seasonal Content      | 2–3 weeks    | 01/17/2027  | 02/06/2027    | 12/22/2026       |
+| Mini-Games & Side Activities        | 2–3 weeks    | 02/07/2027  | 02/27/2027    | 01/12/2027       |
+| Relationship & Reputation System    | 2–3 weeks    | 02/28/2027  | 03/20/2027    | 02/02/2027       |
+| Economy & Trading System            | 2–3 weeks    | 03/21/2027  | 04/10/2027    | 02/23/2027       |
+| Procedural Generation               | 3–4 weeks    | 04/11/2027  | 05/08/2027    | 03/23/2027       |
+| Expanded Lore & Storytelling        | 2–3 weeks    | 05/09/2027  | 05/29/2027    | 04/13/2027       |
+| Endgame Raids & Challenges          | 2–3 weeks    | 05/30/2027  | 06/19/2027    | 05/04/2027       |
+| Analytics & Telemetry (Optional)    | 1 week       | 06/20/2027  | 06/26/2027    | 05/11/2027       |
+| Launch & Marketing                  | 3 weeks      | 06/27/2027  | 07/17/2027    | 06/01/2027       |
+| Alpha Release                       | 1 week       | 07/18/2027  | 07/24/2027    | 06/08/2027       |
+| Beta Release                        | 3 weeks      | 07/25/2027  | 08/14/2027    | 06/29/2027       |
 
 ---
 
@@ -50,6 +50,7 @@
     - **Ranged attack mechanics added (projectile/arrow support)**
     - **Combat logging for debugging (damage, hit, defeat events)**
     - **NPC health values per type (e.g., knight: 20 HP, fatnun: 10 HP)**
+    - **Sound effects for attacks, hits, and defeat implemented**
 - [x] **Weapon System**
     - **Animated projectile support (arrow-atlas.xml)**
     - **Weapon can fire animated projectiles using atlas animation**
@@ -93,9 +94,9 @@
 - [x] **Animated projectile support (arrow-atlas.xml)**
 - [x] **Combat logging for debugging (damage, hit, defeat events)**
 - [x] **NPC health values per type (e.g., knight: 20 HP, fatnun: 10 HP)**
+- [x] **Sound effects for attacks, hits, and defeat**
 
 **Remaining:**
-- [ ] Add sound effects for attacks, hits, and defeat
 - [ ] Add reaction animations (hit, defeat, etc.)
 - [ ] Polish defeat logic (e.g., removal timing, effects)
 - [ ] Playtesting and bug fixing
