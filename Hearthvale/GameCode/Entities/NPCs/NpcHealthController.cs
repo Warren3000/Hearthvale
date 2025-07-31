@@ -5,9 +5,9 @@ public class NpcHealthController
 {
     private int _maxHealth;
     private int _currentHealth;
-    private float _hitCooldown = 0.3f; // seconds between hits
+    private float _hitCooldown = 0.3f; 
     private float _hitTimer = 0f;
-    public bool CanTakeDamage => _hitTimer <= 0f && !_isDefeated;
+    public bool CanTakeDamage => !_isDefeated && _hitTimer <= 0f;
     private bool _isDefeated;
     private float _defeatTimer;
     private float _stunTimer;
@@ -25,10 +25,10 @@ public class NpcHealthController
     }
     public void TakeDamage(int amount, float stunDuration = 0.3f)
     {
-        if (_isDefeated || _hitTimer > 0) return;
+        if (!CanTakeDamage) return;
         _currentHealth -= amount;
         _stunTimer = stunDuration;
-        _hitTimer = _hitCooldown; // Start hit cooldown
+        _hitTimer = _hitCooldown; // Activate invincibility
         if (_currentHealth <= 0)
         {
             _currentHealth = 0;
@@ -49,15 +49,20 @@ public class NpcHealthController
             }
             return true;
         }
-        if (_stunTimer > 0)
-        {
-            _stunTimer -= elapsed;
-            return true;
-        }
+
+        bool wasHit = false;
         if (_hitTimer > 0)
         {
             _hitTimer -= elapsed;
+            wasHit = true;
         }
-        return false;
+
+        if (_stunTimer > 0)
+        {
+            _stunTimer -= elapsed;
+            wasHit = true;
+        }
+        
+        return wasHit;
     }
 }

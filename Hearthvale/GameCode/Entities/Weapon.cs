@@ -18,20 +18,29 @@ public class Weapon
     public int Level { get; private set; }
     public int XP { get; private set; }
     public int Damage { get; private set; }
+    public float Length { get; private set; }
     public float Scale
     {
         get => Sprite.Scale.X; // Assuming uniform scaling
-        set => Sprite.Scale = new Vector2(value, value);
+        set
+        {
+            Sprite.Scale = new Vector2(value, value);
+            // Update the weapon's effective length when its scale changes
+            Length = Sprite.Region.Height * value;
+        }
     }
 
     // Swing animation properties
-    private bool _isSwinging = false;
+    private enum SwingState { Idle, WindingUp, Slashing }
+    private SwingState _currentSwingState = SwingState.Idle;
     private float _swingTimer = 0f;
-    private const float SwingDuration = 0.25f;
-    private const float SwingAngleRange = MathHelper.Pi; // 180-degree swing
+    private const float WindUpDuration = 0.15f;
+    private const float SlashDuration = 0.1f;
     private float _baseRotation = 0f;
     private bool _swingClockwise = true;
     private string _currentAnimation = "Idle";
+
+    public bool IsSlashing => _currentSwingState == SwingState.Slashing;
 
     public Weapon(string name, int baseDamage, TextureAtlas atlas)
     {
@@ -46,28 +55,46 @@ public class Weapon
         );
         Sprite = new AnimatedSprite(animation);
         Sprite.Origin = new Vector2(0, Sprite.Region.Height);
+        // Set initial length. This will be updated if scale is changed.
+        Length = Sprite.Region.Height;
     }
     public void Update(GameTime gameTime)
     {
         Sprite.Update(gameTime);
 
-        if (_isSwinging)
-        {
-            _swingTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-            float swingProgress = _swingTimer / SwingDuration;
+        if (_currentSwingState == SwingState.Idle) return;
 
-            if (swingProgress >= 1.0f)
+        _swingTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+        float direction = _swingClockwise ? 1 : -1;
+
+        if (_currentSwingState == SwingState.WindingUp)
+        {
+            if (_swingTimer >= WindUpDuration)
             {
-                _isSwinging = false;
-                Rotation = _baseRotation; // Reset to base rotation
+                _swingTimer = 0f;
+                _currentSwingState = SwingState.Slashing;
+            }
+            else
+            {
+                // Pulls the weapon back
+                float windUpAngle = MathHelper.PiOver2; // 90 degrees back
+                Rotation = MathHelper.Lerp(_baseRotation, _baseRotation - (windUpAngle * direction), _swingTimer / WindUpDuration);
+            }
+        }
+        else if (_currentSwingState == SwingState.Slashing)
+        {
+            if (_swingTimer >= SlashDuration)
+            {
+                _currentSwingState = SwingState.Idle;
+                Rotation = _baseRotation;
                 SetAnimation("Idle");
             }
             else
             {
-                // Simple linear interpolation for the swing
-                float direction = _swingClockwise ? 1 : -1;
-                float swingAngle = MathHelper.Lerp(0, SwingAngleRange * direction, swingProgress);
-                Rotation = _baseRotation + swingAngle;
+                // Swings the weapon forward in an arc
+                float startAngle = _baseRotation - (MathHelper.PiOver2 * direction);
+                float endAngle = _baseRotation + (MathHelper.PiOver2 * direction);
+                Rotation = MathHelper.Lerp(startAngle, endAngle, _swingTimer / SlashDuration);
             }
         }
     }
@@ -84,18 +111,19 @@ public class Weapon
         Sprite.Rotation = Rotation;
         Sprite.Draw(spriteBatch, Sprite.Position);
     }
-    public Projectile Fire(Vector2 direction)
+    public Projectile Fire(Vector2 direction, Vector2 spawnPosition)
     {
         var projectileTexture = _atlas.GetRegion("Dagger");
         var velocity = Vector2.Normalize(direction) * 500f; // 500f is projectile speed
-        return new Projectile(projectileTexture, Position, velocity, Damage);
+        // Use the provided spawn position, which will be the player's center
+        return new Projectile(projectileTexture, spawnPosition, velocity, Damage);
     }
 
     public void StartSwing(bool clockwise)
     {
-        if (!_isSwinging)
+        if (_currentSwingState == SwingState.Idle)
         {
-            _isSwinging = true;
+            _currentSwingState = SwingState.WindingUp;
             _swingTimer = 0f;
             _swingClockwise = clockwise;
             _baseRotation = Rotation;

@@ -1,8 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGameLibrary.Graphics;
-using System.Collections.Generic;
-using System;
 
 namespace Hearthvale.GameCode.Entities
 {
@@ -13,29 +11,32 @@ namespace Hearthvale.GameCode.Entities
         public Vector2 Velocity { get; set; }
         public int Damage { get; }
         public bool IsActive { get; set; } = true;
-        public Rectangle BoundingBox => new Rectangle((int)Position.X, (int)Position.Y, Sprite.Region.Width, Sprite.Region.Height);
+        public Rectangle BoundingBox => new Rectangle((int)Position.X, (int)Position.Y, (int)Sprite.Width, (int)Sprite.Height);
 
-        public Projectile(TextureRegion textureRegion, Vector2 position, Vector2 velocity, int damage)
+        private float _gracePeriod = 0.05f; // 50ms grace period before collision is active
+        private float _timer;
+
+        public bool CanCollide => _timer >= _gracePeriod;
+
+        public Projectile(TextureRegion texture, Vector2 position, Vector2 velocity, int damage)
         {
-            var animation = new Animation(new List<TextureRegion> { textureRegion }, TimeSpan.FromSeconds(1));
-            Sprite = new AnimatedSprite(animation);
+            Sprite = new AnimatedSprite(new Animation(new() { texture }, System.TimeSpan.FromSeconds(1)));
             Position = position;
             Velocity = velocity;
             Damage = damage;
-            Sprite.Rotation = (float)Math.Atan2(Velocity.Y, Velocity.X);
         }
 
         public void Update(GameTime gameTime)
         {
-            Position += Velocity * (float)gameTime.ElapsedGameTime.TotalSeconds;
+            float elapsed = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            _timer += elapsed;
+            Position += Velocity * elapsed;
+            Sprite.Position = Position;
         }
 
         public void Draw(SpriteBatch spriteBatch)
         {
-            if (IsActive)
-            {
-                Sprite.Draw(spriteBatch, Position);
-            }
+            Sprite.Draw(spriteBatch, Position);
         }
     }
 }

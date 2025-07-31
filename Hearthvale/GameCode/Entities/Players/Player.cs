@@ -90,7 +90,7 @@ namespace Hearthvale.GameCode.Entities.Players
 
         public void Update(GameTime gameTime, KeyboardState keyboard, IEnumerable<NPC> npcs)
         {
-            Vector2 movement = _movementController.Update(gameTime, keyboard);
+            Vector2 movement = _movementController.Update(gameTime, keyboard, npcs);
             _animationController.UpdateFlash((float)gameTime.ElapsedGameTime.TotalSeconds);
             _combatController.Update(gameTime, keyboard, movement, npcs);
             UpdateAnimation(keyboard, movement != Vector2.Zero);
@@ -148,12 +148,33 @@ namespace Hearthvale.GameCode.Entities.Players
         }
         public Rectangle GetAttackArea()
         {
-            int width = 32;
-            int height = (int)_sprite.Height;
-            int offsetX = _facingRight ? (int)_sprite.Width : -width;
-            int x = (int)_position.X + offsetX;
-            int y = (int)_position.Y;
-            return new Rectangle(x, y, width, height);
+            if (EquippedWeapon == null) return Rectangle.Empty;
+
+            float attackReach = EquippedWeapon.Length; // Use the weapon's actual length
+            int attackWidth, attackHeight;
+            Vector2 attackCenter = Position + new Vector2(Sprite.Width / 2, Sprite.Height / 2);
+            Vector2 offset = Vector2.Zero;
+
+            // Check if the primary movement is horizontal or vertical
+            if (System.Math.Abs(LastMovementDirection.X) > System.Math.Abs(LastMovementDirection.Y))
+            {
+                // Horizontal attack
+                attackWidth = 32;
+                attackHeight = (int)Sprite.Height;
+                offset.X = (LastMovementDirection.X > 0 ? 1 : -1) * attackReach;
+            }
+            else
+            {
+                // Vertical attack
+                attackWidth = (int)Sprite.Width;
+                attackHeight = 32;
+                offset.Y = (LastMovementDirection.Y > 0 ? 1 : -1) * attackReach;
+            }
+
+            int x = (int)(attackCenter.X + offset.X - attackWidth / 2);
+            int y = (int)(attackCenter.Y + offset.Y - attackHeight / 2);
+
+            return new Rectangle(x, y, attackWidth, attackHeight);
         }
 
         public void SetLastMovementDirection(Vector2 dir)

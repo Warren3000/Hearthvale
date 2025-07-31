@@ -24,8 +24,8 @@ public class GameScene : Scene
     private bool _isPlayerAttacking;
     public bool IsPlayerAttacking => _isPlayerAttacking;
 
-    private const float MOVEMENT_SPEED = 1.0f;
-    private const int PlayerAttackPower = 1;
+    private const float MOVEMENT_SPEED = 1.0f; // Increased for better feel
+    private SoundEffect _playerAttackSoundEffect; // Add this field
 
     public float MovementSpeed => MOVEMENT_SPEED;
 
@@ -45,12 +45,11 @@ public class GameScene : Scene
     private Camera2D _camera;
     private InputHandler _inputHandler;
 
-
     // handlers
     private NpcManager _npcManager;
     private GameUIManager _uiManager;
     private Player _player;
-    private GameInputHandler _gameInputHandler;
+    // private GameInputHandler _gameInputHandler; // REMOVED
     private ScoreManager _scoreManager;
     private MapManager _mapManager;
     private CombatEffectsManager _combatEffectsManager;
@@ -62,7 +61,6 @@ public class GameScene : Scene
     {
         base.Initialize();
         Core.ExitOnEscape = false;
-
     }
 
     public override void LoadContent()
@@ -126,6 +124,7 @@ public class GameScene : Scene
         sword.ManualOffset = new Vector2(0, 0); // Move down and to the right
         _player.EquipWeapon(sword);
         _dialogManager = new DialogManager(_uiManager, _player, _npcManager, dialogDistance);
+        _playerAttackSoundEffect = Content.Load<SoundEffect>("audio/player_attack"); // Load attack sound
         _combatManager = new CombatManager(
             _npcManager,
             _player,
@@ -134,25 +133,18 @@ public class GameScene : Scene
             _combatEffectsManager,
             _bounceSoundEffect,
             _collectSoundEffect,
+            _playerAttackSoundEffect,
             worldBounds: _mapManager.RoomBounds
         );
 
         _inputHandler = new InputHandler(
             _camera,
-            MOVEMENT_SPEED,
             () => _uiManager.PauseGame(),
-            movement => _player.Move(movement, _mapManager.RoomBounds, _player.Sprite.Width, _player.Sprite.Height, _npcManager.Npcs),
             () => _npcManager.SpawnNPC("DefaultNPCType", _player.Position),
             () => Core.ChangeScene(new TitleScene()),
-            () => _combatManager.HandlePlayerAttack()
+            () => _combatManager.HandlePlayerProjectileAttack(), // Projectile attack
+            () => _combatManager.HandlePlayerMeleeAttack()      // Melee attack
         );
-        _gameInputHandler = new GameInputHandler(
-            _player,
-            _npcManager,
-            _uiManager,
-            _combatManager,
-            () => _uiManager.PauseGame(),
-            () => Core.ChangeScene(new TitleScene()));
     }
 
     public override void Update(GameTime gameTime)
@@ -167,34 +159,19 @@ public class GameScene : Scene
         if (_uiManager.IsPausePanelVisible)
             return;
 
-        _gameInputHandler.Update(gameTime);
-        _inputHandler.Update(gameTime); // <-- Add this line
+        _inputHandler.Update(gameTime);
 
         _player.Update(gameTime, Keyboard.GetState(), _npcManager.Npcs);
         _npcManager.Update(gameTime, _player);
 
         _combatManager.Update(gameTime);
 
-        if (_player.IsAttacking && _combatManager.CanAttack)
-        {
-            _combatManager.HandlePlayerAttack();
-        }
         _combatEffectsManager.Update(gameTime);
 
         _dialogManager.Update();
 
         _mapManager.Update(gameTime);
         UpdateViewport(Core.GraphicsDevice.Viewport);
-        _inputHandler = new InputHandler(
-            _camera,
-            MOVEMENT_SPEED,
-            () => _uiManager.PauseGame(),
-            movement => _player.Move(movement, _mapManager.RoomBounds, _player.Sprite.Width, _player.Sprite.Height, _npcManager.Npcs),
-            () => _npcManager.SpawnNPC("DefaultNPCType", _player.Position),
-            () => Core.ChangeScene(new TitleScene()),
-            () => _combatManager.HandlePlayerAttack() // <-- Added for projectile firing
-        );
-
         _player.ClampToBounds(_mapManager.RoomBounds);
 
         // Calculate the margin rectangle as before
@@ -231,7 +208,8 @@ public class GameScene : Scene
 
         _mapManager.Draw(transform);
         // Determine if sword should be behind player
-        bool drawWeaponBehind = _player.LastMovementDirection.Y < 0; // moving up
+        bool isMovingUp = _player.LastMovementDirection.Y < 0;
+        bool drawWeaponBehind = isMovingUp && !_player.IsAttacking; // Draw behind when moving up, unless attacking
 
         if (drawWeaponBehind)
         {

@@ -1,4 +1,5 @@
 ﻿using Hearthvale.GameCode.Entities.Characters;
+using Hearthvale.GameCode.Entities.Players;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
@@ -34,6 +35,10 @@ public class NPC : Character
         (int)Sprite.Height / 2
     );
 
+    public bool IsAttacking { get; private set; }
+    private float _attackAnimTimer = 0f;
+    private const float AttackAnimDuration = 0.25f; // WindUp (0.15) + Slash (0.1)
+
     public NPC(Dictionary<string, Animation> animations, Vector2 position, Rectangle bounds, SoundEffect defeatSound, int maxHealth)
     {
         var sprite = new AnimatedSprite(animations["Idle"]);
@@ -43,8 +48,10 @@ public class NPC : Character
 
         _sprite = sprite;
         _position = position;
-        _maxHealth = 10;
-        _currentHealth = 10;
+        // Use the maxHealth parameter instead of hardcoding values
+        _maxHealth = maxHealth;
+        _currentHealth = maxHealth;
+        // AttackRadius = 40f; // REMOVED
 
         _animationController.SetAnimation("Idle");
         _movementController.SetIdle();
@@ -95,12 +102,78 @@ public class NPC : Character
     public void Update(GameTime gameTime, IEnumerable<NPC> allNpcs, Character player)
     {
         float elapsed = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+        if (IsDefeated)
+        {
+            UpdateHealth(elapsed);
+            return;
+        }
+
+        if (IsAttacking)
+        {
+            _attackAnimTimer -= elapsed;
+            if (_attackAnimTimer <= 0)
+            {
+                IsAttacking = false;
+            }
+        }
+
         UpdateHealth(elapsed);
         UpdateMovement(elapsed, allNpcs, player);
         UpdateAnimation(elapsed);
         UpdateWeapon(gameTime, player);
 
+        // --- NPC Attack Logic ---
+        // Use the weapon's length to determine attack range
+        float attackRange = EquippedWeapon?.Length ?? 0f;
+        if (CanAttack && !IsAttacking && Vector2.Distance(Position, player.Position) < attackRange)
+        {
+            StartAttack();
+        }
+        // --- End Attack Logic ---
+
         _sprite.Position = Position; // Ensure sprite position matches movement
+    }
+
+    public void StartAttack()
+    {
+        IsAttacking = true;
+        _attackAnimTimer = AttackAnimDuration;
+        EquippedWeapon?.StartSwing(_facingRight);
+        ResetAttackTimer(); // Start global attack cooldown
+    }
+
+    public Rectangle GetAttackArea()
+    {
+        if (EquippedWeapon == null) return Rectangle.Empty;
+
+        float attackReach = EquippedWeapon.Length; // Use the weapon's actual length
+        Vector2 direction = Vector2.Zero;
+        float angle = EquippedWeapon.Rotation;
+        direction.X = (float)System.Math.Cos(angle);
+        direction.Y = (float)System.Math.Sin(angle);
+
+        int attackWidth, attackHeight;
+        Vector2 attackCenter = Position + new Vector2(Sprite.Width / 2, Sprite.Height / 2);
+        Vector2 offset = Vector2.Zero;
+
+        if (System.Math.Abs(direction.X) > System.Math.Abs(direction.Y))
+        {
+            attackWidth = 32;
+            attackHeight = (int)Sprite.Height;
+            offset.X = (direction.X > 0 ? 1 : -1) * attackReach;
+        }
+        else
+        {
+            attackWidth = (int)Sprite.Width;
+            attackHeight = 32;
+            offset.Y = (direction.Y > 0 ? 1 : -1) * attackReach;
+        }
+
+        int x = (int)(attackCenter.X + offset.X - attackWidth / 2);
+        int y = (int)(attackCenter.Y + offset.Y - attackHeight / 2);
+
+        return new Rectangle(x, y, attackWidth, attackHeight);
     }
 
     private void UpdateWeapon(GameTime gameTime, Character player)
@@ -117,7 +190,15 @@ public class NPC : Character
                 directionToPlayer = Vector2.UnitX; // Default if positions are identical
             }
 
-            EquippedWeapon.Rotation = (float)Math.Atan2(directionToPlayer.Y, directionToPlayer.X) + MathHelper.PiOver4;
+            // Set facing direction based on player's position
+            if (Math.Abs(directionToPlayer.X) > System.Math.Abs(directionToPlayer.Y))
+            {
+                _facingRight = directionToPlayer.X > 0;
+            }
+
+            // Align weapon rotation with the direction to the player
+            const float rotationOffset = MathHelper.Pi / 4f; // 45 degrees in radians
+            EquippedWeapon.Rotation = (float)System.Math.Atan2(directionToPlayer.Y, directionToPlayer.X) + rotationOffset;
             EquippedWeapon.Position = Position + new Vector2(Sprite.Width / 2, Sprite.Height / 2);
             EquippedWeapon.Update(gameTime);
         }

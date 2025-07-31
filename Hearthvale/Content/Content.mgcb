@@ -34,6 +34,18 @@
 /processorParam:Quality=Best
 /build:audio/npc_defeat.wav
 
+#begin audio/npc_hit.mp3
+/importer:Mp3Importer
+/processor:SongProcessor
+/processorParam:Quality=Best
+/build:audio/npc_hit.mp3
+
+#begin audio/player_attack.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:audio/player_attack.wav
+
 #begin audio/theme.ogg
 /importer:OggImporter
 /processor:SongProcessor

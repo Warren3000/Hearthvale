@@ -11,7 +11,7 @@ namespace Hearthvale.GameCode.Entities.Players
     {
         private readonly Player _player;
         private float _attackTimer = 0f;
-        private const float AttackDuration = 0.3f;
+        private const float AttackDuration = 0.25f; // WindUp (0.15) + Slash (0.1)
         private CombatEffectsManager _effectsManager;
 
         public bool IsAttacking { get; private set; }
@@ -31,7 +31,6 @@ namespace Hearthvale.GameCode.Entities.Players
                 {
                     IsAttacking = false;
                     _player.IsAttacking = false;
-                    _player.UpdateAnimation(keyboard, false);
                 }
             }
 
@@ -40,23 +39,19 @@ namespace Hearthvale.GameCode.Entities.Players
                 // Only update orbiting rotation if not swinging
                 if (!IsAttacking)
                 {
-                    _player.EquippedWeapon.Rotation = (movement != Vector2.Zero)
-                        ? (float)Math.Atan2(_player.LastMovementDirection.Y, _player.LastMovementDirection.X) + MathF.PI / 4f
-                        : _player.EquippedWeapon.Rotation;
+                    // The weapon should always point in the last moved direction
+                    const float rotationOffset = MathHelper.Pi / 4f; // 45 degrees in radians
+                    _player.EquippedWeapon.Rotation = (float)Math.Atan2(_player.LastMovementDirection.Y, _player.LastMovementDirection.X) + rotationOffset;
                 }
 
-                float angle = _player.EquippedWeapon.Rotation;
-                Vector2 orbitOffset = new Vector2(
-                    MathF.Cos(angle) * _player.WeaponOrbitRadius,
-                    MathF.Sin(angle) * _player.WeaponOrbitRadius
-                );
-                Vector2 directionalOffset = Vector2.Zero;
-                if (_player.LastMovementDirection.Y < 0)
-                    directionalOffset.X -= 4;
-                if (_player.LastMovementDirection.X < 0)
-                    directionalOffset.Y += 4;
-                _player.EquippedWeapon.Offset = orbitOffset + _player.EquippedWeapon.ManualOffset + directionalOffset;
-                _player.EquippedWeapon.Position = _player.Position + new Vector2(_player.Sprite.Width / 2, _player.Sprite.Height / 2) + _player.EquippedWeapon.Offset;
+                // The weapon's position should be based on the player's center, not its own rotation angle
+                Vector2 playerCenter = _player.Position + new Vector2(_player.Sprite.Width / 2f, _player.Sprite.Height / 2f);
+                
+                // Calculate offset from player center based on direction
+                Vector2 orbitOffset = _player.LastMovementDirection * _player.WeaponOrbitRadius;
+
+                _player.EquippedWeapon.Offset = orbitOffset + _player.EquippedWeapon.ManualOffset;
+                _player.EquippedWeapon.Position = playerCenter + _player.EquippedWeapon.Offset;
             }
 
             _player.EquippedWeapon?.Update(gameTime);
@@ -66,6 +61,7 @@ namespace Hearthvale.GameCode.Entities.Players
         {
             if (_player.EquippedWeapon != null)
             {
+                // The swing direction (clockwise/counter-clockwise) should be based on horizontal facing
                 _player.EquippedWeapon.StartSwing(_player.FacingRight);
             }
             _player.StartAttack();
@@ -83,6 +79,5 @@ namespace Hearthvale.GameCode.Entities.Players
         {
             _player.Heal(amount);
         }
-
     }
 }

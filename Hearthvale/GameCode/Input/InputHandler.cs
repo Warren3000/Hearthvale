@@ -1,4 +1,5 @@
-﻿using Hearthvale.GameCode.UI;
+﻿using Hearthvale.GameCode.Entities.Players; // Add this
+using Hearthvale.GameCode.UI;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using MonoGameLibrary;
@@ -10,30 +11,26 @@ namespace Hearthvale.GameCode.Input
     public class InputHandler
     {
         private Camera2D _camera;
-        private float _movementSpeed;
         private readonly Action PauseGameCallback;
-        private readonly Action<Vector2> MoveHeroCallback;
         private readonly Action SpawnNPCCallback;
         private readonly Action QuitCallback;
-        private readonly Action FireProjectileCallback; // <-- Added
+        private readonly Action _projectileAttackCallback;
+        private readonly Action _meleeAttackCallback;
 
         public InputHandler(
             Camera2D camera,
-            float movementSpeed,
             Action pauseGameCallback,
-            Action<Vector2> moveHeroCallback,
             Action spawnNpcCallback,
             Action quitCallback,
-            Action fireProjectileCallback // <-- Added
-        )
+            Action projectileAttackCallback,
+            Action meleeAttackCallback)
         {
             _camera = camera;
-            _movementSpeed = movementSpeed;
             PauseGameCallback = pauseGameCallback;
-            MoveHeroCallback = moveHeroCallback;
             SpawnNPCCallback = spawnNpcCallback;
             QuitCallback = quitCallback;
-            FireProjectileCallback = fireProjectileCallback; // <-- Added
+            _projectileAttackCallback = projectileAttackCallback;
+            _meleeAttackCallback = meleeAttackCallback;
         }
 
         public void Update(GameTime gameTime)
@@ -69,24 +66,11 @@ namespace Hearthvale.GameCode.Input
                 QuitCallback?.Invoke();
             }
 
-            float speed = _movementSpeed / 2;
-            if (keyboard.IsKeyDown(Keys.Space))
+            // Change IsKeyDown to WasKeyJustPressed for a single, clean attack per press.
+            if (keyboard.WasKeyJustPressed(Keys.Space))
             {
-                speed *= 1.5f;
+                _meleeAttackCallback?.Invoke();
             }
-
-            Vector2 movement = Vector2.Zero;
-            if (keyboard.IsKeyDown(Keys.W) || keyboard.IsKeyDown(Keys.Up))
-                movement.Y -= speed;
-            if (keyboard.IsKeyDown(Keys.S) || keyboard.IsKeyDown(Keys.Down))
-                movement.Y += speed;
-            if (keyboard.IsKeyDown(Keys.A) || keyboard.IsKeyDown(Keys.Left))
-                movement.X -= speed;
-            if (keyboard.IsKeyDown(Keys.D) || keyboard.IsKeyDown(Keys.Right))
-                movement.X += speed;
-
-            if (movement != Vector2.Zero)
-                MoveHeroCallback?.Invoke(movement);
 
             if (keyboard.WasKeyJustPressed(Keys.M))
             {
@@ -113,7 +97,7 @@ namespace Hearthvale.GameCode.Input
             // --- Add this block for firing projectiles ---
             if (keyboard.WasKeyJustPressed(Keys.F))
             {
-                FireProjectileCallback?.Invoke();
+                _projectileAttackCallback?.Invoke();
             }
         }
 
@@ -124,43 +108,11 @@ namespace Hearthvale.GameCode.Input
                 PauseGameCallback?.Invoke();
             }
 
-            float speed = _movementSpeed;
-            if (gamePadOne.IsButtonDown(Buttons.A))
-            {
-                speed *= 1.5f;
-                GamePad.SetVibration(PlayerIndex.One, 1f, 1f);
-            }
-            else
-            {
-                GamePad.SetVibration(PlayerIndex.One, 0f, 0f);
-            }
-
-            Vector2 movement = Vector2.Zero;
-
-            if (gamePadOne.LeftThumbStick != Vector2.Zero)
-            {
-                movement = new Vector2(gamePadOne.LeftThumbStick.X * speed, -gamePadOne.LeftThumbStick.Y * speed);
-            }
-            else
-            {
-                if (gamePadOne.IsButtonDown(Buttons.DPadUp))
-                    movement.Y -= speed;
-                if (gamePadOne.IsButtonDown(Buttons.DPadDown))
-                    movement.Y += speed;
-                if (gamePadOne.IsButtonDown(Buttons.DPadLeft))
-                    movement.X -= speed;
-                if (gamePadOne.IsButtonDown(Buttons.DPadRight))
-                    movement.X += speed;
-            }
-
-            if (movement != Vector2.Zero)
-            {
-                MoveHeroCallback?.Invoke(movement);
-            }
-
             // Optionally, add gamepad support for firing projectiles here
-            // if (gamePadOne.WasButtonJustPressed(Buttons.RightShoulder))
-            //     FireProjectileCallback?.Invoke();
+            if (gamePadOne.WasButtonJustPressed(Buttons.RightShoulder))
+                 _projectileAttackCallback?.Invoke();
+            if (gamePadOne.WasButtonJustPressed(Buttons.X))
+                _meleeAttackCallback?.Invoke();
         }
     }
 }

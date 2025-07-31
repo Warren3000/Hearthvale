@@ -1,54 +1,85 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
+using System.Collections.Generic;
+using Hearthvale.GameCode.Entities.NPCs;
 
 namespace Hearthvale.GameCode.Entities.Players
 {
     public class PlayerMovementController
     {
         private readonly Player _player;
-        private Vector2 _velocity = Vector2.Zero;
+        private Vector2 _velocity;
+        private float _knockbackTimer;
+        private const float KnockbackDuration = 0.2f;
 
         public PlayerMovementController(Player player)
         {
             _player = player;
         }
 
-        public Vector2 Update(GameTime gameTime, KeyboardState keyboard)
+        public Vector2 Update(GameTime gameTime, KeyboardState keyboard, IEnumerable<NPC> npcs)
         {
-            Vector2 movement = Vector2.Zero;
-            if (keyboard.IsKeyDown(Keys.A) || keyboard.IsKeyDown(Keys.Left))
-                movement.X -= 1;
-            if (keyboard.IsKeyDown(Keys.D) || keyboard.IsKeyDown(Keys.Right))
-                movement.X += 1;
-            if (keyboard.IsKeyDown(Keys.W) || keyboard.IsKeyDown(Keys.Up))
-                movement.Y -= 1;
-            if (keyboard.IsKeyDown(Keys.S) || keyboard.IsKeyDown(Keys.Down))
-                movement.Y += 1;
+            float elapsed = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // Apply knockback velocity if present
-            if (_velocity != Vector2.Zero)
+            // Handle knockback first
+            if (_knockbackTimer > 0)
             {
-                _player.SetPosition(_player.Position + _velocity * _player.MovementSpeed);
-                // Dampen velocity for next frame (simple friction)
-                _velocity *= 0.85f;
-                if (_velocity.LengthSquared() < 0.01f)
-                    _velocity = Vector2.Zero;
-            }
-            else if (movement != Vector2.Zero)
-            {
-                movement.Normalize();
-                _player.SetPosition(_player.Position + movement * _player.MovementSpeed);
-                _player.SetLastMovementDirection(movement);
-                if (movement.X != 0)
-                    _player.SetFacingRight(movement.X > 0);
+                _knockbackTimer -= elapsed;
+                _player.SetPosition(_player.Position + _velocity * elapsed);
+                return _velocity; // Return knockback velocity and skip player input
             }
 
-            return movement;
+            Vector2 direction = Vector2.Zero;
+            if (keyboard.IsKeyDown(Keys.W)) direction.Y--;
+            if (keyboard.IsKeyDown(Keys.S)) direction.Y++;
+            if (keyboard.IsKeyDown(Keys.A)) direction.X--;
+            if (keyboard.IsKeyDown(Keys.D)) direction.X++;
+
+            if (direction != Vector2.Zero)
+            {
+                direction.Normalize();
+                _player.SetLastMovementDirection(direction);
+                // Update facing direction based on the dominant axis of movement
+                if (System.Math.Abs(direction.X) > System.Math.Abs(direction.Y))
+                {
+                    _player.SetFacingRight(direction.X > 0);
+                }
+            }
+
+            _velocity = direction * _player.MovementSpeed * 100f * elapsed;
+
+            // --- Collision Check ---
+            Vector2 newPosition = _player.Position + _velocity;
+            Rectangle candidateBounds = new Rectangle(
+                (int)newPosition.X + 8,
+                (int)newPosition.Y + 16,
+                (int)_player.Sprite.Width / 2,
+                (int)_player.Sprite.Height / 2
+            );
+
+            bool collision = false;
+            foreach (var npc in npcs)
+            {
+                if (!npc.IsDefeated && candidateBounds.Intersects(npc.Bounds))
+                {
+                    collision = true;
+                    break;
+                }
+            }
+
+            if (!collision)
+            {
+                _player.SetPosition(newPosition);
+            }
+            // --- End Collision Check ---
+
+            return _velocity;
         }
 
         public void SetVelocity(Vector2 velocity)
         {
             _velocity = velocity;
+            _knockbackTimer = KnockbackDuration;
         }
     }
 }
