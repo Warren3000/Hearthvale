@@ -97,9 +97,9 @@
 - [x] **Sound effects for attacks, hits, and defeat**
 
 **Remaining:**
-- [ ] Add reaction animations (hit, defeat, etc.)
-- [ ] Polish defeat logic (e.g., removal timing, effects)
-- [ ] Playtesting and bug fixing
+- [x] Add reaction animations (hit, defeat, etc.)
+- [x] Polish defeat logic (e.g., removal timing, effects)
+- [x] Playtesting and bug fixing
 
 </details>
 
