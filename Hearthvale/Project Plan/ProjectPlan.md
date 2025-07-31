@@ -192,10 +192,36 @@
 
 **Remaining:**
 - [ ] Design inventory and stats UI
+    - [ ] Plan layout for inventory grid, equipment slots, and player stats summary
+    - [ ] Visual design for item icons, tooltips, and drag/drop indicators
+    - [ ] Tabs or filters for item categories (weapons, armor, consumables, quest items)
+    - [ ] Stats breakdown (health, attack, defense, buffs, passives, etc.)
 - [ ] Implement inventory management logic
+    - [ ] Add/remove items from inventory
+    - [ ] Equip/unequip weapons, armor, accessories
+    - [ ] Stackable vs unique items handling
+    - [ ] Item sorting/filtering and search functionality
+    - [ ] Use, drop, or inspect actions for items
 - [ ] Integrate with player data and save/load
+    - [ ] Sync inventory and equipment with player data model
+    - [ ] Persist inventory and equipment via save/load system
+    - [ ] Handle edge cases (full inventory, lost items, corrupted saves)
 - [ ] Add input handling to open/close inventory screen
+    - [ ] Keyboard/controller shortcuts to open/close UI
+    - [ ] Pause/unpause game during inventory management
+    - [ ] Contextual hints/tooltips for controls
+- [ ] Advanced features (optional)
+    - [ ] Quick-equip/favorite items
+    - [ ] Compare items (side-by-side stats)
+    - [ ] Item crafting or combining (if applicable)
+    - [ ] Equipment durability and repair (if applicable)
 - [ ] Playtesting and polish
+    - [ ] UX feedback and iteration
+    - [ ] Visual polish and animation for UI transitions
+    - [ ] Sound effects for inventory actions
+    - [ ] Accessibility options (scalable text, colorblind mode, etc.)
+
+---
 
 </details>
 
