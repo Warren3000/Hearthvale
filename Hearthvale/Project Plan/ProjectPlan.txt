@@ -1,143 +1,460 @@
-﻿Hearthvale Project Plan
+﻿================================================================================
 
-| Feature Area                     | Status      | Notes                                           | 
-|----------------------------------|-------------|--------------------------------------------------| 
-| Combat System                    | ⏳ Incomplete| Basic attacks and defeat; missing feedback, sound, and reactions. Player and NPC health implemented. Player health bar added. | 
-| Weapon Leveling                  | ⏳ Pending   | Not started                                     | 
-| Dungeon Interactivity            | ⏳ Pending   | Not started                                     | 
-| City Building                    | ⏳ Pending   | Not started                                     | 
-| Time/Story                       | ⏳ Pending   | Not started                                     |
-| Global Game State & Save/Load    | ⏳ Pending   | Unified save/load for player, town, quests, etc. |
-| Bosses & Advanced AI             | ⏳ Pending   | Unique boss fights and AI behaviors              |
-| Dungeon Secrets & Lore           | ⏳ Pending   | Secret rooms, collectibles, lore                 |
-| Town Events & NPCs               | ⏳ Pending   | Town festivals, NPC recruitment                  |
-| Accessibility & Polish           | ⏳ Pending   | UX, controller support, save/load, etc.          |
-| Launch & Marketing               | ⏳ Pending   | Demo, trailer, Steam integration, etc.           |
+Timeline
+--------------------------------------------------------------------------------
+| Milestone                          | Est. Duration | Start Date  | Est. End Date |
+|------------------------------------ |-------------- |-------------|---------------|
+| Combat System v1                   | 6–7 weeks     | 07/15/2025  | 09/02/2025    |
+| Weapon Leveling v1                 | 4 weeks       | 09/03/2025  | 09/30/2025    |
+| Dungeon Interactivity v1           | 9–10 weeks    | 10/01/2025  | 12/09/2025    |
+| Combat System v2                   | 4–5 weeks     | 12/10/2025  | 01/13/2026    |
+| Player Inventory & Stats Screen    | 2–3 weeks     | 01/14/2026  | 01/31/2026    |
+| Bosses & Advanced AI               | 3 weeks       | 02/01/2026  | 02/21/2026    |
 
----
+| City Building Prototype            | 6–7 weeks     | 02/22/2026  | 04/11/2026    |
+| Time/Story Progression v1          | 6 weeks       | 04/12/2026  | 05/23/2026    |
+| Global Game State & Save/Load      | 3 weeks       | 05/24/2026  | 06/13/2026    |
+| Dungeon Secrets & Lore             | 3 weeks       | 06/14/2026  | 07/04/2026    |
+| Town Events & NPCs                 | 3 weeks       | 07/05/2026  | 07/25/2026    |
 
-## Milestone Details
+| Accessibility & Polish             | 3 weeks       | 07/26/2026  | 08/15/2026    |
+| Tutorial & Onboarding              | 1–2 weeks     | 08/16/2026  | 08/29/2026    |
 
-### Milestone 1: Combat System v1 (6–7 weeks)
-- Implement player and NPC health/damage systems
-- Add health bar UI for player
-- Basic attack mechanics (melee, ranged if possible)
-- Damage feedback (visual/sound)
-- Basic enemy defeat logic
+| Quest System & Journal             | 2–3 weeks     | 08/30/2026  | 09/19/2026    |
+| Map & Fast Travel                  | 2 weeks       | 09/20/2026  | 10/03/2026    |
+| Achievements & Progress Tracking   | 1–2 weeks     | 10/04/2026  | 10/17/2026    |
+| Endgame & Replayability            | 2–3 weeks     | 10/18/2026  | 11/07/2026    |
 
-### Milestone 2: Weapon Leveling v1 (4 weeks)
-- Weapon XP and level system
-- Weapon stat progression
-- Save/load weapon state
-- UI for weapon stats and progression
+| Multiplayer/Co-op Mode             | 4–6 weeks     | 11/08/2026  | 12/19/2026    |
+| Modding & Extensibility (Optional) | 2–4 weeks     | 12/20/2026  | 01/16/2027    |
+| Live Events & Seasonal Content     | 2–3 weeks     | 01/17/2027  | 02/06/2027    |
+| Mini-Games & Side Activities       | 2–3 weeks     | 02/07/2027  | 02/27/2027    |
+| Relationship & Reputation System   | 2–3 weeks     | 02/28/2027  | 03/20/2027    |
+| Economy & Trading System           | 2–3 weeks     | 03/21/2027  | 04/10/2027    |
+| Procedural Generation              | 3–4 weeks     | 04/11/2027  | 05/08/2027    |
+| Expanded Lore & Storytelling       | 2–3 weeks     | 05/09/2027  | 05/29/2027    |
+| Endgame Raids & Challenges         | 2–3 weeks     | 05/30/2027  | 06/19/2027    |
+| Analytics & Telemetry (Optional)   | 1 week        | 06/20/2027  | 06/26/2027    |
 
-### Milestone 3: Dungeon Interactivity v1 (9–10 weeks)
-- Interactive dungeon elements (doors, traps, switches)
-- Basic puzzle mechanics
-- Dungeon loot system
-- Enemy encounters and spawners
+| Launch & Marketing                 | 3 weeks       | 06/27/2027  | 07/17/2027    |
+| Alpha Release                      | 1 week        | 07/18/2027  | 07/24/2027    |
+| Beta Release                       | 3 weeks       | 07/25/2027  | 08/14/2027    |
 
-### Milestone 4: Combat System v2 (4–5 weeks)
-- Add advanced combat moves/combos
-- Special weapon abilities
-- Status effects (poison, stun, etc.)
-- Enemy variety improvements
+================================================================================
 
-### Milestone 5: City Building Prototype (6–7 weeks)
-- Placeable building system in town
-- Resource collection mechanics
-- Save/load town state
-- Basic town upgrade logic
+Feature Areas
+--------------------------------------------------------------------------------
+- [ ] Combat System
+      - Basic attacks/defeat; missing feedback, sound, and reactions.
+      - Player/NPC health implemented. Player health bar added.
+- [ ] Weapon Leveling
+      - Not started
+- [ ] Dungeon Interactivity
+      - Not started
+- [ ] City Building
+      - Not started
+- [ ] Time/Story
+      - Not started
+- [ ] Global Game State & Save
+      - Unified save/load for player, town, quests, etc.
+- [ ] Bosses & Advanced AI
+      - Unique boss fights and AI behaviors
+- [ ] Dungeon Secrets & Lore
+      - Secret rooms, collectibles, lore
+- [ ] Town Events & NPCs
+      - Town festivals, NPC recruitment
+- [ ] Accessibility & Polish
+      - UX, controller support, save/load, etc.
+- [ ] Launch & Marketing
+      - Demo, trailer, Steam integration, etc.
+- [ ] Tutorial & Onboarding
+      - Guided intro, tooltips, onboarding
+- [ ] Quest System & Journal
+      - Quest tracking, journal/log
+- [ ] Map & Fast Travel
+      - World map, fast travel, markers
+- [ ] Achievements & Progress Tracking
+      - In-game achievements, progress UI
+- [ ] Endgame & Replayability
+      - New Game+, challenge content
+- [ ] Modding & Extensibility
+      - Mod support, documentation
+- [ ] Analytics & Telemetry
+      - Player analytics, error reporting
 
-### Milestone 6: Time/Story Progression v1 (6 weeks)
-- Story events and progression triggers
-- Quest system (main and side quests)
-- Time-of-day system
-- Event scheduling
+================================================================================
 
-### Milestone 7: Global Game State & Save/Load System (3 weeks)
-**Goal:** Implement a robust global game state system and unified save/load functionality.
+Core Gameplay & Systems
+--------------------------------------------------------------------------------
+Milestone 1: Combat System v1 (6–7 weeks)
+**Completed:**
+- [x] Implement player and NPC health/damage systems
+- [x] Add health bar UI for player
+- [x] Add health bar UI for NPCs
+- [x] Basic attack mechanics (melee)
+- [x] Basic enemy defeat logic
+- [x] Damage feedback: smooth floating combat text and damage numbers
 
-**Tasks:**
-- Design a global game state structure:
-  - Player stats, inventory, equipment
-  - Weapon state
-  - Town/building state
-  - Quest and story flags
-  - NPC states and relationships
-  - Dungeon progress, secrets found
-  - Time-of-day, world events
-- Implement serialization/deserialization (JSON or binary)
-- Integrate save/load logic for all major systems
-- Add UI for save/load slots and autosave
-- Error handling for corrupted/missing saves
-- Playtesting and validation for edge cases
+**Remaining:**
+- [ ] Add ranged attack mechanics (if possible)
+- [ ] Add sound effects for attacks, hits, and defeat
+- [ ] Add reaction animations (hit, defeat, etc.)
+- [ ] Polish defeat logic (e.g., removal timing, effects)
+- [ ] Playtesting and bug fixing
 
-### Milestone 8: Bosses & Advanced AI (3 weeks)
-- Implement at least 2 unique boss fights (multi-phase)
-- Advanced enemy AI behaviors (evasion, combos, spells)
-- Visual/sound polish for boss attacks/cues
-- Boss health bars, intro animations
+--------------------------------------------------------------------------------
+Milestone 2: Weapon Leveling v1 (4 weeks)
+**Completed:**
+- [ ] (none yet)
 
-### Milestone 9: Dungeon Secrets & Lore (3 weeks)
-- Secret rooms, hidden puzzles, rare collectibles
-- Lore pickups (diaries, relics, ancient books)
-- UI for discovered secrets/collectibles
+**Remaining:**
+- [ ] Weapon XP and level system
+- [ ] Weapon stat progression
+- [ ] Save/load weapon state
+- [ ] UI for weapon stats and progression
 
-### Milestone 10: Town Events & NPCs (3 weeks)
-- Town events (festivals, merchant visits, attacks)
-- Recruitable NPCs (specialists, shopkeepers, quest givers)
-- NPC schedule system
-- Town reputation/affinity mechanics
+--------------------------------------------------------------------------------
+Milestone 3: Dungeon Interactivity v1 (9–10 weeks)
+**Completed:**
+- [ ] (none yet)
 
-### Milestone 11: Accessibility & Polish (3 weeks)
-- Custom keybindings/controller support
-- Save/load UI polish (linked to global system)
-- Difficulty settings and assist modes
-- UI/sound/menu polish
+**Remaining:**
+- [ ] Interactive dungeon elements (doors, traps, switches)
+- [ ] Basic puzzle mechanics
+- [ ] Dungeon loot system
+- [ ] Enemy encounters and spawners
 
-### Milestone 12: Launch & Marketing (3 weeks)
-- Build and distribute demo
-- Prepare trailer and promotional materials
-- Achievements/trophies (Steam, PC)
-- Steamworks integration (if applicable)
-- Localization (if feasible)
-- Launch and post-release support
+--------------------------------------------------------------------------------
+Milestone 4: Combat System v2 (4–5 weeks)
+**Completed:**
+- [ ] (none yet)
 
-### Milestone 13: Alpha Release (1 week)
-- Internal testing and feedback
-- Collect bug reports and iterate
+**Remaining:**
+- [ ] Add advanced combat moves/combos
+- [ ] Special weapon abilities
+- [ ] Status effects (poison, stun, etc.)
+- [ ] Enemy variety improvements
 
-### Milestone 14: Beta Release (3 weeks)
-- Public playtesting
-- Final bug fixes and polish
-- Prepare for launch
+--------------------------------------------------------------------------------
+Milestone 5: Player Inventory & Stats Screen (2–3 weeks)
+**Completed:**
+- [ ] (none yet)
 
----
+**Remaining:**
+- [ ] Design inventory and stats UI
+- [ ] Implement inventory management logic
+- [ ] Integrate with player data and save/load
+- [ ] Add input handling to open/close inventory screen
+- [ ] Playtesting and polish
 
-## Timeline
+--------------------------------------------------------------------------------
+Milestone 6: Bosses & Advanced AI (3 weeks)
+**Completed:**
+- [ ] (none yet)
 
-| Milestone                      | Est. Duration | Start Date  | End Date    |
-|------------------------------- |-------------- |-------------|-------------|
-| Combat System v1               | 6–7 weeks     | 07/15/2025  | 09/02/2025  |
-| Weapon Leveling v1             | 4 weeks       | 09/03/2025  | 09/30/2025  |
-| Dungeon Interactivity v1       | 9–10 weeks    | 10/01/2025  | 12/09/2025  |
-| Combat System v2               | 4–5 weeks     | 12/10/2025  | 01/13/2026  |
-| City Building Prototype        | 6–7 weeks     | 01/14/2026  | 03/04/2026  |
-| Time/Story Progression v1      | 6 weeks       | 03/05/2026  | 04/15/2026  |
-| Global Game State & Save/Load  | 3 weeks       | 04/16/2026  | 05/06/2026  |
-| Bosses & Advanced AI           | 3 weeks       | 05/07/2026  | 05/27/2026  |
-| Dungeon Secrets & Lore         | 3 weeks       | 05/28/2026  | 06/17/2026  |
-| Town Events & NPCs             | 3 weeks       | 06/18/2026  | 07/08/2026  |
-| Accessibility & Polish         | 3 weeks       | 07/09/2026  | 07/29/2026  |
-| Launch & Marketing             | 3 weeks       | 07/30/2026  | 08/19/2026  |
-| Alpha Release                  | 1 week        | 08/20/2026  | 08/26/2026  |
-| Beta Release                   | 3 weeks       | 08/27/2026  | 09/16/2026  |
+**Remaining:**
+- [ ] Implement at least 2 unique boss fights (multi-phase)
+- [ ] Advanced enemy AI behaviors (evasion, combos, spells)
+- [ ] Visual/sound polish for boss attacks/cues
+- [ ] Boss health bars, intro animations
 
----
+================================================================================
 
-## Additional Recommendations
-- Playtest after major milestones and before launch.
-- Regular code refactoring (20 min/day) included in schedule.
-- Document all features and systems for future support and updates.
-- Adjust milestone durations as you progress and gain confidence.
+Progression & World Building
+--------------------------------------------------------------------------------
+Milestone 7: City Building Prototype (6–7 weeks)
+**Completed:**
+- [ ] (none yet)
+
+**Remaining:**
+- [ ] Placeable building system in town
+- [ ] Resource collection mechanics
+- [ ] Save/load town state
+- [ ] Basic town upgrade logic
+
+--------------------------------------------------------------------------------
+Milestone 8: Time/Story Progression v1 (6 weeks)
+**Completed:**
+- [ ] (none yet)
+
+**Remaining:**
+- [ ] Story events and progression triggers
+- [ ] Quest system (main and side quests)
+- [ ] Time-of-day system
+- [ ] Event scheduling
+
+--------------------------------------------------------------------------------
+Milestone 9: Global Game State & Save/Load (3 weeks)
+**Completed:**
+- [ ] (none yet)
+
+**Remaining:**
+- [ ] Design a global game state structure:
+      - Player stats, inventory, equipment
+      - Weapon state
+      - Town/building state
+      - Quest and story flags
+      - NPC states and relationships
+      - Dungeon progress, secrets found
+      - Time-of-day, world events
+- [ ] Implement serialization/deserialization (JSON or binary)
+- [ ] Integrate save/load logic for all major systems
+- [ ] Add UI for save/load slots and autosave
+- [ ] Error handling for corrupted/missing saves
+- [ ] Playtesting and validation for edge cases
+
+--------------------------------------------------------------------------------
+Milestone 10: Dungeon Secrets & Lore (3 weeks)
+**Completed:**
+- [ ] (none yet)
+
+**Remaining:**
+- [ ] Secret rooms, hidden puzzles, rare collectibles
+- [ ] Lore pickups (diaries, relics, ancient books)
+- [ ] UI for discovered secrets/collectibles
+
+--------------------------------------------------------------------------------
+Milestone 11: Town Events & NPCs (3 weeks)
+**Completed:**
+- [ ] (none yet)
+
+**Remaining:**
+- [ ] Town events (festivals, merchant visits, attacks)
+- [ ] Recruitable NPCs (specialists, shopkeepers, quest givers)
+- [ ] NPC schedule system
+- [ ] Town reputation/affinity mechanics
+
+================================================================================
+
+Polish & Accessibility
+--------------------------------------------------------------------------------
+Milestone 12: Accessibility & Polish (3 weeks)
+**Completed:**
+- [ ] (none yet)
+
+**Remaining:**
+- [ ] Custom keybindings/controller support
+- [ ] Save/load UI polish (linked to global system)
+- [ ] Difficulty settings and assist modes
+- [ ] UI/sound/menu polish
+
+--------------------------------------------------------------------------------
+Milestone 13: Tutorial & Onboarding (1–2 weeks)
+**Completed:**
+- [ ] (none yet)
+
+**Remaining:**
+- [ ] Design and implement tutorial sequence
+- [ ] Add contextual tooltips/help screens
+- [ ] Onboarding for controls, combat, inventory, progression
+
+================================================================================
+
+Retention & Replayability
+--------------------------------------------------------------------------------
+Milestone 14: Quest System & Journal (2–3 weeks)
+**Completed:**
+- [ ] (none yet)
+
+**Remaining:**
+- [ ] Quest tracking UI
+- [ ] Journal/log for story, lore, player notes
+- [ ] Integrate quest triggers and rewards
+
+--------------------------------------------------------------------------------
+Milestone 15: Map & Fast Travel (2 weeks)
+**Completed:**
+- [ ] (none yet)
+
+**Remaining:**
+- [ ] World map UI
+- [ ] Fast travel system
+- [ ] Map markers for POIs, quests, NPCs
+
+--------------------------------------------------------------------------------
+Milestone 16: Achievements & Progress Tracking (1–2 weeks)
+**Completed:**
+- [ ] (none yet)
+
+**Remaining:**
+- [ ] In-game achievement system
+- [ ] Progress tracking for collectibles, secrets, quests, bosses
+- [ ] UI for achievements and progress
+
+--------------------------------------------------------------------------------
+Milestone 17: Endgame & Replayability (2–3 weeks)
+**Completed:**
+- [ ] (none yet)
+
+**Remaining:**
+- [ ] New Game+ mode
+- [ ] Challenge dungeons/bosses
+- [ ] Randomized events/challenges
+
+================================================================================
+
+Community & Advanced Systems
+--------------------------------------------------------------------------------
+Milestone 18: Multiplayer/Co-op Mode (4–6 weeks)
+**Completed:**
+- [ ] (none yet)
+
+**Remaining:**
+- [ ] Design multiplayer architecture (online/local, host/join, sync)
+- [ ] Implement player connection and session management
+- [ ] Add co-op gameplay features (shared progression, trading, chat)
+- [ ] Integrate multiplayer with combat, dungeons, and town building
+- [ ] Add UI for multiplayer (lobby, invite, status)
+- [ ] Playtesting, bug fixing, and network optimization
+
+--------------------------------------------------------------------------------
+Milestone 19: Modding & Extensibility (Optional, 2–4 weeks)
+**Completed:**
+- [ ] (none yet)
+
+**Remaining:**
+- [ ] Mod support (custom maps, NPCs, items)
+- [ ] Documentation for modders
+- [ ] In-game mod browser/loader
+
+--------------------------------------------------------------------------------
+Milestone 20: Live Events & Seasonal Content (2–3 weeks)
+**Completed:**
+- [ ] (none yet)
+
+**Remaining:**
+- [ ] Design time-limited quests and world changes
+- [ ] Implement special bosses and community challenges
+- [ ] Add seasonal events (festivals, holidays, weather)
+- [ ] Integrate live events with quest and reward systems
+- [ ] Add UI for event notifications and participation
+- [ ] Playtesting and polish
+
+--------------------------------------------------------------------------------
+Milestone 21: Mini-Games & Side Activities (2–3 weeks)
+**Completed:**
+- [ ] (none yet)
+
+**Remaining:**
+- [ ] Design and implement mini-games (card games, fishing, puzzles, arena battles)
+- [ ] Add leaderboards and rewards for mini-games
+- [ ] Integrate mini-games with town and NPCs
+- [ ] Add UI for mini-game access and progress
+- [ ] Playtesting and polish
+
+--------------------------------------------------------------------------------
+Milestone 22: Relationship & Reputation System (2–3 weeks)
+**Completed:**
+- [ ] (none yet)
+
+**Remaining:**
+- [ ] Design NPC relationship mechanics (friendship, romance, rivalry)
+- [ ] Implement reputation system (town, factions, global)
+- [ ] Integrate relationship/reputation with quest outcomes and prices
+- [ ] Add UI for relationship/reputation status
+- [ ] Add dialogue and event triggers based on relationship/reputation
+- [ ] Playtesting and polish
+
+--------------------------------------------------------------------------------
+Milestone 23: Economy & Trading System (2–3 weeks)
+**Completed:**
+- [ ] (none yet)
+
+**Remaining:**
+- [ ] Design dynamic market prices and trading mechanics
+- [ ] Implement player-run shops and auctions
+- [ ] Add bartering and trade caravans
+- [ ] Integrate economy with crafting, loot, and NPCs
+- [ ] Add UI for trading, shop management, and market status
+- [ ] Playtesting and polish
+
+--------------------------------------------------------------------------------
+Milestone 24: Procedural Generation (3–4 weeks)
+**Completed:**
+- [ ] (none yet)
+
+**Remaining:**
+- [ ] Design procedural generation algorithms for dungeons and/or overworld
+- [ ] Implement random dungeon layouts, loot, and enemy placement
+- [ ] Add seed-based world sharing
+- [ ] Integrate procedural content with quest and event systems
+- [ ] Playtesting and polish
+
+--------------------------------------------------------------------------------
+Milestone 25: Expanded Lore & Storytelling (2–3 weeks)
+**Completed:**
+- [ ] (none yet)
+
+**Remaining:**
+- [ ] Design branching storylines and multiple endings
+- [ ] Add in-game books, diaries, and lore pickups
+- [ ] Implement cutscenes and/or voice acting
+- [ ] Integrate lore with quests, NPCs, and world events
+- [ ] Add UI for lore and story tracking
+- [ ] Playtesting and polish
+
+--------------------------------------------------------------------------------
+Milestone 26: Endgame Raids & Challenges (2–3 weeks)
+**Completed:**
+- [ ] (none yet)
+
+**Remaining:**
+- [ ] Design large-scale boss fights and timed dungeons
+- [ ] Implement leaderboard competitions and challenge modes
+- [ ] Add unique loot and cosmetic rewards for endgame content
+- [ ] Integrate raids/challenges with multiplayer and progression
+- [ ] Add UI for raid/challenge access and tracking
+- [ ] Playtesting and polish
+
+--------------------------------------------------------------------------------
+Milestone 27: Analytics & Telemetry (Optional, 1 week)
+**Completed:**
+- [ ] (none yet)
+
+**Remaining:**
+- [ ] Basic analytics for progression, deaths, quest completion
+- [ ] Error/crash reporting integration
+
+================================================================================
+
+Launch & Post-Release
+--------------------------------------------------------------------------------
+Milestone 28: Launch & Marketing (3 weeks)
+**Completed:**
+- [ ] (none yet)
+
+**Remaining:**
+- [ ] Build and distribute demo
+- [ ] Prepare trailer and promotional materials
+- [ ] Achievements/trophies (Steam, PC)
+- [ ] Steamworks integration (if applicable)
+- [ ] Localization (if feasible)
+- [ ] Launch and post-release support
+
+--------------------------------------------------------------------------------
+Milestone 29: Alpha Release (1 week)
+**Completed:**
+- [ ] (none yet)
+
+**Remaining:**
+- [ ] Internal testing and feedback
+- [ ] Collect bug reports and iterate
+
+--------------------------------------------------------------------------------
+Milestone 30: Beta Release (3 weeks)
+**Completed:**
+- [ ] (none yet)
+
+**Remaining:**
+- [ ] Public playtesting
+- [ ] Final bug fixes and polish
+- [ ] Prepare for launch
+
+================================================================================
+
+Additional Recommendations
+--------------------------------------------------------------------------------
+- Playtest after major milestones and before launch
+- Regular code refactoring (20 min/day) included in schedule
+- Document all features and systems for future support and updates
+- Adjust milestone durations as you progress and gain confidence

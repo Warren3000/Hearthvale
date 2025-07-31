@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGameLibrary.Graphics;
+using System;
 using System.Collections.Generic;
 
 namespace Hearthvale.GameCode.Entities.NPCs;
@@ -17,6 +18,7 @@ public class NPC : Character
     public int AttackPower { get; set; } = 1;
     private float _attackCooldown = 1.5f;
     private float _attackTimer = 0f;
+    public Weapon EquippedWeapon { get; private set; }
 
     public bool CanAttack => _attackTimer <= 0f;
     public void ResetAttackTimer() => _attackTimer = _attackCooldown;
@@ -49,7 +51,23 @@ public class NPC : Character
     }
     public override void Draw(SpriteBatch spriteBatch)
     {
-        _sprite.Draw(spriteBatch, Position); // Position returns _movementController.Position
+        bool drawWeaponBehind = _movementController.GetVelocity().Y < 0;
+
+        if (drawWeaponBehind)
+        {
+            EquippedWeapon?.Draw(spriteBatch, Position);
+            _sprite.Draw(spriteBatch, Position);
+        }
+        else
+        {
+            _sprite.Draw(spriteBatch, Position);
+            EquippedWeapon?.Draw(spriteBatch, Position);
+        }
+    }
+
+    public void EquipWeapon(Weapon weapon)
+    {
+        EquippedWeapon = weapon;
     }
 
     public override void TakeDamage(int amount, Vector2? knockback = null)
@@ -80,8 +98,29 @@ public class NPC : Character
         UpdateHealth(elapsed);
         UpdateMovement(elapsed, allNpcs, player);
         UpdateAnimation(elapsed);
+        UpdateWeapon(gameTime, player);
 
         _sprite.Position = Position; // Ensure sprite position matches movement
+    }
+
+    private void UpdateWeapon(GameTime gameTime, Character player)
+    {
+        if (EquippedWeapon != null)
+        {
+            Vector2 directionToPlayer = player.Position - Position;
+            if (directionToPlayer != Vector2.Zero)
+            {
+                directionToPlayer.Normalize();
+            }
+            else
+            {
+                directionToPlayer = Vector2.UnitX; // Default if positions are identical
+            }
+
+            EquippedWeapon.Rotation = (float)Math.Atan2(directionToPlayer.Y, directionToPlayer.X) + MathHelper.PiOver4;
+            EquippedWeapon.Position = Position + new Vector2(Sprite.Width / 2, Sprite.Height / 2);
+            EquippedWeapon.Update(gameTime);
+        }
     }
 
     private void UpdateHealth(float elapsed)

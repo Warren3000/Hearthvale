@@ -24,6 +24,15 @@ public class Weapon
         set => Sprite.Scale = new Vector2(value, value);
     }
 
+    // Swing animation properties
+    private bool _isSwinging = false;
+    private float _swingTimer = 0f;
+    private const float SwingDuration = 0.25f;
+    private const float SwingAngleRange = MathHelper.Pi; // 180-degree swing
+    private float _baseRotation = 0f;
+    private bool _swingClockwise = true;
+    private string _currentAnimation = "Idle";
+
     public Weapon(string name, int baseDamage, TextureAtlas atlas)
     {
         Name = name;
@@ -41,6 +50,26 @@ public class Weapon
     public void Update(GameTime gameTime)
     {
         Sprite.Update(gameTime);
+
+        if (_isSwinging)
+        {
+            _swingTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+            float swingProgress = _swingTimer / SwingDuration;
+
+            if (swingProgress >= 1.0f)
+            {
+                _isSwinging = false;
+                Rotation = _baseRotation; // Reset to base rotation
+                SetAnimation("Idle");
+            }
+            else
+            {
+                // Simple linear interpolation for the swing
+                float direction = _swingClockwise ? 1 : -1;
+                float swingAngle = MathHelper.Lerp(0, SwingAngleRange * direction, swingProgress);
+                Rotation = _baseRotation + swingAngle;
+            }
+        }
     }
 
     public void Draw(SpriteBatch spriteBatch, Vector2 playerPosition)
@@ -55,13 +84,33 @@ public class Weapon
         Sprite.Rotation = Rotation;
         Sprite.Draw(spriteBatch, Sprite.Position);
     }
-    //public void StartAttack()
-    //{
-    //    if (_atlas.HasAnimation(Name + "_Attack"))
-    //    {
-    //        Sprite.Animation = _atlas.GetAnimation(Name + "_Attack");
-    //    }
-    //}
+    public Projectile Fire(Vector2 direction)
+    {
+        var projectileTexture = _atlas.GetRegion("Dagger");
+        var velocity = Vector2.Normalize(direction) * 500f; // 500f is projectile speed
+        return new Projectile(projectileTexture, Position, velocity, Damage);
+    }
+
+    public void StartSwing(bool clockwise)
+    {
+        if (!_isSwinging)
+        {
+            _isSwinging = true;
+            _swingTimer = 0f;
+            _swingClockwise = clockwise;
+            _baseRotation = Rotation;
+            SetAnimation("Swing");
+        }
+    }
+
+    public void SetAnimation(string animationName)
+    {
+        if (_atlas.HasAnimation(animationName) && _currentAnimation != animationName)
+        {
+            Sprite.Animation = _atlas.GetAnimation(animationName);
+            _currentAnimation = animationName;
+        }
+    }
 
     public void GainXP(int amount)
     {

@@ -15,8 +15,17 @@ namespace Hearthvale.GameCode.Input
         private readonly Action<Vector2> MoveHeroCallback;
         private readonly Action SpawnNPCCallback;
         private readonly Action QuitCallback;
+        private readonly Action FireProjectileCallback; // <-- Added
 
-        public InputHandler(Camera2D camera, float movementSpeed, Action pauseGameCallback, Action<Vector2> moveHeroCallback, Action spawnNpcCallback, Action quitCallback)
+        public InputHandler(
+            Camera2D camera,
+            float movementSpeed,
+            Action pauseGameCallback,
+            Action<Vector2> moveHeroCallback,
+            Action spawnNpcCallback,
+            Action quitCallback,
+            Action fireProjectileCallback // <-- Added
+        )
         {
             _camera = camera;
             _movementSpeed = movementSpeed;
@@ -24,6 +33,7 @@ namespace Hearthvale.GameCode.Input
             MoveHeroCallback = moveHeroCallback;
             SpawnNPCCallback = spawnNpcCallback;
             QuitCallback = quitCallback;
+            FireProjectileCallback = fireProjectileCallback; // <-- Added
         }
 
         public void Update(GameTime gameTime)
@@ -99,6 +109,12 @@ namespace Hearthvale.GameCode.Input
                 Core.Audio.SongVolume -= 0.1f;
                 Core.Audio.SoundEffectVolume -= 0.1f;
             }
+
+            // --- Add this block for firing projectiles ---
+            if (keyboard.WasKeyJustPressed(Keys.F))
+            {
+                FireProjectileCallback?.Invoke();
+            }
         }
 
         private void HandleGamePad(GamePadInfo gamePadOne)
@@ -141,6 +157,10 @@ namespace Hearthvale.GameCode.Input
             {
                 MoveHeroCallback?.Invoke(movement);
             }
+
+            // Optionally, add gamepad support for firing projectiles here
+            // if (gamePadOne.WasButtonJustPressed(Buttons.RightShoulder))
+            //     FireProjectileCallback?.Invoke();
         }
     }
 }

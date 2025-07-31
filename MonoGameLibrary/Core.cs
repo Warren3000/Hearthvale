@@ -159,11 +159,14 @@ public class Core : Game
 
     protected override void Draw(GameTime gameTime)
     {
+        GraphicsDevice.Clear(Color.CornflowerBlue);
+
+        SpriteBatch.Begin(samplerState: SamplerState.PointClamp);
+
         // If there is an active scene, draw it.
-        if (s_activeScene != null)
-        {
-            s_activeScene.Draw(gameTime);
-        }
+        s_activeScene?.Draw(gameTime);
+
+        SpriteBatch.End();
 
         base.Draw(gameTime);
     }

@@ -58,7 +58,11 @@ namespace Hearthvale.GameCode.Entities.Players
 
         public override void TakeDamage(int amount, Vector2? knockback = null)
         {
-            _healthController.TakeDamage(amount);
+            if (IsDefeated) return;
+
+            _currentHealth -= amount;
+            if (_currentHealth < 0) _currentHealth = 0;
+
             if (knockback.HasValue)
                 _movementController.SetVelocity(knockback.Value);
             Flash();
@@ -110,37 +114,38 @@ namespace Hearthvale.GameCode.Entities.Players
                 _sprite.Animation = _atlas.GetAnimation(desiredAnimation);
                 _currentAnimationName = desiredAnimation;
             }
+            // Weapon animation should be handled separately, e.g. in the weapon class or controller
         }
         public void Move(Vector2 movement, Rectangle roomBounds, float spriteWidth, float spriteHeight, IEnumerable<NPC> npcs)
-{
-    Vector2 newPosition = Position + movement;
-    float clampedX = MathHelper.Clamp(
-        newPosition.X,
-        roomBounds.Left,
-        roomBounds.Right - spriteWidth
-    );
-    float clampedY = MathHelper.Clamp(
-        newPosition.Y,
-        roomBounds.Top,
-        roomBounds.Bottom - spriteHeight
-    );
-    Vector2 candidate = new Vector2(clampedX, clampedY);
+        {
+            Vector2 newPosition = Position + movement;
+            float clampedX = MathHelper.Clamp(
+                newPosition.X,
+                roomBounds.Left,
+                roomBounds.Right - spriteWidth
+            );
+            float clampedY = MathHelper.Clamp(
+                newPosition.Y,
+                roomBounds.Top,
+                roomBounds.Bottom - spriteHeight
+            );
+            Vector2 candidate = new Vector2(clampedX, clampedY);
 
-    // Check collision with NPCs
-    Rectangle candidateBounds = new Rectangle(
-        (int)candidate.X + 8,
-        (int)candidate.Y + 16,
-        (int)Sprite.Width / 2,
-        (int)Sprite.Height / 2
-    );
-    foreach (var npc in npcs)
-    {
-        if (candidateBounds.Intersects(npc.Bounds))
-            return; // Block movement if collision
-    }
+            // Check collision with NPCs
+            Rectangle candidateBounds = new Rectangle(
+                (int)candidate.X + 8,
+                (int)candidate.Y + 16,
+                (int)Sprite.Width / 2,
+                (int)Sprite.Height / 2
+            );
+            foreach (var npc in npcs)
+            {
+                if (candidateBounds.Intersects(npc.Bounds))
+                    return; // Block movement if collision
+            }
 
-    SetPosition(candidate);
-}
+            SetPosition(candidate);
+        }
         public Rectangle GetAttackArea()
         {
             int width = 32;

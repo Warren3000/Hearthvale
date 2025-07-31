@@ -91,9 +91,12 @@ public class GameScene : Scene
             {
                 npc.DialogText = "I am a friendly NPC!";
                 // You can customize per NPC type or from map data
+                var npcWeapon = new Weapon("Dagger", baseDamage: 2, _weaponAtlas);
+                npcWeapon.Scale = 0.4f;
+                npc.EquipWeapon(npcWeapon);
             }
         }
-        
+
         _bounceSoundEffect = Content.Load<SoundEffect>("audio/bounce");
         _collectSoundEffect = Content.Load<SoundEffect>("audio/collect");
         _uiSoundEffect = Core.Content.Load<SoundEffect>("audio/ui");
@@ -127,9 +130,11 @@ public class GameScene : Scene
             _npcManager,
             _player,
             _scoreManager,
+            Core.SpriteBatch,
             _combatEffectsManager,
             _bounceSoundEffect,
-            _collectSoundEffect
+            _collectSoundEffect,
+            worldBounds: _mapManager.RoomBounds
         );
 
         _inputHandler = new InputHandler(
@@ -138,7 +143,8 @@ public class GameScene : Scene
             () => _uiManager.PauseGame(),
             movement => _player.Move(movement, _mapManager.RoomBounds, _player.Sprite.Width, _player.Sprite.Height, _npcManager.Npcs),
             () => _npcManager.SpawnNPC("DefaultNPCType", _player.Position),
-            () => Core.ChangeScene(new TitleScene())
+            () => Core.ChangeScene(new TitleScene()),
+            () => _combatManager.HandlePlayerAttack()
         );
         _gameInputHandler = new GameInputHandler(
             _player,
@@ -162,6 +168,7 @@ public class GameScene : Scene
             return;
 
         _gameInputHandler.Update(gameTime);
+        _inputHandler.Update(gameTime); // <-- Add this line
 
         _player.Update(gameTime, Keyboard.GetState(), _npcManager.Npcs);
         _npcManager.Update(gameTime, _player);
@@ -170,7 +177,7 @@ public class GameScene : Scene
 
         if (_player.IsAttacking && _combatManager.CanAttack)
         {
-            _combatManager.HandlePlayerAttack(PlayerAttackPower);
+            _combatManager.HandlePlayerAttack();
         }
         _combatEffectsManager.Update(gameTime);
 
@@ -178,7 +185,15 @@ public class GameScene : Scene
 
         _mapManager.Update(gameTime);
         UpdateViewport(Core.GraphicsDevice.Viewport);
-        _inputHandler.Update(gameTime);
+        _inputHandler = new InputHandler(
+            _camera,
+            MOVEMENT_SPEED,
+            () => _uiManager.PauseGame(),
+            movement => _player.Move(movement, _mapManager.RoomBounds, _player.Sprite.Width, _player.Sprite.Height, _npcManager.Npcs),
+            () => _npcManager.SpawnNPC("DefaultNPCType", _player.Position),
+            () => Core.ChangeScene(new TitleScene()),
+            () => _combatManager.HandlePlayerAttack() // <-- Added for projectile firing
+        );
 
         _player.ClampToBounds(_mapManager.RoomBounds);
 
@@ -209,8 +224,8 @@ public class GameScene : Scene
 
     public override void Draw(GameTime gameTime)
     {
-        Core.GraphicsDevice.Clear(Color.CornflowerBlue);
-
+        // End current batch to start a new one with camera transform
+        Core.SpriteBatch.End();
         Matrix transform = _camera.GetViewMatrix();
         Core.SpriteBatch.Begin(transformMatrix: transform, samplerState: SamplerState.PointClamp);
 
@@ -229,17 +244,17 @@ public class GameScene : Scene
             _player.EquippedWeapon?.Draw(Core.SpriteBatch, _player.Position);
         }
         _npcManager.Draw(Core.SpriteBatch, _uiManager);
+        _combatManager.DrawProjectiles(Core.SpriteBatch);
         _uiManager.DrawCollisionBoxes(Core.SpriteBatch, _player, _npcManager.Npcs);
         _combatEffectsManager.Draw(Core.SpriteBatch, _font);
-        Core.SpriteBatch.End();
 
+        // End camera batch and restart for UI
+        Core.SpriteBatch.End();
         Core.SpriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
         _uiManager.DrawPlayerHealthBar(Core.SpriteBatch, _player, new Vector2(20, 20), new Vector2(100, 12));
         _scoreManager.Draw(Core.SpriteBatch);
         _uiManager.DrawDebugInfo(Core.SpriteBatch, gameTime, _player.Position, _camera.Position, _viewport);
-
-        Core.SpriteBatch.End();
 
         GumService.Default.Draw();
     }
