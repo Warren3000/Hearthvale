@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics;
 using Microsoft.Xna.Framework.Audio;
 
@@ -55,6 +56,12 @@ namespace Hearthvale.GameCode.Entities.NPCs
                 _defeatTimer = 1.0f;
                 _defeatSound?.Play();
             }
+        }
+
+        public void Heal(int amount)
+        {
+            if (!_isDefeated)
+                _currentHealth = Math.Min(_maxHealth, _currentHealth + amount);
         }
 
         public void StartAttackCooldown(float duration)

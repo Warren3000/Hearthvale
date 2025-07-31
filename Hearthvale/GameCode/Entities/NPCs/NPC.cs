@@ -305,4 +305,10 @@ public class NPC : Character
         if (velocity.X != 0)
             _facingRight = velocity.X > 0;
     }
+
+    public override void Heal(int amount)
+    {
+        // Add a Heal method to NpcHealthController if it doesn't exist
+        _healthController.Heal(amount);
+    }
 }
