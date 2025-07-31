@@ -179,6 +179,8 @@
     - [ ] Analytics for combat performance and challenge balancing  
 - [ ] Playtesting and polish for new combat features
 
+</details>
+
 ---
 
 ### Player Inventory & Stats Screen (2–3 weeks)
