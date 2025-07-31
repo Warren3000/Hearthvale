@@ -95,11 +95,10 @@
 - [x] **Combat logging for debugging (damage, hit, defeat events)**
 - [x] **NPC health values per type (e.g., knight: 20 HP, fatnun: 10 HP)**
 - [x] **Sound effects for attacks, hits, and defeat**
-
-**Remaining:**
 - [x] Add reaction animations (hit, defeat, etc.)
 - [x] Polish defeat logic (e.g., removal timing, effects)
 - [x] Playtesting and bug fixing
+**Remaining:**
 
 </details>
 
