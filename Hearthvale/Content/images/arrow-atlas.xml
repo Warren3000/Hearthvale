@@ -1,0 +1,43 @@
+﻿<TextureAtlas>
+  <Texture>images/ArrowSpriteSheet</Texture>
+  <Regions>
+    <!--Arrow-Wooden-->
+    <Region name="Arrow-Wooden-1" x="0" y="0" width="32" height="32" />
+    <Region name="Arrow-Wooden-2" x="32" y="0" width="32" height="32" />
+    <Region name="Arrow-Wooden-3" x="64" y="0" width="32" height="32" />
+    <!--Arrow-Ice-->
+    <Region name="Arrow-Ice-1" x="0" y="32" width="32" height="32" />
+    <Region name="Arrow-Ice-2" x="0" y="32" width="32" height="32" />
+    <Region name="Arrow-Ice-3" x="0" y="32" width="32" height="32" />
+    <!--Arrow-Poison-->
+    <Region name="Arrow-Poison-1" x="0" y="64" width="32" height="32" />
+    <Region name="Arrow-Poison-2" x="0" y="64" width="32" height="32" />
+    <Region name="Arrow-Poison-3" x="0" y="64" width="32" height="32" />
+    <!--Arrow-Fire-->
+    <Region name="Arrow-Fire-1" x="0" y="96" width="32" height="32" />
+    <Region name="Arrow-Fire-2" x="0" y="96" width="32" height="32" />
+    <Region name="Arrow-Fire-3" x="0" y="96" width="32" height="32" />
+  </Regions>
+  <Animations>
+    <Animation name="Arrow-Wooden-Attack" delay="120">
+      <Frame region="Arrow-Wooden-1" />
+      <Frame region="Arrow-Wooden-2" />
+      <Frame region="Arrow-Wooden-3" />
+    </Animation>
+    <Animation name="Arrow-Ice-Attack" delay="120">
+      <Frame region="Arrow-Ice-1" />
+      <Frame region="Arrow-Ice-2" />
+      <Frame region="Arrow-Ice-3" />
+    </Animation>
+    <Animation name="Arrow-Poison-Attack" delay="120">
+      <Frame region="Arrow-Poison-1" />
+      <Frame region="Arrow-Poison-2" />
+      <Frame region="Arrow-Poison-3" />
+    </Animation>
+    <Animation name="Arrow-Fire-Attack" delay="120">
+      <Frame region="Arrow-Fire-1" />
+      <Frame region="Arrow-Fire-2" />
+      <Frame region="Arrow-Fire-3" />
+    </Animation>
+  </Animations>
+</TextureAtlas>

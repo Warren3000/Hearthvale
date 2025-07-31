@@ -82,7 +82,7 @@ namespace Hearthvale.GameCode.Managers
                 // ... other types
                 _ => 10
             };
-            NPC npc = new NPC(animations, position, _bounds, defeatSound, npcHealth);
+            NPC npc = new NPC(npcType, animations, position, _bounds, defeatSound, npcHealth);
 
             npc.FacingRight = false;
             _npcs.Add(npc);

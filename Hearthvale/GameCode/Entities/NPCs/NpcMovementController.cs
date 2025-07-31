@@ -46,17 +46,14 @@ public class NpcMovementController
 
     public void Update(float elapsed, Func<Vector2, bool> collisionCheck)
     {
-        // Handle knockback
+        // Handle knockback first, as it's a forced movement
         if (_knockbackTimer > 0f)
         {
             _knockbackTimer -= elapsed;
             Vector2 nextPosition = Position + _velocity * elapsed;
-            if (collisionCheck(nextPosition))
-            {
-                _velocity = Vector2.Zero;
-                _knockbackTimer = 0f;
-            }
-            else
+            
+            // During knockback, only stop if colliding. Don't zero out velocity yet.
+            if (!collisionCheck(nextPosition))
             {
                 Position = Vector2.Clamp(
                     nextPosition,
@@ -64,15 +61,16 @@ public class NpcMovementController
                     new Vector2(Bounds.Right, Bounds.Bottom)
                 );
             }
+
             if (_knockbackTimer <= 0f)
             {
-                _velocity = Vector2.Zero;
-                _isIdle = true;
-                _idleTimer = 1f + (float)_random.NextDouble() * 2f;
+                _velocity = Vector2.Zero; // Reset velocity only when timer expires
+                SetIdle(); // Transition to idle state after knockback
             }
-            return;
+            return; // IMPORTANT: Skip normal AI movement during knockback
         }
 
+        // Normal AI movement logic
         if (_isIdle)
         {
             _idleTimer -= elapsed;

@@ -6,6 +6,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGameLibrary.Graphics;
 using System.Collections.Generic;
+using Microsoft.Xna.Framework.Audio;
 
 namespace Hearthvale.GameCode.Entities.Players
 {
@@ -15,8 +16,7 @@ namespace Hearthvale.GameCode.Entities.Players
         private PlayerCombatController _combatController;
         private PlayerMovementController _movementController;
         private CombatEffectsManager _effectsManager;
-        private readonly NpcAnimationController _animationController;
-        private readonly NpcHealthController _healthController;
+        private readonly PlayerAnimationController _animationController;
 
         public float MovementSpeed { get; }
         public bool IsAttacking { get; set; }
@@ -26,6 +26,8 @@ namespace Hearthvale.GameCode.Entities.Players
         public float WeaponOrbitRadius => _weaponOrbitRadius;
         public Weapon EquippedWeapon { get; private set; }
         private Vector2 _lastMovementDirection = Vector2.UnitX;
+        // Add this field to the Player class to fix CS0103
+        private readonly float _movementSpeed;
         public Vector2 LastMovementDirection => _lastMovementDirection;
         public int CurrentHealth => _currentHealth;
         public int MaxHealth => _maxHealth;
@@ -39,21 +41,28 @@ namespace Hearthvale.GameCode.Entities.Players
             (int)Sprite.Height / 2
         );
 
-        public Player(TextureAtlas atlas, Vector2 startPosition, CombatEffectsManager effectsManager, float movementSpeed = 3.0f)
+        public Player(TextureAtlas atlas, Vector2 position, CombatManager combatManager, CombatEffectsManager combatEffectsManager, ScoreManager scoreManager, SoundEffect hitSound, SoundEffect defeatSound, SoundEffect playerAttackSound, float movementSpeed)
         {
             _atlas = atlas;
-            _sprite = _atlas.CreateAnimatedSprite("Mage_Idle");
-            _sprite.Scale = new Vector2(1f, 1f);
-            _position = startPosition;
-            MovementSpeed = movementSpeed;
-            _maxHealth = 10;
-            _currentHealth = 10;
-            _effectsManager = effectsManager;
-            _combatController = new PlayerCombatController(this, _effectsManager);
+            _sprite = new AnimatedSprite(atlas.GetAnimation("Mage_Idle"));
+            _position = position;
+            _movementSpeed = movementSpeed;
+            _facingRight = true;
+            _lastMovementDirection = Vector2.UnitX;
+
             _movementController = new PlayerMovementController(this);
-            _animationController = new NpcAnimationController(_sprite, new Dictionary<string, Animation>());
-            _healthController = new NpcHealthController(_maxHealth, null);
-            IsAttacking = false;
+            _combatController = new PlayerCombatController(this, combatManager, combatEffectsManager, scoreManager, hitSound, defeatSound, playerAttackSound);
+
+            var animations = new Dictionary<string, Animation>
+            {
+                { "Mage_Idle", atlas.GetAnimation("Mage_Idle") },
+                { "Mage_Walk", atlas.GetAnimation("Mage_Walk") }
+            };
+            _animationController = new PlayerAnimationController(this, _sprite, animations);
+
+            // Initialize health
+            _maxHealth = 100;
+            _currentHealth = _maxHealth;
         }
 
         public override void TakeDamage(int amount, Vector2? knockback = null)
@@ -88,12 +97,12 @@ namespace Hearthvale.GameCode.Entities.Players
             EquippedWeapon = weapon;
         }
 
-        public void Update(GameTime gameTime, KeyboardState keyboard, IEnumerable<NPC> npcs)
+        public void Update(GameTime gameTime, IEnumerable<NPC> npcs)
         {
-            Vector2 movement = _movementController.Update(gameTime, keyboard, npcs);
+            _movementController.Update(gameTime, npcs); // Handles knockback
             _animationController.UpdateFlash((float)gameTime.ElapsedGameTime.TotalSeconds);
-            _combatController.Update(gameTime, keyboard, movement, npcs);
-            UpdateAnimation(keyboard, movement != Vector2.Zero);
+            _combatController.Update(gameTime, npcs); // Now handles hit detection
+            _animationController.UpdateAnimation(_movementController.IsMoving());
 
             _sprite.Position = _position;
             _sprite.Effects = _facingRight ? SpriteEffects.None : SpriteEffects.FlipHorizontally;
@@ -106,18 +115,17 @@ namespace Hearthvale.GameCode.Entities.Players
             SetPosition(new Vector2(clampedX, clampedY));
         }
 
-        public void UpdateAnimation(KeyboardState keyboard, bool moving)
-        {
-            string desiredAnimation = moving ? "Mage_Walk" : "Mage_Idle";
-            if (_currentAnimationName != desiredAnimation)
-            {
-                _sprite.Animation = _atlas.GetAnimation(desiredAnimation);
-                _currentAnimationName = desiredAnimation;
-            }
-            // Weapon animation should be handled separately, e.g. in the weapon class or controller
-        }
         public void Move(Vector2 movement, Rectangle roomBounds, float spriteWidth, float spriteHeight, IEnumerable<NPC> npcs)
         {
+            // Only allow player input to move if not being knocked back
+            if (_movementController.IsKnockedBack) return;
+
+            if (movement != Vector2.Zero)
+            {
+                _lastMovementDirection = Vector2.Normalize(movement);
+                _facingRight = _lastMovementDirection.X >= 0;
+            }
+
             Vector2 newPosition = Position + movement;
             float clampedX = MathHelper.Clamp(
                 newPosition.X,

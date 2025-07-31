@@ -6,6 +6,7 @@ using Microsoft.Xna.Framework.Graphics;
 using MonoGameLibrary.Graphics;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Hearthvale.GameCode.Entities.NPCs;
 
@@ -18,11 +19,11 @@ public class NPC : Character
     public string DialogText { get; set; } = "Hello, adventurer!";
     public int AttackPower { get; set; } = 1;
     private float _attackCooldown = 1.5f;
-    private float _attackTimer = 0f;
+    // private float _attackTimer = 0f; // REMOVED: This is now managed by the health controller's stun timer
     public Weapon EquippedWeapon { get; private set; }
 
-    public bool CanAttack => _attackTimer <= 0f;
-    public void ResetAttackTimer() => _attackTimer = _attackCooldown;
+    public bool CanAttack => !_healthController.IsOnCooldown; // Use the health controller's state
+    public void ResetAttackTimer() => _healthController.StartAttackCooldown(_attackCooldown);
     public bool IsReadyToRemove => _healthController.IsReadyToRemove;
     public override bool IsDefeated => _healthController.IsDefeated;
     public override int Health => _healthController.Health;
@@ -39,8 +40,11 @@ public class NPC : Character
     private float _attackAnimTimer = 0f;
     private const float AttackAnimDuration = 0.25f; // WindUp (0.15) + Slash (0.1)
 
-    public NPC(Dictionary<string, Animation> animations, Vector2 position, Rectangle bounds, SoundEffect defeatSound, int maxHealth)
+    public string Name { get; private set; }
+
+    public NPC(string name, Dictionary<string, Animation> animations, Vector2 position, Rectangle bounds, SoundEffect defeatSound, int maxHealth)
     {
+        Name = name; // Assign the name
         var sprite = new AnimatedSprite(animations["Idle"]);
         _animationController = new NpcAnimationController(sprite, animations);
         _movementController = new NpcMovementController(position, 60.0f, bounds);
@@ -48,10 +52,8 @@ public class NPC : Character
 
         _sprite = sprite;
         _position = position;
-        // Use the maxHealth parameter instead of hardcoding values
         _maxHealth = maxHealth;
         _currentHealth = maxHealth;
-        // AttackRadius = 40f; // REMOVED
 
         _animationController.SetAnimation("Idle");
         _movementController.SetIdle();
@@ -79,12 +81,18 @@ public class NPC : Character
 
     public override void TakeDamage(int amount, Vector2? knockback = null)
     {
+        Debug.WriteLine($"--[NPC.{Name}] TakeDamage called for {amount} damage. Checking CanTakeDamage...");
         if (_healthController.CanTakeDamage)
         {
+            Debug.WriteLine($"----[NPC.{Name}] CanTakeDamage is TRUE. Applying damage.");
             _healthController.TakeDamage(amount);
             if (knockback.HasValue)
                 _movementController.SetVelocity(knockback.Value);
             Flash();
+        }
+        else
+        {
+            Debug.WriteLine($"----[NPC.{Name}] CanTakeDamage is FALSE. Damage blocked.");
         }
     }
 
@@ -103,12 +111,24 @@ public class NPC : Character
     {
         float elapsed = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
+        // Step 1: Update health and animation states first. This is the highest priority.
+        UpdateHealthAndAnimation(elapsed);
+
+        // Step 2: If defeated, do nothing else.
         if (IsDefeated)
         {
-            UpdateHealth(elapsed);
             return;
         }
 
+        // Step 3: If stunned by a hit, only process knockback. Do not process AI or attacks.
+        if (_healthController.IsStunned)
+        {
+            _movementController.Update(elapsed, _ => false); // Update knockback but not AI
+            _sprite.Position = Position;
+            return;
+        }
+        
+        // Step 4: Handle the attack animation timer if currently attacking.
         if (IsAttacking)
         {
             _attackAnimTimer -= elapsed;
@@ -118,19 +138,19 @@ public class NPC : Character
             }
         }
 
-        UpdateHealth(elapsed);
+        // Step 5: Process regular movement and AI.
         UpdateMovement(elapsed, allNpcs, player);
-        UpdateAnimation(elapsed);
+        
+        // Step 6: Update weapon position and rotation.
         UpdateWeapon(gameTime, player);
 
-        // --- NPC Attack Logic ---
-        // Use the weapon's length to determine attack range
-        float attackRange = EquippedWeapon?.Length ?? 0f;
+        // Step 7: Decide whether to initiate a new attack.
+        // This can only happen if not already attacking and not on any cooldown.
+        float attackRange = EquippedWeapon?.Length ?? 32f; // Use a default range if no weapon
         if (CanAttack && !IsAttacking && Vector2.Distance(Position, player.Position) < attackRange)
         {
             StartAttack();
         }
-        // --- End Attack Logic ---
 
         _sprite.Position = Position; // Ensure sprite position matches movement
     }
@@ -204,14 +224,34 @@ public class NPC : Character
         }
     }
 
-    private void UpdateHealth(float elapsed)
+    private void UpdateHealthAndAnimation(float elapsed)
     {
         _animationController.UpdateFlash(elapsed);
-        if (_healthController.Update(elapsed))
+        _healthController.Update(elapsed);
+
+        // Determine the correct animation based on a clear priority
+        string desiredAnimation = "Idle"; // Default animation
+
+        if (_healthController.IsDefeated)
         {
-            _animationController.SetAnimation(_healthController.IsDefeated ? "Defeated" : "Hit");
-            Sprite.Update(new GameTime());
+            desiredAnimation = "Defeated";
         }
+        else if (_healthController.IsStunned)
+        {
+            desiredAnimation = "Hit";
+        }
+        else if (IsAttacking)
+        {
+            // This could be a specific "Attack" animation if you have one
+            desiredAnimation = "Walk"; // Or whatever looks best
+        }
+        else if (!_movementController.IsIdle)
+        {
+            desiredAnimation = "Walk";
+        }
+
+        _animationController.SetAnimation(desiredAnimation);
+        Sprite.Update(new GameTime(new TimeSpan(), TimeSpan.FromSeconds(elapsed)));
     }
 
     private void UpdateMovement(float elapsed, IEnumerable<NPC> allNpcs, Character player)
@@ -245,18 +285,5 @@ public class NPC : Character
         var velocity = _movementController.GetVelocity();
         if (velocity.X != 0)
             _facingRight = velocity.X > 0;
-
-        if (_attackTimer > 0)
-            _attackTimer -= elapsed;
-    }
-
-    private void UpdateAnimation(float elapsed)
-    {
-        if (_movementController.IsIdle)
-            _animationController.SetAnimation("Idle");
-        else
-            _animationController.SetAnimation("Walk");
-
-        Sprite.Update(new GameTime());
     }
 }

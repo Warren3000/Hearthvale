@@ -102,7 +102,7 @@ public class Core : Game
         IsMouseVisible = true;
 
         // Stop the app when the window is closed
-        Window.Closed += (sender, args) => Exit();
+        this.Exiting += (sender, args) => Exit();
     }
 
     protected override void Initialize()

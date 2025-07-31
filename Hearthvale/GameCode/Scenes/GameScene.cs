@@ -24,7 +24,7 @@ public class GameScene : Scene
     private bool _isPlayerAttacking;
     public bool IsPlayerAttacking => _isPlayerAttacking;
 
-    private const float MOVEMENT_SPEED = 1.0f; // Increased for better feel
+    private const float MOVEMENT_SPEED = 2.0f; // Increased for better feel
     private SoundEffect _playerAttackSoundEffect; // Add this field
 
     public float MovementSpeed => MOVEMENT_SPEED;
@@ -41,6 +41,7 @@ public class GameScene : Scene
     private TextureAtlas _atlas;
     private TextureAtlas _heroAtlas;
     private TextureAtlas _weaponAtlas;
+    private TextureAtlas _arrowAtlas; // Add this line
     private Viewport _viewport;
     private Camera2D _camera;
     private InputHandler _inputHandler;
@@ -72,6 +73,7 @@ public class GameScene : Scene
         _atlas = TextureAtlas.FromFile(Core.Content, "images/atlas-definition.xml");
         _heroAtlas = TextureAtlas.FromFile(Core.Content, "images/npc-atlas.xml");
         _weaponAtlas = TextureAtlas.FromFile(Core.Content, "images/weapon-atlas.xml");
+        _arrowAtlas = TextureAtlas.FromFile(Core.Content, "images/arrow-atlas.xml"); // Add this line
 
         // Initialize MapManager
         _mapManager = new MapManager(Game1.GraphicsDevice, Game1.Content, "Tilesets/DampDungeons/Tiles/DungeonMap");
@@ -89,7 +91,7 @@ public class GameScene : Scene
             {
                 npc.DialogText = "I am a friendly NPC!";
                 // You can customize per NPC type or from map data
-                var npcWeapon = new Weapon("Dagger", baseDamage: 2, _weaponAtlas);
+                var npcWeapon = new Weapon("Dagger", baseDamage: 2, _weaponAtlas, _arrowAtlas  );
                 npcWeapon.Scale = 0.4f;
                 npc.EquipWeapon(npcWeapon);
             }
@@ -118,16 +120,11 @@ public class GameScene : Scene
             () => _uiManager.QuitGame(_uiSoundEffect, () => Core.ChangeScene(new TitleScene()))
         );
         _combatEffectsManager = new CombatEffectsManager(_camera);
-        _player = new Player(_heroAtlas, _playerStart, _combatEffectsManager, MOVEMENT_SPEED);
-        var sword = new Weapon("Dagger", baseDamage: 5, _weaponAtlas);
-        sword.Scale = 0.5f;
-        sword.ManualOffset = new Vector2(0, 0); // Move down and to the right
-        _player.EquipWeapon(sword);
-        _dialogManager = new DialogManager(_uiManager, _player, _npcManager, dialogDistance);
+        
         _playerAttackSoundEffect = Content.Load<SoundEffect>("audio/player_attack"); // Load attack sound
         _combatManager = new CombatManager(
             _npcManager,
-            _player,
+            null, // Player will be set after it's created
             _scoreManager,
             Core.SpriteBatch,
             _combatEffectsManager,
@@ -136,14 +133,35 @@ public class GameScene : Scene
             _playerAttackSoundEffect,
             worldBounds: _mapManager.RoomBounds
         );
+        _player = new Player(
+            _heroAtlas,
+            _playerStart,
+            _combatManager, // Pass the CombatManager to the Player
+            _combatEffectsManager,
+            _scoreManager,
+            _bounceSoundEffect,
+            _collectSoundEffect,
+            _playerAttackSoundEffect,
+            MOVEMENT_SPEED
+        );
+        _combatManager.SetPlayer(_player); // Set the player reference in CombatManager
 
+        // Must be initialized after _player is created
+        _dialogManager = new DialogManager(_uiManager, _player, _npcManager, dialogDistance);
+        
+        var sword = new Weapon("Dagger", baseDamage: 5, _weaponAtlas, _arrowAtlas); // Pass the arrow atlas here
+        sword.Scale = 0.5f;
+        sword.ManualOffset = new Vector2(0, 0); // Move down and to the right
+        _player.EquipWeapon(sword);
         _inputHandler = new InputHandler(
             _camera,
+            MOVEMENT_SPEED,
             () => _uiManager.PauseGame(),
+            (movement) => _player.Move(movement, _mapManager.RoomBounds, _player.Sprite.Width, _player.Sprite.Height, _npcManager.Npcs),
             () => _npcManager.SpawnNPC("DefaultNPCType", _player.Position),
             () => Core.ChangeScene(new TitleScene()),
-            () => _combatManager.HandlePlayerProjectileAttack(), // Projectile attack
-            () => _combatManager.HandlePlayerMeleeAttack()      // Melee attack
+             () => _player.CombatController.StartProjectileAttack(), // CORRECT: Call the player's controller
+            () => _player.CombatController.StartMeleeAttack()      // CORRECT: Call the player's controller
         );
     }
 
@@ -161,7 +179,7 @@ public class GameScene : Scene
 
         _inputHandler.Update(gameTime);
 
-        _player.Update(gameTime, Keyboard.GetState(), _npcManager.Npcs);
+        _player.Update(gameTime, _npcManager.Npcs);
         _npcManager.Update(gameTime, _player);
 
         _combatManager.Update(gameTime);

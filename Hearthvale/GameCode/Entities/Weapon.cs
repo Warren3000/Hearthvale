@@ -15,6 +15,7 @@ public class Weapon
     public Vector2 ManualOffset { get; set; } = Vector2.Zero;
     public Vector2 Offset { get; set; } = Vector2.Zero;
     public TextureAtlas _atlas { get; set; }
+    private readonly TextureAtlas _projectileAtlas; // Add this line
     public int Level { get; private set; }
     public int XP { get; private set; }
     public int Damage { get; private set; }
@@ -42,10 +43,11 @@ public class Weapon
 
     public bool IsSlashing => _currentSwingState == SwingState.Slashing;
 
-    public Weapon(string name, int baseDamage, TextureAtlas atlas)
+    public Weapon(string name, int baseDamage, TextureAtlas atlas, TextureAtlas projectileAtlas)
     {
         Name = name;
         _atlas = atlas;
+        _projectileAtlas = projectileAtlas; // Assign the projectile atlas
         Damage = baseDamage;
         // For single-frame weapons, create an animation with one frame
         var region = atlas.GetRegion(name);
@@ -113,10 +115,24 @@ public class Weapon
     }
     public Projectile Fire(Vector2 direction, Vector2 spawnPosition)
     {
-        var projectileTexture = _atlas.GetRegion("Dagger");
+        if (_projectileAtlas == null)
+        {
+            Debug.WriteLine("[Weapon.Fire] ERROR: The projectile atlas has not been assigned to this weapon.");
+            return null;
+        }
+
+        // Use the animation from the projectile atlas
+        var projectileAnimation = _projectileAtlas.GetAnimation("Arrow-Wooden-Attack");
+        
+        if (projectileAnimation == null)
+        {
+            Debug.WriteLine("[Weapon.Fire] ERROR: Animation 'Arrow-Wooden-Attack' not found in the projectile atlas.");
+            return null;
+        }
+
         var velocity = Vector2.Normalize(direction) * 500f; // 500f is projectile speed
         // Use the provided spawn position, which will be the player's center
-        return new Projectile(projectileTexture, spawnPosition, velocity, Damage);
+        return new Projectile(projectileAnimation, spawnPosition, velocity, Damage);
     }
 
     public void StartSwing(bool clockwise)

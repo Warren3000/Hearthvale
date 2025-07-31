@@ -23,6 +23,9 @@
     <None Remove="Map\**" />
   </ItemGroup>
   <ItemGroup>
+    <None Remove="Content\images\ArrowSpriteSheet.xcf" />
+    <None Remove="Content\images\NPCSpriteSheet.xcf" />
+    <None Remove="Content\images\WeaponsSpriteSheet.xcf" />
     <None Remove="Content\Tilesets\DampDungeons\Tiles\DungeonDecorations.png" />
     <None Remove="Content\Tilesets\DampDungeons\Tiles\Dungeon_Autotiles.png" />
     <None Remove="Content\Tilesets\DampDungeons\Tiles\Dungeon_WallsAndFloors.png" />

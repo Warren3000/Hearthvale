@@ -11,13 +11,14 @@ namespace Hearthvale.GameCode.Entities.Players
         private Vector2 _velocity;
         private float _knockbackTimer;
         private const float KnockbackDuration = 0.2f;
+        public bool IsMoving() => _velocity != Vector2.Zero;
+        public bool IsKnockedBack => _knockbackTimer > 0;
 
         public PlayerMovementController(Player player)
         {
             _player = player;
         }
-
-        public Vector2 Update(GameTime gameTime, KeyboardState keyboard, IEnumerable<NPC> npcs)
+        public void Update(GameTime gameTime, IEnumerable<NPC> npcs)
         {
             float elapsed = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
@@ -26,54 +27,11 @@ namespace Hearthvale.GameCode.Entities.Players
             {
                 _knockbackTimer -= elapsed;
                 _player.SetPosition(_player.Position + _velocity * elapsed);
-                return _velocity; // Return knockback velocity and skip player input
-            }
-
-            Vector2 direction = Vector2.Zero;
-            if (keyboard.IsKeyDown(Keys.W)) direction.Y--;
-            if (keyboard.IsKeyDown(Keys.S)) direction.Y++;
-            if (keyboard.IsKeyDown(Keys.A)) direction.X--;
-            if (keyboard.IsKeyDown(Keys.D)) direction.X++;
-
-            if (direction != Vector2.Zero)
-            {
-                direction.Normalize();
-                _player.SetLastMovementDirection(direction);
-                // Update facing direction based on the dominant axis of movement
-                if (System.Math.Abs(direction.X) > System.Math.Abs(direction.Y))
+                if (_knockbackTimer <= 0)
                 {
-                    _player.SetFacingRight(direction.X > 0);
+                    _velocity = Vector2.Zero;
                 }
             }
-
-            _velocity = direction * _player.MovementSpeed * 100f * elapsed;
-
-            // --- Collision Check ---
-            Vector2 newPosition = _player.Position + _velocity;
-            Rectangle candidateBounds = new Rectangle(
-                (int)newPosition.X + 8,
-                (int)newPosition.Y + 16,
-                (int)_player.Sprite.Width / 2,
-                (int)_player.Sprite.Height / 2
-            );
-
-            bool collision = false;
-            foreach (var npc in npcs)
-            {
-                if (!npc.IsDefeated && candidateBounds.Intersects(npc.Bounds))
-                {
-                    collision = true;
-                    break;
-                }
-            }
-
-            if (!collision)
-            {
-                _player.SetPosition(newPosition);
-            }
-            // --- End Collision Check ---
-
-            return _velocity;
         }
 
         public void SetVelocity(Vector2 velocity)

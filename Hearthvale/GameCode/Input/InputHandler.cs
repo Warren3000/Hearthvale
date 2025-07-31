@@ -12,6 +12,8 @@ namespace Hearthvale.GameCode.Input
     {
         private Camera2D _camera;
         private readonly Action PauseGameCallback;
+        private readonly Action<Vector2> _movePlayerCallback;
+        private readonly float _movementSpeed;
         private readonly Action SpawnNPCCallback;
         private readonly Action QuitCallback;
         private readonly Action _projectileAttackCallback;
@@ -19,14 +21,18 @@ namespace Hearthvale.GameCode.Input
 
         public InputHandler(
             Camera2D camera,
+            float movementSpeed,
             Action pauseGameCallback,
+            Action<Vector2> movePlayerCallback,
             Action spawnNpcCallback,
             Action quitCallback,
             Action projectileAttackCallback,
             Action meleeAttackCallback)
         {
             _camera = camera;
+            _movementSpeed = movementSpeed;
             PauseGameCallback = pauseGameCallback;
+            _movePlayerCallback = movePlayerCallback;
             SpawnNPCCallback = spawnNpcCallback;
             QuitCallback = quitCallback;
             _projectileAttackCallback = projectileAttackCallback;
@@ -51,6 +57,19 @@ namespace Hearthvale.GameCode.Input
 
         private void HandleKeyboard(KeyboardInfo keyboard)
         {
+            // Player Movement
+            Vector2 moveDirection = Vector2.Zero;
+            if (keyboard.IsKeyDown(Keys.W)) moveDirection.Y = -1;
+            if (keyboard.IsKeyDown(Keys.S)) moveDirection.Y = 1;
+            if (keyboard.IsKeyDown(Keys.A)) moveDirection.X = -1;
+            if (keyboard.IsKeyDown(Keys.D)) moveDirection.X = 1;
+
+            if (moveDirection != Vector2.Zero)
+            {
+                moveDirection.Normalize();
+                _movePlayerCallback?.Invoke(moveDirection * _movementSpeed);
+            }
+
             if (keyboard.WasKeyJustPressed(Keys.K))
             {
                 _camera?.Shake(0.5f, 8f);
@@ -103,6 +122,13 @@ namespace Hearthvale.GameCode.Input
 
         private void HandleGamePad(GamePadInfo gamePadOne)
         {
+            // Player Movement
+            Vector2 moveDirection = gamePadOne.LeftThumbStick;
+            if (moveDirection != Vector2.Zero)
+            {
+                _movePlayerCallback?.Invoke(moveDirection * _movementSpeed);
+            }
+
             if (gamePadOne.WasButtonJustPressed(Buttons.Start))
             {
                 PauseGameCallback?.Invoke();
