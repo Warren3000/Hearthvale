@@ -104,23 +104,6 @@
 
 ---
 
-### Weapon Leveling v1 (4 weeks)
-<details>
-<summary>Details</summary>
-
-**Completed:**
-- [ ] (none yet)
-
-**Remaining:**
-- [ ] Weapon XP and level system
-- [ ] Weapon stat progression
-- [ ] Save/load weapon state
-- [ ] UI for weapon stats and progression
-
-</details>
-
----
-
 ### Dungeon Interactivity v1 (9–10 weeks)
 <details>
 <summary>Details</summary>
@@ -129,10 +112,34 @@
 - [ ] (none yet)
 
 **Remaining:**
-- [ ] Interactive dungeon elements (doors, traps, switches)
+- [ ] Implement interactive dungeon elements
+    - [ ] Doors (locked/unlocked, keys, pressure plates)
+    - [ ] Switches (toggleable, timed, sequence-based)
+    - [ ] Levers and pressure plates (single-use, reusable, combo logic)
+    - [ ] Trap mechanisms (spikes, arrows, pitfalls, poison gas, reset/disable states)
+    - [ ] Moving platforms and environmental hazards
+    - [ ] Secret passages and hidden rooms
 - [ ] Basic puzzle mechanics
+    - [ ] Block-pushing puzzles
+    - [ ] Light/mirror reflection puzzles
+    - [ ] Multi-step switch or sequence puzzles
+    - [ ] Riddle/text-based puzzles
+    - [ ] Puzzle feedback (audio, UI, animation cues)
 - [ ] Dungeon loot system
+    - [ ] Randomized loot tables for chests
+    - [ ] Key item placement and quest items
+    - [ ] Hidden loot and secret rewards
+    - [ ] Trapped chests and mimics
+    - [ ] Loot UI/notification system
 - [ ] Enemy encounters and spawners
+    - [ ] Fixed enemy placements
+    - [ ] Random spawner logic
+    - [ ] Triggered encounters (by room, puzzle, or event)
+    - [ ] Boss/mini-boss room triggers
+    - [ ] Enemy waves and reinforcements
+    - [ ] Encounter completion logic (unlock doors, reward drops)
+- [ ] Dungeon state persistence (save/restore opened doors, solved puzzles, cleared encounters)
+- [ ] Playtesting and polish for all dungeon mechanics
 
 </details>
 
