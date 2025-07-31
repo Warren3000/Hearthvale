@@ -153,12 +153,31 @@
 - [ ] (none yet)
 
 **Remaining:**
-- [ ] Add advanced combat moves/combos
-- [ ] Special weapon abilities
-- [ ] Status effects (poison, stun, etc.)
-- [ ] Enemy variety improvements
-
-</details>
+- [ ] Add advanced combat moves/combos  
+    - [ ] Implement multi-step attack combos for player weapons  
+    - [ ] Add combo meter/UI indicators  
+    - [ ] Enemy reactions to combos (interrupt, stagger, escape)  
+    - [ ] Special effects for successful combos  
+- [ ] Special weapon abilities  
+    - [ ] Unique charged attacks or weapon skills  
+    - [ ] Cooldown system for weapon abilities  
+    - [ ] Visual/audio feedback for ability use  
+    - [ ] Ability upgrades or branching choices  
+- [ ] Status effects (poison, stun, etc.)  
+    - [ ] Apply and display status effects on player/NPC (icons, timers)  
+    - [ ] Implement core effects: poison, burn, freeze, stun, slow, bleed  
+    - [ ] Visual and audio cues for each effect  
+    - [ ] System for effect resistance, cure, and stacking  
+- [ ] Enemy variety improvements  
+    - [ ] New enemy types with unique attack patterns  
+    - [ ] Enemy resistances and vulnerabilities  
+    - [ ] Mini-bosses with special moves  
+    - [ ] Improved AI: dodging, flanking, retreat, group tactics  
+    - [ ] Enemy reactions to player special moves/combos  
+- [ ] Combat log improvements and analytics  
+    - [ ] Log advanced combat events (combos, status effects, ability use)  
+    - [ ] Analytics for combat performance and challenge balancing  
+- [ ] Playtesting and polish for new combat features
 
 ---
 
