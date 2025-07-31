@@ -44,9 +44,16 @@
 <details>
 <summary>Click to expand</summary>
 
-- [ ] **Combat System**
+- [x] **Combat System**
     - Basic attacks/defeat; missing feedback, sound, and reactions.
     - Player/NPC health implemented. Player health bar added.
+    - **Ranged attack mechanics added (projectile/arrow support)**
+    - **Combat logging for debugging (damage, hit, defeat events)**
+    - **NPC health values per type (e.g., knight: 20 HP, fatnun: 10 HP)**
+- [x] **Weapon System**
+    - **Animated projectile support (arrow-atlas.xml)**
+    - **Weapon can fire animated projectiles using atlas animation**
+    - **Weapon constructor updated to accept projectile atlas**
 - [ ] **Weapon Leveling** — Not started
 - [ ] **Dungeon Interactivity** — Not started
 - [ ] **City Building** — Not started
@@ -82,9 +89,12 @@
 - [x] Basic attack mechanics (melee)
 - [x] Basic enemy defeat logic
 - [x] Damage feedback: smooth floating combat text and damage numbers
+- [x] **Ranged attack mechanics (projectile/arrow firing)**
+- [x] **Animated projectile support (arrow-atlas.xml)**
+- [x] **Combat logging for debugging (damage, hit, defeat events)**
+- [x] **NPC health values per type (e.g., knight: 20 HP, fatnun: 10 HP)**
 
 **Remaining:**
-- [ ] Add ranged attack mechanics (if possible)
 - [ ] Add sound effects for attacks, hits, and defeat
 - [ ] Add reaction animations (hit, defeat, etc.)
 - [ ] Polish defeat logic (e.g., removal timing, effects)
