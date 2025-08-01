@@ -6,6 +6,6 @@ namespace Hearthvale.GameCode.Entities.Interfaces
     {
         int Health { get; }
         bool IsDefeated { get; }
-        void TakeDamage(int amount, Vector2? knockback = null);
+        bool TakeDamage(int amount, Vector2? knockback = null);
     }
 }

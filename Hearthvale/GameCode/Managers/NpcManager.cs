@@ -1,4 +1,5 @@
 ﻿using Hearthvale.GameCode.Entities.NPCs;
+using Hearthvale.GameCode.Entities.Characters;
 using Hearthvale.GameCode.Entities.Players;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
@@ -17,6 +18,7 @@ namespace Hearthvale.GameCode.Managers
         private readonly Rectangle _bounds;
         private readonly TextureAtlas _heroAtlas;
         public IEnumerable<NPC> Npcs => _npcs;
+        public IEnumerable<Character> Characters => _npcs;
 
         public NpcManager(TextureAtlas heroAtlas, Rectangle bounds)
         {
@@ -87,7 +89,7 @@ namespace Hearthvale.GameCode.Managers
             npc.FacingRight = false;
             _npcs.Add(npc);
         }
-        public void Update(GameTime gameTime, Player player)
+        public void Update(GameTime gameTime, Character player)
         {
             foreach (var npc in _npcs)
                 npc.Update(gameTime, _npcs, player);

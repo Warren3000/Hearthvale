@@ -10,7 +10,7 @@ using System.Diagnostics;
 
 namespace Hearthvale.GameCode.Entities.NPCs;
 
-public class NPC : Character
+public class NPC : Character, INpcDialog, ICombatNpc
 {
     private readonly NpcAnimationController _animationController;
     private readonly NpcMovementController _movementController;
@@ -20,7 +20,6 @@ public class NPC : Character
     public int AttackPower { get; set; } = 1;
     private float _attackCooldown = 1.5f;
     // private float _attackTimer = 0f; // REMOVED: This is now managed by the health controller's stun timer
-    public Weapon EquippedWeapon { get; private set; }
 
     public bool CanAttack => !_healthController.IsOnCooldown; // Use the health controller's state
     public void ResetAttackTimer() => _healthController.StartAttackCooldown(_attackCooldown);
@@ -58,72 +57,31 @@ public class NPC : Character
         _animationController.SetAnimation("Idle");
         _movementController.SetIdle();
     }
-    public override void Draw(SpriteBatch spriteBatch)
-    {
-        Color originalColor = _sprite.Color;
-        Color weaponOriginalColor = EquippedWeapon != null ? EquippedWeapon.Sprite.Color : Color.White;
-        float alpha = 1f;
-        if (IsDefeated && IsReadyToRemove == false)
-        {
-            float progress = _healthController.DefeatTimerProgress;
-            alpha = MathHelper.Clamp(progress, 0f, 1f);
-            _sprite.Color = Color.White * alpha;
-            if (EquippedWeapon != null)
-                EquippedWeapon.Sprite.Color = Color.White * alpha;
-        }
-        else
-        {
-            _sprite.Color = Color.White;
-            if (EquippedWeapon != null)
-                EquippedWeapon.Sprite.Color = Color.White;
-        }
-        bool drawWeaponBehind = _movementController.GetVelocity().Y < 0;
-        if (drawWeaponBehind)
-        {
-            EquippedWeapon?.Draw(spriteBatch, Position);
-            _sprite.Draw(spriteBatch, Position);
-        }
-        else
-        {
-            _sprite.Draw(spriteBatch, Position);
-            EquippedWeapon?.Draw(spriteBatch, Position);
-        }
-        _sprite.Color = originalColor;
-        if (EquippedWeapon != null)
-            EquippedWeapon.Sprite.Color = weaponOriginalColor;
-    }
 
-    public void EquipWeapon(Weapon weapon)
-    {
-        EquippedWeapon = weapon;
-    }
-
-    public override void TakeDamage(int amount, Vector2? knockback = null)
+    public override bool TakeDamage(int amount, Vector2? knockback = null)
     {
         Debug.WriteLine($"--[NPC.{Name}] TakeDamage called for {amount} damage. Checking CanTakeDamage...");
         if (_healthController.CanTakeDamage)
         {
             Debug.WriteLine($"----[NPC.{Name}] CanTakeDamage is TRUE. Applying damage.");
-            _healthController.TakeDamage(amount);
+            bool justDefeated = _healthController.TakeDamage(amount);
+            _currentHealth = _healthController.Health;
             if (knockback.HasValue)
                 _movementController.SetVelocity(knockback.Value);
             Flash();
+            return justDefeated;
         }
         else
         {
             Debug.WriteLine($"----[NPC.{Name}] CanTakeDamage is FALSE. Damage blocked.");
         }
+        return false;
     }
 
-    public override void Flash()
+    public override void Heal(int amount)
     {
-        _animationController.Flash();
-    }
-
-    public override void SetPosition(Vector2 position)
-    {
-        _movementController.Position = position;
-        _sprite.Position = position;
+        _healthController.Heal(amount);
+        _currentHealth = _healthController.Health;
     }
 
     public void Update(GameTime gameTime, IEnumerable<NPC> allNpcs, Character player)
@@ -180,39 +138,6 @@ public class NPC : Character
         _attackAnimTimer = AttackAnimDuration;
         EquippedWeapon?.StartSwing(_facingRight);
         ResetAttackTimer(); // Start global attack cooldown
-    }
-
-    public Rectangle GetAttackArea()
-    {
-        if (EquippedWeapon == null) return Rectangle.Empty;
-
-        float attackReach = EquippedWeapon.Length; // Use the weapon's actual length
-        Vector2 direction = Vector2.Zero;
-        float angle = EquippedWeapon.Rotation;
-        direction.X = (float)System.Math.Cos(angle);
-        direction.Y = (float)System.Math.Sin(angle);
-
-        int attackWidth, attackHeight;
-        Vector2 attackCenter = Position + new Vector2(Sprite.Width / 2, Sprite.Height / 2);
-        Vector2 offset = Vector2.Zero;
-
-        if (System.Math.Abs(direction.X) > System.Math.Abs(direction.Y))
-        {
-            attackWidth = 32;
-            attackHeight = (int)Sprite.Height;
-            offset.X = (direction.X > 0 ? 1 : -1) * attackReach;
-        }
-        else
-        {
-            attackWidth = (int)Sprite.Width;
-            attackHeight = 32;
-            offset.Y = (direction.Y > 0 ? 1 : -1) * attackReach;
-        }
-
-        int x = (int)(attackCenter.X + offset.X - attackWidth / 2);
-        int y = (int)(attackCenter.Y + offset.Y - attackHeight / 2);
-
-        return new Rectangle(x, y, attackWidth, attackHeight);
     }
 
     private void UpdateWeapon(GameTime gameTime, Character player)
@@ -306,9 +231,24 @@ public class NPC : Character
             _facingRight = velocity.X > 0;
     }
 
-    public override void Heal(int amount)
+    public override void Flash()
     {
-        // Add a Heal method to NpcHealthController if it doesn't exist
-        _healthController.Heal(amount);
+        _animationController.Flash();
+    }
+
+    public Vector2 GetVelocity()
+    {
+        return _movementController.GetVelocity();
+    }
+
+    protected override Vector2 GetAttackDirection()
+    {
+        float angle = EquippedWeapon?.Rotation ?? 0f;
+        return new Vector2((float)Math.Cos(angle), (float)Math.Sin(angle));
+    }
+
+    protected override bool ShouldDrawWeaponBehind()
+    {
+        return GetVelocity().Y < 0;
     }
 }

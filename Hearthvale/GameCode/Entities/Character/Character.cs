@@ -26,10 +26,12 @@ public abstract class Character : IDamageable, IMovable, IAnimatable
         set => _facingRight = value;
     }
 
-    public virtual void TakeDamage(int amount, Vector2? knockback = null)
+    public virtual bool TakeDamage(int amount, Vector2? knockback = null)
     {
+        bool wasDefeated = IsDefeated;
         _currentHealth = Math.Max(0, _currentHealth - amount);
         Flash();
+        return !wasDefeated && IsDefeated;
     }
 
     public virtual void Heal(int amount)
@@ -52,8 +54,89 @@ public abstract class Character : IDamageable, IMovable, IAnimatable
         (int)_sprite.Height / 2
     );
 
+    public Weapon EquippedWeapon { get; private set; }
+
+    public virtual void EquipWeapon(Weapon weapon)
+    {
+        if (weapon == null) return;
+        EquippedWeapon = weapon;
+    }
+
+    /// <summary>
+    /// Gets the direction to use for attack area calculation. Override in subclasses for custom logic.
+    /// </summary>
+    protected virtual Vector2 GetAttackDirection()
+    {
+        return _facingRight ? Vector2.UnitX : -Vector2.UnitX;
+    }
+
+    /// <summary>
+    /// Gets the attack area rectangle for this character.
+    /// </summary>
+    public virtual Rectangle GetAttackArea()
+    {
+        if (EquippedWeapon == null) return Rectangle.Empty;
+
+        float attackReach = EquippedWeapon.Length;
+        int attackWidth, attackHeight;
+        Vector2 attackCenter = Position + new Vector2(Sprite.Width / 2, Sprite.Height / 2);
+        Vector2 offset = Vector2.Zero;
+        Vector2 direction = GetAttackDirection();
+
+        if (Math.Abs(direction.X) > Math.Abs(direction.Y))
+        {
+            attackWidth = 32;
+            attackHeight = (int)Sprite.Height;
+            offset.X = (direction.X > 0 ? 1 : -1) * attackReach;
+        }
+        else
+        {
+            attackWidth = (int)Sprite.Width;
+            attackHeight = 32;
+            offset.Y = (direction.Y > 0 ? 1 : -1) * attackReach;
+        }
+
+        int x = (int)(attackCenter.X + offset.X - attackWidth / 2);
+        int y = (int)(attackCenter.Y + offset.Y - attackHeight / 2);
+
+        return new Rectangle(x, y, attackWidth, attackHeight);
+    }
+
+    /// <summary>
+    /// Determines if the weapon should be drawn behind the character. Override in subclasses for custom logic.
+    /// </summary>
+    protected virtual bool ShouldDrawWeaponBehind()
+    {
+        return false;
+    }
+
     public virtual void Draw(SpriteBatch spriteBatch)
     {
-        _sprite.Draw(spriteBatch, _position);
+        Color originalColor = _sprite.Color;
+        Color weaponOriginalColor = EquippedWeapon != null ? EquippedWeapon.Sprite.Color : Color.White;
+        float alpha = 1f;
+        if (IsDefeated)
+        {
+            alpha = 0.5f;
+        }
+        _sprite.Color = Color.White * alpha;
+        if (EquippedWeapon != null)
+            EquippedWeapon.Sprite.Color = Color.White * alpha;
+
+        bool drawWeaponBehind = ShouldDrawWeaponBehind();
+
+        if (drawWeaponBehind)
+        {
+            EquippedWeapon?.Draw(spriteBatch, Position);
+            _sprite.Draw(spriteBatch, Position);
+        }
+        else
+        {
+            _sprite.Draw(spriteBatch, Position);
+            EquippedWeapon?.Draw(spriteBatch, Position);
+        }
+        _sprite.Color = originalColor;
+        if (EquippedWeapon != null)
+            EquippedWeapon.Sprite.Color = weaponOriginalColor;
     }
 }

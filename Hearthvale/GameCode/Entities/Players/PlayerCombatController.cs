@@ -73,15 +73,12 @@ namespace Hearthvale.GameCode.Entities.Players
                 {
                     if (attackArea.Intersects(npc.Bounds))
                     {
-                        Debug.WriteLine($"[PlayerCombatController] Hit detected on {npc.Name}. Attempting to deal {_player.EquippedWeapon.Damage} damage.");
-                        npc.TakeDamage(_player.EquippedWeapon.Damage, null); // Pass null for knockback for now to simplify
-                        _effectsManager.ShowCombatText(npc.Position, _player.EquippedWeapon.Damage.ToString(), Color.Yellow);
-                        _hitSound?.Play();
-                        if (npc.IsDefeated)
-                        {
-                            _defeatSound?.Play();
-                            _scoreManager?.Add(1);
-                        }
+                        // --- Apply Knockback ---
+                        Vector2 direction = Vector2.Normalize(npc.Position - _player.Position);
+                        float knockbackStrength = 150f; // Adjust as needed
+                        Vector2 knockback = direction * knockbackStrength;
+                        
+                        _combatManager.HandleNpcHit(npc, _player.EquippedWeapon.Damage, knockback);
                         
                         _hitNpcsThisSwing.Add(npc);
                     }

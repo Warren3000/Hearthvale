@@ -66,33 +66,36 @@ namespace HearthvaleTest
         [Fact]
         public void TryDamagePlayer_DamagesPlayer_WhenNotOnCooldown()
         {
-            var (combatManager, player, _, _, _, _) = CreateTestCombatManager();
+            var (combatManager, player, npcManager, _, _, _) = CreateTestCombatManager();
+            var npc = npcManager.Npcs.First();
             int initialHealth = player.Health;
-            combatManager.TryDamagePlayer(10);
+            combatManager.TryDamagePlayer(10, npc.Position);
             Assert.True(player.Health < initialHealth);
         }
 
         [Fact]
         public void TryDamagePlayer_RespectsDamageCooldown()
         {
-            var (combatManager, player, _, _, _, _) = CreateTestCombatManager();
+            var (combatManager, player, npcManager, _, _, _) = CreateTestCombatManager();
+            var npc = npcManager.Npcs.First();
             int initialHealth = player.Health;
-            combatManager.TryDamagePlayer(10);
+            combatManager.TryDamagePlayer(10, npc.Position);
             Assert.True(player.Health < initialHealth);
             int afterFirstHit = player.Health;
             // Try to damage again immediately, should not take damage due to cooldown
-            combatManager.TryDamagePlayer(10);
+            combatManager.TryDamagePlayer(10, npc.Position);
             Assert.Equal(afterFirstHit, player.Health);
             // Simulate enough time passing for damage cooldown to expire
             combatManager.Update(new GameTime(TimeSpan.Zero, TimeSpan.FromSeconds(2)));
-            combatManager.TryDamagePlayer(10);
+            combatManager.TryDamagePlayer(10, npc.Position);
             Assert.True(player.Health < afterFirstHit);
         }
 
         [Fact]
         public void SetPlayer_UpdatesPlayerReference()
         {
-            var (combatManager, _, _, _, _, _) = CreateTestCombatManager();
+            var (combatManager, _, npcManager, _, _, _) = CreateTestCombatManager();
+            var npc = npcManager.Npcs.First();
             var dummyTexture = new Texture2D(GraphicsDevice(), 1, 1);
             var atlas = new TextureAtlas(dummyTexture);
             // Add required animations for Player
@@ -103,7 +106,7 @@ namespace HearthvaleTest
             combatManager.SetPlayer(newPlayer);
             // Try to damage the new player and check health is reduced
             int initialHealth = newPlayer.Health;
-            combatManager.TryDamagePlayer(5);
+            combatManager.TryDamagePlayer(5, npc.Position);
             Assert.True(newPlayer.Health < initialHealth);
         }
 
@@ -122,6 +125,27 @@ namespace HearthvaleTest
                 combatManager.Update(new GameTime(TimeSpan.Zero, TimeSpan.FromSeconds(0.1)));
             }
             // No exception = pass, projectiles should be processed and possibly removed if out of bounds
+        }
+
+        [Fact]
+        public void Update_ProjectileHitsNpc_NpcTakesDamage()
+        {
+            // Arrange
+            var (combatManager, player, npcManager, _, _, _) = CreateTestCombatManager();
+            var npc = npcManager.Npcs.First();
+            int initialNpcHealth = npc.Health;
+            var dummyTexture = new Texture2D(GraphicsDevice(), 1, 1);
+            var region = new TextureRegion(dummyTexture, 0, 0, 1, 1);
+            var anim = new Animation(new List<TextureRegion> { region }, System.TimeSpan.FromSeconds(0.1));
+            // Position the projectile to hit the NPC immediately
+            var projectile = new Projectile(anim, npc.Position, Vector2.Zero, 5);
+            combatManager.RegisterProjectile(projectile);
+
+            // Act
+            combatManager.Update(new GameTime());
+
+            // Assert
+            Assert.True(npc.Health < initialNpcHealth);
         }
 
         private (CombatManager, Player, NpcManager, ScoreManager, SpriteBatch, CombatEffectsManager) CreateTestCombatManager()
@@ -154,8 +178,7 @@ namespace HearthvaleTest
             var effectsManager = new CombatEffectsManager(camera);
             var hitSound = (SoundEffect)null;
             var defeatSound = (SoundEffect)null;
-            var playerAttackSound = (SoundEffect)null;
-            var combatManager = new CombatManager(npcManager, player, scoreManager, spriteBatch, effectsManager, hitSound, defeatSound, playerAttackSound, new Rectangle(0, 0, 100, 100));
+            var combatManager = new CombatManager(npcManager, player, scoreManager, spriteBatch, effectsManager, hitSound, defeatSound, new Rectangle(0, 0, 100, 100));
             return (combatManager, player, npcManager, scoreManager, spriteBatch, effectsManager);
         }
 

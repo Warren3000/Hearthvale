@@ -16,8 +16,9 @@ public class Weapon
     public Vector2 Offset { get; set; } = Vector2.Zero;
     public TextureAtlas _atlas { get; set; }
     private readonly TextureAtlas _projectileAtlas; // Add this line
-    public int Level { get; private set; }
+    public int Level { get; private set; } = 1;
     public int XP { get; private set; }
+    public int XpToNextLevel => 10 * (Level + 1);
     public int Damage { get; private set; }
     public float Length { get; private set; }
     public float Scale
@@ -59,6 +60,18 @@ public class Weapon
         Sprite.Origin = new Vector2(0, Sprite.Region.Height);
         // Set initial length. This will be updated if scale is changed.
         Length = Sprite.Region.Height;
+    }
+
+    public void GainXP(int amount)
+    {
+        XP += amount;
+        while (XP >= XpToNextLevel)
+        {
+            XP -= XpToNextLevel;
+            Level++;
+            Damage++; // Increase damage by 1 on level up
+            Debug.WriteLine($"[Weapon] {Name} leveled up to Level {Level}! New Damage: {Damage}");
+        }
     }
     public void Update(GameTime gameTime)
     {
@@ -155,22 +168,4 @@ public class Weapon
             _currentAnimation = animationName;
         }
     }
-
-    public void GainXP(int amount)
-    {
-        XP += amount;
-        if (XP >= XPToNextLevel())
-        {
-            LevelUp();
-        }
-    }
-
-    private void LevelUp()
-    {
-        Level++;
-        XP = 0;
-        Damage += 2; // Example increment
-    }
-
-    private int XPToNextLevel() => Level * 10;
 }

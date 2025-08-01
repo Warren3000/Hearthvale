@@ -38,24 +38,27 @@ namespace Hearthvale.GameCode.Entities.NPCs
             _currentHealth = maxHealth;
             _defeatSound = defeatSound;
         }
-        public void TakeDamage(int amount, float stunDuration = 0.3f)
+        public bool TakeDamage(int amount, float stunDuration = 0.3f)
         {
-            if (!CanTakeDamage) return; // This check is redundant but safe
-            
+            if (!CanTakeDamage) return false;
+
             int oldHealth = _currentHealth;
             _currentHealth -= amount;
             _stunTimer = stunDuration;
-            _hitTimer = _hitCooldown; // Activate invincibility
+            _hitTimer = _hitCooldown;
 
-            Debug.WriteLine($"------[NpcHealthController] Damage applied. Health: {oldHealth} -> {_currentHealth}. Starting invincibility timer for {_hitCooldown}s.");
+            Debug.WriteLine($"------[NpcHealthController] Damage applied. Health: {oldHealth} -> {_currentHealth}.");
 
-            if (_currentHealth <= 0)
+            if (_currentHealth <= 0 && !_isDefeated)
             {
+                Debug.WriteLine("------[NpcHealthController] Health is <= 0 and not already defeated. SETTING DEFEATED.");
                 _currentHealth = 0;
                 _isDefeated = true;
                 _defeatTimer = 1.0f;
                 _defeatSound?.Play();
+                return true; // NPC was just defeated
             }
+            return false; // NPC was damaged but not defeated
         }
 
         public void Heal(int amount)

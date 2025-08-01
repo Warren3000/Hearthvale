@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Hearthvale\Hearthvale.csproj" />
+    <ProjectReference Include="..\MonoGameLibrary\MonoGameLibrary.csproj" />
   </ItemGroup>
 
   <ItemGroup>

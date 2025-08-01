@@ -6,7 +6,7 @@
 
 | Milestone                          | Est. Duration | Start Date  | Est. End Date | Current End Date |
 |-------------------------------------|--------------|-------------|---------------|------------------|
-| Combat System v1                    | 6–7 weeks    | 07/15/2025  | 09/02/2025    | 08/12/2025       |
+| Combat System v1                    | 6–7 weeks    | 07/15/2025  | 09/02/2025    | 08/31/2025       |
 | Weapon Leveling v1                  | 4 weeks      | 09/03/2025  | 09/30/2025    | 09/09/2025       |
 | Dungeon Interactivity v1            | 9–10 weeks   | 10/01/2025  | 12/09/2025    | 11/04/2025       |
 | Combat System v2                    | 4–5 weeks    | 12/10/2025  | 01/13/2026    | 12/09/2025       |
@@ -51,10 +51,17 @@
     - **Combat logging for debugging (damage, hit, defeat events)**
     - **NPC health values per type (e.g., knight: 20 HP, fatnun: 10 HP)**
     - **Sound effects for attacks, hits, and defeat implemented**
+    - Refactored all managers and entities to use interfaces and base types for decoupling and testability. [NEW]
+    - Centralized weapon, attack area, and draw logic in Character base class. [NEW]
+    - Added edge case handling for missing NPC animations and dialog with defeated NPCs. [NEW]
+    - Improved error handling and code maintainability. [NEW]
 - [x] **Weapon System**
     - **Animated projectile support (arrow-atlas.xml)**
     - **Weapon can fire animated projectiles using atlas animation**
     - **Weapon constructor updated to accept projectile atlas**
+    - **Weapon level now starts at 1 (not 0) for all new weapons** [NEW]
+    - **XP and level-up logic updated to match new baseline** [NEW]
+    - **Weapon UI and tests updated to reflect level 1 as the starting point** [NEW]
 - [ ] **Weapon Leveling** — Not started
 - [ ] **Dungeon Interactivity** — Not started
 - [ ] **City Building** — Not started
@@ -99,6 +106,27 @@
 - [x] Polish defeat logic (e.g., removal timing, effects)
 - [x] Playtesting and bug fixing
 **Remaining:**
+
+</details>
+
+---
+
+### Weapon Leveling v1 (4 weeks)
+<details>
+<summary>Details</summary>
+
+**Completed:**
+- [x] Weapon level now starts at 1 for all new weapons [NEW]
+- [x] XP and level-up logic updated to match new baseline [NEW]
+- [x] Weapon UI and tests updated to reflect level 1 as the starting point [NEW]
+
+**Remaining:**
+- [ ] Design weapon experience and leveling system
+- [ ] Implement weapon XP gain on use or kill
+- [ ] Add weapon level-up effects and stat increases
+- [ ] UI for weapon XP and level display
+- [ ] Integrate weapon levels with combat calculations
+- [ ] Playtesting and polish for weapon leveling
 
 </details>
 

@@ -15,9 +15,11 @@ using MonoGameLibrary.Graphics;
 using System;
 using System.Collections.Generic;
 
-
 namespace Hearthvale.GameCode.Managers
 {
+    /// <summary>
+    /// Manages all in-game UI, including dialog, pause, health bars, and debug info.
+    /// </summary>
     public class GameUIManager
     {
         private readonly TextureAtlas _atlas;
@@ -32,10 +34,16 @@ namespace Hearthvale.GameCode.Managers
         private TextRuntime _dialogText;
         private bool _isDialogOpen = false;
         private Texture2D _whitePixel;
+        private Panel _weaponPanel;
+        private TextRuntime _weaponLevelText;
+        private ColoredRectangleRuntime _weaponXpBar;
 
         public bool IsDialogOpen => _isDialogOpen;
         public bool IsPausePanelVisible => _pausePanel?.IsVisible ?? false;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="GameUIManager"/> class.
+        /// </summary>
         public GameUIManager(TextureAtlas atlas, SpriteFont font, SpriteFont debugFont, Action onResume, Action onQuit)
         {
             _atlas = atlas;
@@ -51,6 +59,7 @@ namespace Hearthvale.GameCode.Managers
             GumService.Default.Root.Children.Clear();
             CreateDialogPanel();
             CreatePausePanel();
+            CreateWeaponPanel();
             _whitePixel = new Texture2D(Core.GraphicsDevice, 1, 1);
             _whitePixel.SetData(new[] { Color.White });
         }
@@ -98,6 +107,7 @@ namespace Hearthvale.GameCode.Managers
             // Foreground (green portion)
             spriteBatch.Draw(_whitePixel, new Rectangle((int)barPos.X, (int)barPos.Y, (int)(size.X * percent), (int)size.Y), Color.LimeGreen);
         }
+
         private void CreatePausePanel()
         {
             _pausePanel = new Panel();
@@ -149,6 +159,54 @@ namespace Hearthvale.GameCode.Managers
             _pausePanel.AddChild(quitButton);
         }
 
+        private void CreateWeaponPanel()
+        {
+            _weaponPanel = new Panel();
+            _weaponPanel.Anchor(Anchor.TopRight);
+            _weaponPanel.Visual.WidthUnits = DimensionUnitType.Absolute;
+            _weaponPanel.Visual.Width = 60; // Reduced from 120
+            _weaponPanel.Visual.HeightUnits = DimensionUnitType.Absolute;
+            _weaponPanel.Visual.Height = 20; // Reduced from 40
+            _weaponPanel.Visual.X = -5; // Adjusted for smaller size
+            _weaponPanel.Visual.Y = 5;
+            _weaponPanel.IsVisible = true;
+            _weaponPanel.AddToRoot();
+
+            _weaponLevelText = new TextRuntime();
+            _weaponLevelText.Text = "Lvl: 0";
+            _weaponLevelText.FontScale = 0.25f; // Reduced from 0.5f
+            _weaponLevelText.X = 2;
+            _weaponLevelText.Y = 2;
+            _weaponPanel.AddChild(_weaponLevelText);
+
+            // XP Bar Background
+            var xpBarBackground = new ColoredRectangleRuntime();
+            xpBarBackground.Width = 50; // Reduced from 100
+            xpBarBackground.Height = 5; // Reduced from 10
+            xpBarBackground.X = 2;
+            xpBarBackground.Y = 12;
+            xpBarBackground.Color = new Color(50, 50, 50); // Dark grey
+            _weaponPanel.AddChild(xpBarBackground);
+
+            // XP Bar Foreground
+            _weaponXpBar = new ColoredRectangleRuntime();
+            _weaponXpBar.Width = 0;
+            _weaponXpBar.Height = 5;
+            _weaponXpBar.X = 2;
+            _weaponXpBar.Y = 12;
+            ((ColoredRectangleRuntime)_weaponXpBar).Color = Color.Gold;
+            _weaponPanel.AddChild(_weaponXpBar);
+        }
+
+        public void UpdateWeaponUI(int level, int currentXp, int xpToNextLevel)
+        {
+            if (_weaponPanel == null || !_weaponPanel.IsVisible) return;
+
+            _weaponLevelText.Text = $"Lvl: {level}";
+
+            float xpPercent = (float)currentXp / xpToNextLevel;
+            _weaponXpBar.Width = 50 * xpPercent; // Reduced from 100
+        }
         private void CreateDialogPanel()
         {
             _dialogPanel = new Panel();

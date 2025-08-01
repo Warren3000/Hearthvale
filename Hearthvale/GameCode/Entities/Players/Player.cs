@@ -24,13 +24,12 @@ namespace Hearthvale.GameCode.Entities.Players
         private const float AttackDuration = 0.3f;
         private float _weaponOrbitRadius = 3f;
         public float WeaponOrbitRadius => _weaponOrbitRadius;
-        public Weapon EquippedWeapon { get; private set; }
+
         private Vector2 _lastMovementDirection = Vector2.UnitX;
         // Add this field to the Player class to fix CS0103
         private readonly float _movementSpeed;
         public Vector2 LastMovementDirection => _lastMovementDirection;
         public int CurrentHealth => _currentHealth;
-        public int MaxHealth => _maxHealth;
 
         public override AnimatedSprite Sprite => _sprite;
         public override Vector2 Position => _position;
@@ -65,16 +64,13 @@ namespace Hearthvale.GameCode.Entities.Players
             _currentHealth = _maxHealth;
         }
 
-        public override void TakeDamage(int amount, Vector2? knockback = null)
+        public override bool TakeDamage(int amount, Vector2? knockback = null)
         {
-            if (IsDefeated) return;
-
-            _currentHealth -= amount;
-            if (_currentHealth < 0) _currentHealth = 0;
-
+            if (IsDefeated) return false;
+            bool justDefeated = base.TakeDamage(amount, knockback);
             if (knockback.HasValue)
                 _movementController.SetVelocity(knockback.Value);
-            Flash();
+            return justDefeated;
         }
 
         public override void Flash()
@@ -84,17 +80,6 @@ namespace Hearthvale.GameCode.Entities.Players
         public void StartAttack()
         {
             IsAttacking = true;
-        }
-        public override void SetPosition(Vector2 pos)
-        {
-            _position = pos;
-            _sprite.Position = pos;
-        }
-
-        public void EquipWeapon(Weapon weapon)
-        {
-            if (weapon == null) return; // Prevent unequipping
-            EquippedWeapon = weapon;
         }
 
         public void Update(GameTime gameTime, IEnumerable<NPC> npcs)
@@ -154,37 +139,6 @@ namespace Hearthvale.GameCode.Entities.Players
 
             SetPosition(candidate);
         }
-        public Rectangle GetAttackArea()
-        {
-            if (EquippedWeapon == null) return Rectangle.Empty;
-
-            float attackReach = EquippedWeapon.Length; // Use the weapon's actual length
-            int attackWidth, attackHeight;
-            Vector2 attackCenter = Position + new Vector2(Sprite.Width / 2, Sprite.Height / 2);
-            Vector2 offset = Vector2.Zero;
-
-            // Check if the primary movement is horizontal or vertical
-            if (System.Math.Abs(LastMovementDirection.X) > System.Math.Abs(LastMovementDirection.Y))
-            {
-                // Horizontal attack
-                attackWidth = 32;
-                attackHeight = (int)Sprite.Height;
-                offset.X = (LastMovementDirection.X > 0 ? 1 : -1) * attackReach;
-            }
-            else
-            {
-                // Vertical attack
-                attackWidth = (int)Sprite.Width;
-                attackHeight = 32;
-                offset.Y = (LastMovementDirection.Y > 0 ? 1 : -1) * attackReach;
-            }
-
-            int x = (int)(attackCenter.X + offset.X - attackWidth / 2);
-            int y = (int)(attackCenter.Y + offset.Y - attackHeight / 2);
-
-            return new Rectangle(x, y, attackWidth, attackHeight);
-        }
-
         public void SetLastMovementDirection(Vector2 dir)
         {
             _lastMovementDirection = dir;
@@ -197,34 +151,14 @@ namespace Hearthvale.GameCode.Entities.Players
 
         public PlayerCombatController CombatController => _combatController;
 
-        public override void Draw(SpriteBatch spriteBatch)
+        protected override Vector2 GetAttackDirection()
         {
-            Color originalColor = _sprite.Color;
-            Color weaponOriginalColor = EquippedWeapon != null ? EquippedWeapon.Sprite.Color : Color.White;
-            float alpha = 1f;
-            if (IsDefeated)
-            {
-                // Fade out when defeated
-                alpha = 0.5f; // You may want to use a timer for smooth fade-out
-            }
-            _sprite.Color = Color.White * alpha;
-            if (EquippedWeapon != null)
-                EquippedWeapon.Sprite.Color = Color.White * alpha;
+            return LastMovementDirection;
+        }
 
-            bool drawWeaponBehind = _lastMovementDirection.Y < 0;
-            if (drawWeaponBehind)
-            {
-                EquippedWeapon?.Draw(spriteBatch, Position);
-                _sprite.Draw(spriteBatch, Position);
-            }
-            else
-            {
-                _sprite.Draw(spriteBatch, Position);
-                EquippedWeapon?.Draw(spriteBatch, Position);
-            }
-            _sprite.Color = originalColor;
-            if (EquippedWeapon != null)
-                EquippedWeapon.Sprite.Color = weaponOriginalColor;
+        protected override bool ShouldDrawWeaponBehind()
+        {
+            return LastMovementDirection.Y < 0;
         }
     }
 }

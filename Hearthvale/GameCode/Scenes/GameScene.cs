@@ -130,7 +130,6 @@ public class GameScene : Scene
             _combatEffectsManager,
             _bounceSoundEffect,
             _collectSoundEffect,
-            _playerAttackSoundEffect,
             worldBounds: _mapManager.RoomBounds
         );
         _player = new Player(
@@ -147,7 +146,7 @@ public class GameScene : Scene
         _combatManager.SetPlayer(_player); // Set the player reference in CombatManager
 
         // Must be initialized after _player is created
-        _dialogManager = new DialogManager(_uiManager, _player, _npcManager, dialogDistance);
+        _dialogManager = new DialogManager(_uiManager, _player, _npcManager.Characters, dialogDistance);
         
         var sword = new Weapon("Dagger", baseDamage: 5, _weaponAtlas, _arrowAtlas); // Pass the arrow atlas here
         sword.Scale = 0.5f;
@@ -191,6 +190,15 @@ public class GameScene : Scene
         _mapManager.Update(gameTime);
         UpdateViewport(Core.GraphicsDevice.Viewport);
         _player.ClampToBounds(_mapManager.RoomBounds);
+
+        if (_player.EquippedWeapon != null)
+        {
+            _uiManager.UpdateWeaponUI(
+                _player.EquippedWeapon.Level,
+                _player.EquippedWeapon.XP,
+                _player.EquippedWeapon.XpToNextLevel
+            );
+        }
 
         // Calculate the margin rectangle as before
         Rectangle margin = new Rectangle(
