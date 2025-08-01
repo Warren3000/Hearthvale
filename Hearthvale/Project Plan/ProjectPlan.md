@@ -127,6 +127,10 @@
     - [ ] Implement weapon XP gain logic in combat manager
 - [x] Implement weapon XP gain on kill
 - [ ] Add weapon level-up effects and stat increases
+- [ ] Weapon Switching
+    - [ ] Allow player to switch between equipped weapons during gameplay
+    - [ ] Update weapon stats and visuals on switch
+    - [ ] Add UI for current weapon display and switching controls
 - [x] UI for weapon XP and level display
 - [x] Integrate weapon levels with combat calculations
 - [ ] Implement in-game weapon switching (currently, dagger is hardcoded; allow player to change weapons during gameplay)
