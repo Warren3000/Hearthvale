@@ -7,7 +7,7 @@
 | Milestone                          | Est. Duration | Start Date  | Est. End Date | Current End Date |
 |-------------------------------------|--------------|-------------|---------------|------------------|
 | Combat System v1                    | 6–7 weeks    | 07/15/2025  | 09/02/2025    | 08/31/2025       |
-| Weapon Leveling v1                  | 4 weeks      | 09/03/2025  | 09/30/2025    | 09/09/2025       |
+| Weapon System v1                    | 4 weeks      | 09/03/2025  | 09/30/2025    | 09/09/2025       |
 | Dungeon Interactivity v1            | 9–10 weeks   | 10/01/2025  | 12/09/2025    | 11/04/2025       |
 | Combat System v2                    | 4–5 weeks    | 12/10/2025  | 01/13/2026    | 12/09/2025       |
 | Player Inventory & Stats Screen     | 2–3 weeks    | 01/14/2026  | 01/31/2026    | 12/30/2025       |
@@ -62,7 +62,6 @@
     - **Weapon level now starts at 1 (not 0) for all new weapons** [NEW]
     - **XP and level-up logic updated to match new baseline** [NEW]
     - **Weapon UI and tests updated to reflect level 1 as the starting point** [NEW]
-- [ ] **Weapon Leveling** — Not started
 - [ ] **Dungeon Interactivity** — Not started
 - [ ] **City Building** — Not started
 - [ ] **Time/Story** — Not started
@@ -111,7 +110,7 @@
 
 ---
 
-### Weapon Leveling v1 (4 weeks)
+### Weapon System v1 (4 weeks)
 <details>
 <summary>Details</summary>
 
@@ -121,11 +120,16 @@
 - [x] Weapon UI and tests updated to reflect level 1 as the starting point [NEW]
 
 **Remaining:**
-- [ ] Design weapon experience and leveling system
-- [ ] Implement weapon XP gain on use or kill
+
+- [ ] Design weapon experience and leveling system based on kills
+    - [ ] Define XP gain per kill based on enemy type and difficulty
+    - [ ] Set XP thresholds for each weapon level (e.g., 100 XP for level 2, 200 XP for level 3)
+    - [ ] Implement weapon XP gain logic in combat manager
+- [x] Implement weapon XP gain on kill
 - [ ] Add weapon level-up effects and stat increases
-- [ ] UI for weapon XP and level display
-- [ ] Integrate weapon levels with combat calculations
+- [x] UI for weapon XP and level display
+- [x] Integrate weapon levels with combat calculations
+- [ ] Implement in-game weapon switching (currently, dagger is hardcoded; allow player to change weapons during gameplay)
 - [ ] Playtesting and polish for weapon leveling
 
 </details>
