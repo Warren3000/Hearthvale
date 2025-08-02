@@ -1,6 +1,7 @@
 ﻿using Gum.DataTypes;
 using Gum.Managers;
 using Gum.Wireframe;
+using Hearthvale.GameCode.Entities;
 using Hearthvale.GameCode.Entities.NPCs;
 using Hearthvale.GameCode.Entities.Players;
 using Hearthvale.GameCode.UI;
@@ -37,6 +38,10 @@ namespace Hearthvale.GameCode.Managers
         private Panel _weaponPanel;
         private TextRuntime _weaponLevelText;
         private ColoredRectangleRuntime _weaponXpBar;
+        private Panel _equippedWeaponStatusPanel;
+        private TextRuntime _equippedWeaponNameText;
+        private SpriteRuntime _equippedWeaponSprite;
+        private TextRuntime _weaponXpText;
 
         public bool IsDialogOpen => _isDialogOpen;
         public bool IsPausePanelVisible => _pausePanel?.IsVisible ?? false;
@@ -59,7 +64,7 @@ namespace Hearthvale.GameCode.Managers
             GumService.Default.Root.Children.Clear();
             CreateDialogPanel();
             CreatePausePanel();
-            CreateWeaponPanel();
+            CreateModernWeaponUIPanel();
             _whitePixel = new Texture2D(Core.GraphicsDevice, 1, 1);
             _whitePixel.SetData(new[] { Color.White });
         }
@@ -85,13 +90,44 @@ namespace Hearthvale.GameCode.Managers
             int maxHealth = player.MaxHealth;
             float percent = (float)health / maxHealth;
 
-            // Background
-            spriteBatch.Draw(_whitePixel, new Rectangle((int)position.X, (int)position.Y, (int)size.X, (int)size.Y), Color.DarkRed);
-            // Foreground
-            spriteBatch.Draw(_whitePixel, new Rectangle((int)position.X, (int)position.Y, (int)(size.X * percent), (int)size.Y), Color.LimeGreen);
+            // Rounded background
+            int radius = 6;
+            DrawRoundedRect(spriteBatch, position, size, Color.FromNonPremultiplied(60, 20, 20, 220), radius);
 
-            // Optional: Draw border or text
-            // spriteBatch.DrawString(_font, $"{health}/{maxHealth}", position + new Vector2(2, 2), Color.White);
+            // Foreground (gradient green)
+            var fgColor = Color.Lerp(Color.Red, Color.LimeGreen, percent);
+            DrawRoundedRect(spriteBatch, position, new Vector2(size.X * percent, size.Y), fgColor, radius);
+
+            // Border
+            DrawRoundedRect(spriteBatch, position, size, Color.White * 0.2f, radius, outline: true);
+
+            // Health text (smaller)
+            var healthText = $"{health}/{maxHealth}";
+            float healthFontScale = 0.6f; // 60% of normal font size
+            var textSize = _font.MeasureString(healthText) * healthFontScale;
+            var textPos = position + new Vector2(size.X / 2 - textSize.X / 2, size.Y / 2 - textSize.Y / 2);
+            spriteBatch.DrawString(_font, healthText, textPos, Color.White, 0f, Vector2.Zero, healthFontScale, SpriteEffects.None, 0f);
+        }
+        // Helper for rounded rectangles (simple approximation)
+        private void DrawRoundedRect(SpriteBatch spriteBatch, Vector2 pos, Vector2 size, Color color, int radius, bool outline = false)
+        {
+            // Center rectangle
+            spriteBatch.Draw(_whitePixel, new Rectangle((int)pos.X + radius, (int)pos.Y, (int)size.X - 2 * radius, (int)size.Y), color);
+            // Left and right rectangles
+            spriteBatch.Draw(_whitePixel, new Rectangle((int)pos.X, (int)pos.Y + radius, radius, (int)size.Y - 2 * radius), color);
+            spriteBatch.Draw(_whitePixel, new Rectangle((int)(pos.X + size.X - radius), (int)pos.Y + radius, radius, (int)size.Y - 2 * radius), color);
+            // Four corner circles (approximate with small squares)
+            spriteBatch.Draw(_whitePixel, new Rectangle((int)pos.X, (int)pos.Y, radius, radius), color);
+            spriteBatch.Draw(_whitePixel, new Rectangle((int)(pos.X + size.X - radius), (int)pos.Y, radius, radius), color);
+            spriteBatch.Draw(_whitePixel, new Rectangle((int)pos.X, (int)(pos.Y + size.Y - radius), radius, radius), color);
+            spriteBatch.Draw(_whitePixel, new Rectangle((int)(pos.X + size.X - radius), (int)(pos.Y + size.Y - radius), radius, radius), color);
+
+            // Optional outline
+            if (outline)
+            {
+                var outlineColor = Color.White * 0.4f;
+                DrawRect(spriteBatch, new Rectangle((int)pos.X, (int)pos.Y, (int)size.X, (int)size.Y), _whitePixel, outlineColor);
+            }
         }
         public void DrawNpcHealthBar(SpriteBatch spriteBatch, NPC npc, Vector2 offset, Vector2 size)
         {
@@ -158,54 +194,144 @@ namespace Hearthvale.GameCode.Managers
             quitButton.Click += (s, e) => OnQuit?.Invoke();
             _pausePanel.AddChild(quitButton);
         }
-
-        private void CreateWeaponPanel()
+        // New unified, modern weapon UI panel
+        private void CreateModernWeaponUIPanel()
         {
-            _weaponPanel = new Panel();
-            _weaponPanel.Anchor(Anchor.TopRight);
-            _weaponPanel.Visual.WidthUnits = DimensionUnitType.Absolute;
-            _weaponPanel.Visual.Width = 60; // Reduced from 120
-            _weaponPanel.Visual.HeightUnits = DimensionUnitType.Absolute;
-            _weaponPanel.Visual.Height = 20; // Reduced from 40
-            _weaponPanel.Visual.X = -5; // Adjusted for smaller size
-            _weaponPanel.Visual.Y = 5;
-            _weaponPanel.IsVisible = true;
-            _weaponPanel.AddToRoot();
+            var panel = new Panel();
+            panel.Anchor(Anchor.BottomLeft);
+            panel.Visual.WidthUnits = DimensionUnitType.Absolute;
+            panel.Visual.Width = 160;
+            panel.Visual.HeightUnits = DimensionUnitType.Absolute;
+            panel.Visual.Height = 48; // Slightly taller for XP text
+            panel.Visual.X = 10;
+            panel.Visual.Y = -10;
+            panel.IsVisible = true;
+            panel.AddToRoot();
 
-            _weaponLevelText = new TextRuntime();
-            _weaponLevelText.Text = "Lvl: 0";
-            _weaponLevelText.FontScale = 0.25f; // Reduced from 0.5f
-            _weaponLevelText.X = 2;
-            _weaponLevelText.Y = 2;
-            _weaponPanel.AddChild(_weaponLevelText);
+            var background = new NineSliceRuntime();
+            var region = _atlas.GetRegion("panel-background");
+            background.Dock(Dock.Fill);
+            background.Texture = region.Texture;
+            background.TextureAddress = TextureAddress.Custom;
+            background.TextureHeight = region.Height;
+            background.TextureLeft = region.SourceRectangle.Left;
+            background.TextureTop = region.SourceRectangle.Top;
+            background.TextureWidth = region.Width;
+            panel.AddChild(background);
 
-            // XP Bar Background
-            var xpBarBackground = new ColoredRectangleRuntime();
-            xpBarBackground.Width = 50; // Reduced from 100
-            xpBarBackground.Height = 5; // Reduced from 10
-            xpBarBackground.X = 2;
-            xpBarBackground.Y = 12;
-            xpBarBackground.Color = new Color(50, 50, 50); // Dark grey
-            _weaponPanel.AddChild(xpBarBackground);
+            _equippedWeaponSprite = new SpriteRuntime
+            {
+                X = 8,
+                Y = 8,
+                Width = 24,
+                Height = 24,
+                TextureAddress = TextureAddress.Custom
+            };
+            panel.AddChild(_equippedWeaponSprite);
 
-            // XP Bar Foreground
-            _weaponXpBar = new ColoredRectangleRuntime();
-            _weaponXpBar.Width = 0;
-            _weaponXpBar.Height = 5;
-            _weaponXpBar.X = 2;
-            _weaponXpBar.Y = 12;
-            ((ColoredRectangleRuntime)_weaponXpBar).Color = Color.Gold;
-            _weaponPanel.AddChild(_weaponXpBar);
+            _equippedWeaponNameText = new TextRuntime
+            {
+                Text = "Weapon: None",
+                FontScale = 0.22f,
+                X = 38,
+                Y = 8,
+                Color = new Color(220, 220, 255)
+            };
+            panel.AddChild(_equippedWeaponNameText);
+
+            _weaponLevelText = new TextRuntime
+            {
+                Text = "Lvl: --",
+                FontScale = 0.18f,
+                X = 38,
+                Y = 22,
+                Color = Color.Gold
+            };
+            panel.AddChild(_weaponLevelText);
+
+            // XP Bar background
+            var xpBarBackground = new ColoredRectangleRuntime
+            {
+                Width = 80,
+                Height = 5,
+                X = 38,
+                Y = 32,
+                Color = new Color(60, 60, 80)
+            };
+            panel.AddChild(xpBarBackground);
+
+            // XP Bar foreground
+            _weaponXpBar = new ColoredRectangleRuntime
+            {
+                Width = 0,
+                Height = 5,
+                X = 38,
+                Y = 32,
+                Color = Color.Gold
+            };
+            panel.AddChild(_weaponXpBar);
+
+            // XP text
+            _weaponXpText = new TextRuntime
+            {
+                Text = "XP: 0/0",
+                FontScale = 0.16f,
+                X = 38,
+                Y = 38,
+                Color = new Color(180, 180, 220)
+            };
+            panel.AddChild(_weaponXpText);
+
+            _weaponPanel = panel;
+            _equippedWeaponStatusPanel = panel;
         }
-
-        public void UpdateWeaponUI(int level, int currentXp, int xpToNextLevel)
+        public void UpdateWeaponUI(Weapon equippedWeapon)
         {
-            if (_weaponPanel == null || !_weaponPanel.IsVisible) return;
+            if (equippedWeapon != null)
+            {
+                
+                if (_weaponPanel != null && _weaponPanel.IsVisible)
+                {
+                    _weaponLevelText.Text = $"Lvl: {equippedWeapon.Level}";
+                    float xpPercent = equippedWeapon.XpToNextLevel > 0 ? (float)equippedWeapon.XP / equippedWeapon.XpToNextLevel : 0;
+                    _weaponXpBar.Width = 50 * xpPercent;
+                    _weaponXpText.Text = $"XP: {equippedWeapon.XP}/{equippedWeapon.XpToNextLevel}";
+                }
 
-            _weaponLevelText.Text = $"Lvl: {level}";
-
-            float xpPercent = (float)currentXp / xpToNextLevel;
-            _weaponXpBar.Width = 50 * xpPercent; // Reduced from 100
+                if (_equippedWeaponStatusPanel != null && _equippedWeaponStatusPanel.IsVisible)
+                {
+                    _equippedWeaponNameText.Text = $"Weapon: {equippedWeapon.Name}";
+                    if (equippedWeapon.Sprite?.Region?.Texture != null)
+                    {
+                        var region = equippedWeapon.Sprite.Region;
+                        _equippedWeaponSprite.Texture = region.Texture;
+                        _equippedWeaponSprite.TextureLeft = region.SourceRectangle.Left;
+                        _equippedWeaponSprite.TextureTop = region.SourceRectangle.Top;
+                        _equippedWeaponSprite.TextureWidth = region.SourceRectangle.Width;
+                        _equippedWeaponSprite.TextureHeight = region.SourceRectangle.Height;
+                    }
+                    else
+                    {
+                       
+                        _equippedWeaponSprite.Texture = null;
+                    }
+                }
+            }
+            else
+            {
+               
+                if (_weaponPanel != null && _weaponPanel.IsVisible)
+                {
+                    _weaponLevelText.Text = "Lvl: --";
+                    _weaponXpBar.Width = 0;
+                    _weaponXpText.Text = "XP: 0/0";
+                }
+                if (_equippedWeaponStatusPanel != null && _equippedWeaponStatusPanel.IsVisible)
+                {
+                    _equippedWeaponNameText.Text = "Weapon: None";
+                    _equippedWeaponSprite.Texture = null;
+                }
+            }
         }
         private void CreateDialogPanel()
         {
@@ -276,16 +402,22 @@ namespace Hearthvale.GameCode.Managers
 
         public void DrawDebugInfo(SpriteBatch spriteBatch, GameTime gameTime, Vector2 heroPosition, Vector2 cameraPosition, Viewport viewport)
         {
-            Vector2 position = new Vector2(20, 40);
-            float fps = 1f / (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-            string[] debugLines = new string[]
+            // Position debug info at the bottom right
+            float margin = 16f;
+            var debugLines = new string[]
             {
                 $"Player Position: {heroPosition}",
                 $"Camera Position: {cameraPosition}",
                 $"Viewport Position: {viewport.X} ,{viewport.Y}",
-                $"FPS: {fps:0.0}"
+                $"FPS: {1f / (float)gameTime.ElapsedGameTime.TotalSeconds:0.0}"
             };
+
+            // Calculate total height
+            float totalHeight = debugLines.Length * _debugFont.LineSpacing;
+            Vector2 position = new Vector2(
+                viewport.Width - 220, // 220px from right, adjust as needed
+                viewport.Height - totalHeight - margin
+            );
 
             foreach (string line in debugLines)
             {

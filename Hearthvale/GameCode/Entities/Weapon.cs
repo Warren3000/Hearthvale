@@ -41,25 +41,35 @@ public class Weapon
     private float _baseRotation = 0f;
     private bool _swingClockwise = true;
     private string _currentAnimation = "Idle";
-
+    
     public bool IsSlashing => _currentSwingState == SwingState.Slashing;
 
     public Weapon(string name, int baseDamage, TextureAtlas atlas, TextureAtlas projectileAtlas)
     {
         Name = name;
         _atlas = atlas;
-        _projectileAtlas = projectileAtlas; // Assign the projectile atlas
+        _projectileAtlas = projectileAtlas;
         Damage = baseDamage;
-        // For single-frame weapons, create an animation with one frame
-        var region = atlas.GetRegion(name);
-        var animation = new Animation(
-            new List<TextureRegion> { region },
-            TimeSpan.FromSeconds(0.2)
-        );
-        Sprite = new AnimatedSprite(animation);
-        Sprite.Origin = new Vector2(0, Sprite.Region.Height);
-        // Set initial length. This will be updated if scale is changed.
-        Length = Sprite.Region.Height;
+
+        try
+        {
+            var region = atlas.GetRegion(name);
+            var animation = new Animation(new List<TextureRegion> { region }, TimeSpan.FromSeconds(0.2));
+            
+            // Initialize the sprite first.
+            Sprite = new AnimatedSprite(animation)
+            {
+                Origin = new Vector2(0, region.Height)
+            };
+            Length = region.Height;
+
+            // Now that the sprite is initialized, we can safely set the animation.
+            SetAnimation("Idle");
+        }
+        catch (Exception ex)
+        {
+            // If the region isn't found, Sprite will be null. We should handle this gracefully.
+        }
     }
 
     public void GainXP(int amount)
@@ -70,7 +80,6 @@ public class Weapon
             XP -= XpToNextLevel;
             Level++;
             Damage++; // Increase damage by 1 on level up
-            Debug.WriteLine($"[Weapon] {Name} leveled up to Level {Level}! New Damage: {Damage}");
         }
     }
     public void Update(GameTime gameTime)
@@ -114,15 +123,13 @@ public class Weapon
         }
     }
 
-    public void Draw(SpriteBatch spriteBatch, Vector2 playerPosition)
+    public void Draw(SpriteBatch spriteBatch, Vector2 ownerCenterPosition)
     {
-        // Center of the player sprite
-        Vector2 playerCenter = playerPosition + new Vector2(Sprite.Width / 2f, Sprite.Height / 1.4f);
+        if (Sprite == null) return;
 
-        // Final weapon position
-        Vector2 finalPosition = playerCenter + Offset + ManualOffset;
-
-        Sprite.Position = finalPosition;
+        // The weapon's position is now calculated relative to its owner's center.
+        Position = ownerCenterPosition + Offset + ManualOffset;
+        Sprite.Position = Position;
         Sprite.Rotation = Rotation;
         Sprite.Draw(spriteBatch, Sprite.Position);
     }
@@ -130,7 +137,6 @@ public class Weapon
     {
         if (_projectileAtlas == null)
         {
-            Debug.WriteLine("[Weapon.Fire] ERROR: The projectile atlas has not been assigned to this weapon.");
             return null;
         }
 
@@ -139,7 +145,6 @@ public class Weapon
         
         if (projectileAnimation == null)
         {
-            Debug.WriteLine("[Weapon.Fire] ERROR: Animation 'Arrow-Wooden-Attack' not found in the projectile atlas.");
             return null;
         }
 
@@ -162,10 +167,39 @@ public class Weapon
 
     public void SetAnimation(string animationName)
     {
-        if (_atlas.HasAnimation(animationName) && _currentAnimation != animationName)
+        // Ensure sprite exists before trying to set an animation.
+        if (Sprite == null) return;
+
+        string specificAnimationName = $"{Name}_{animationName}";
+        string baseAnimationName = animationName;
+
+        Animation newAnimation = null;
+
+        if (_atlas.HasAnimation(specificAnimationName))
         {
-            Sprite.Animation = _atlas.GetAnimation(animationName);
-            _currentAnimation = animationName;
+            newAnimation = _atlas.GetAnimation(specificAnimationName);
         }
+        else if (_atlas.HasAnimation(baseAnimationName))
+        {
+            newAnimation = _atlas.GetAnimation(baseAnimationName);
+        }
+        else
+        {
+            try
+            {
+                var fallbackRegion = _atlas.GetRegion(Name);
+                newAnimation = new Animation(new List<TextureRegion> { fallbackRegion }, TimeSpan.FromSeconds(0.2));
+            }
+            catch (Exception ex)
+            {
+                return; // Exit if we can't find any texture
+            }
+        }
+
+        if (Sprite.Animation != newAnimation)
+        {
+            Sprite.Animation = newAnimation;
+        }
+        _currentAnimation = animationName; // Keep track of the logical state, e.g., "Idle", "Swing"
     }
 }

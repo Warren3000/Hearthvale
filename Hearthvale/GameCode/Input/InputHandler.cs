@@ -1,4 +1,5 @@
 ﻿using Hearthvale.GameCode.Entities.Players; // Add this
+using Hearthvale.GameCode.Managers; // Add this
 using Hearthvale.GameCode.UI;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
@@ -18,6 +19,8 @@ namespace Hearthvale.GameCode.Input
         private readonly Action QuitCallback;
         private readonly Action _projectileAttackCallback;
         private readonly Action _meleeAttackCallback;
+        private readonly Action _rotateWeaponLeftCallback;
+        private readonly Action _rotateWeaponRightCallback;
 
         public InputHandler(
             Camera2D camera,
@@ -27,7 +30,9 @@ namespace Hearthvale.GameCode.Input
             Action spawnNpcCallback,
             Action quitCallback,
             Action projectileAttackCallback,
-            Action meleeAttackCallback)
+            Action meleeAttackCallback,
+            Action rotateWeaponLeftCallback,
+            Action rotateWeaponRightCallback)
         {
             _camera = camera;
             _movementSpeed = movementSpeed;
@@ -37,6 +42,8 @@ namespace Hearthvale.GameCode.Input
             QuitCallback = quitCallback;
             _projectileAttackCallback = projectileAttackCallback;
             _meleeAttackCallback = meleeAttackCallback;
+            _rotateWeaponLeftCallback = rotateWeaponLeftCallback;
+            _rotateWeaponRightCallback = rotateWeaponRightCallback;
         }
 
         public void Update(GameTime gameTime)
@@ -117,6 +124,16 @@ namespace Hearthvale.GameCode.Input
             if (keyboard.WasKeyJustPressed(Keys.F))
             {
                 _projectileAttackCallback?.Invoke();
+            }
+
+            // --- Add weapon rotation support ---
+            if (keyboard.WasKeyJustPressed(Keys.Q))
+            {
+                _rotateWeaponLeftCallback?.Invoke();
+            }
+            if (keyboard.WasKeyJustPressed(Keys.E))
+            {
+                _rotateWeaponRightCallback?.Invoke();
             }
         }
 

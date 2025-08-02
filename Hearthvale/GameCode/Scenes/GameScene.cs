@@ -12,6 +12,7 @@ using MonoGameLibrary;
 using MonoGameLibrary.Graphics;
 using MonoGameLibrary.Scenes;
 using SharpDX.Direct2D1;
+using System.Collections.Generic;
 
 namespace Hearthvale.Scenes;
 
@@ -57,6 +58,9 @@ public class GameScene : Scene
     private CombatManager _combatManager;
     private DialogManager _dialogManager;
     private CameraManager _cameraManager;
+    private WeaponManager _weaponManager;
+    private List<Weapon> _playerWeapons;
+    private int _currentPlayerWeaponIndex = 0;
 
     public override void Initialize()
     {
@@ -148,10 +152,26 @@ public class GameScene : Scene
         // Must be initialized after _player is created
         _dialogManager = new DialogManager(_uiManager, _player, _npcManager.Characters, dialogDistance);
         
-        var sword = new Weapon("Dagger", baseDamage: 5, _weaponAtlas, _arrowAtlas); // Pass the arrow atlas here
-        sword.Scale = 0.5f;
-        sword.ManualOffset = new Vector2(0, 0); // Move down and to the right
-        _player.EquipWeapon(sword);
+        _weaponManager = new WeaponManager();
+
+        // Create player weapons
+        _playerWeapons = new List<Weapon>
+        {
+            new Weapon("Dagger", baseDamage: 5, _weaponAtlas, _arrowAtlas) { Scale = 0.5f, ManualOffset = new Vector2(0, 0) },
+            new Weapon("Dagger-Copper", baseDamage: 8, _weaponAtlas, _arrowAtlas) { Scale = 0.5f, ManualOffset = new Vector2(0, 0) },
+            new Weapon("Dagger-Cold", baseDamage: 12, _weaponAtlas, _arrowAtlas) { Scale = 0.5f, ManualOffset = new Vector2(0, 0) }
+        };
+
+        // Equip initial weapon using WeaponManager
+        _weaponManager.EquipWeapon(_player, _playerWeapons[_currentPlayerWeaponIndex]);
+
+        // For NPCs, use WeaponManager as well
+        foreach (var npc in _npcManager.Npcs)
+        {
+            var npcWeapon = new Weapon("Dagger", baseDamage: 2, _weaponAtlas, _arrowAtlas) { Scale = 0.4f };
+            _weaponManager.EquipWeapon(npc, npcWeapon);
+        }
+
         _inputHandler = new InputHandler(
             _camera,
             MOVEMENT_SPEED,
@@ -160,8 +180,24 @@ public class GameScene : Scene
             () => _npcManager.SpawnNPC("DefaultNPCType", _player.Position),
             () => Core.ChangeScene(new TitleScene()),
              () => _player.CombatController.StartProjectileAttack(), // CORRECT: Call the player's controller
-            () => _player.CombatController.StartMeleeAttack()      // CORRECT: Call the player's controller
+            () => _player.CombatController.StartMeleeAttack(),      // CORRECT: Call the player's controller
+            RotatePlayerWeaponLeft,   // Q
+            RotatePlayerWeaponRight   // E
         );
+    }
+
+    private void RotatePlayerWeaponLeft()
+    {
+        if (_playerWeapons.Count == 0) return;
+        _currentPlayerWeaponIndex = (_currentPlayerWeaponIndex - 1 + _playerWeapons.Count) % _playerWeapons.Count;
+        _weaponManager.EquipWeapon(_player, _playerWeapons[_currentPlayerWeaponIndex]);
+    }
+
+    private void RotatePlayerWeaponRight()
+    {
+        if (_playerWeapons.Count == 0) return;
+        _currentPlayerWeaponIndex = (_currentPlayerWeaponIndex + 1) % _playerWeapons.Count;
+        _weaponManager.EquipWeapon(_player, _playerWeapons[_currentPlayerWeaponIndex]);
     }
 
     public override void Update(GameTime gameTime)
@@ -191,14 +227,7 @@ public class GameScene : Scene
         UpdateViewport(Core.GraphicsDevice.Viewport);
         _player.ClampToBounds(_mapManager.RoomBounds);
 
-        if (_player.EquippedWeapon != null)
-        {
-            _uiManager.UpdateWeaponUI(
-                _player.EquippedWeapon.Level,
-                _player.EquippedWeapon.XP,
-                _player.EquippedWeapon.XpToNextLevel
-            );
-        }
+        _uiManager.UpdateWeaponUI(_player.EquippedWeapon);
 
         // Calculate the margin rectangle as before
         Rectangle margin = new Rectangle(
@@ -233,20 +262,10 @@ public class GameScene : Scene
         Core.SpriteBatch.Begin(transformMatrix: transform, samplerState: SamplerState.PointClamp);
 
         _mapManager.Draw(transform);
-        // Determine if sword should be behind player
-        bool isMovingUp = _player.LastMovementDirection.Y < 0;
-        bool drawWeaponBehind = isMovingUp && !_player.IsAttacking; // Draw behind when moving up, unless attacking
+        
+        // The Character.Draw method now handles the draw order of the player and weapon.
+        _player.Draw(Core.SpriteBatch);
 
-        if (drawWeaponBehind)
-        {
-            _player.EquippedWeapon?.Draw(Core.SpriteBatch, _player.Position);
-            _player.Sprite.Draw(Core.SpriteBatch, _player.Position);
-        }
-        else
-        {
-            _player.Sprite.Draw(Core.SpriteBatch, _player.Position);
-            _player.EquippedWeapon?.Draw(Core.SpriteBatch, _player.Position);
-        }
         _npcManager.Draw(Core.SpriteBatch, _uiManager);
         _combatManager.DrawProjectiles(Core.SpriteBatch);
         _uiManager.DrawCollisionBoxes(Core.SpriteBatch, _player, _npcManager.Npcs);

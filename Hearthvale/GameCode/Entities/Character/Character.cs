@@ -112,31 +112,38 @@ public abstract class Character : IDamageable, IMovable, IAnimatable
 
     public virtual void Draw(SpriteBatch spriteBatch)
     {
-        Color originalColor = _sprite.Color;
-        Color weaponOriginalColor = EquippedWeapon != null ? EquippedWeapon.Sprite.Color : Color.White;
-        float alpha = 1f;
-        if (IsDefeated)
+        if (_sprite != null)
         {
-            alpha = 0.5f;
-        }
-        _sprite.Color = Color.White * alpha;
-        if (EquippedWeapon != null)
-            EquippedWeapon.Sprite.Color = Color.White * alpha;
+            Color originalColor = _sprite.Color;
+            float alpha = 1f;
+            if (IsDefeated)
+            {
+                alpha = 0.5f;
+            }
+            _sprite.Color = Color.White * alpha;
 
-        bool drawWeaponBehind = ShouldDrawWeaponBehind();
+            bool drawWeaponBehind = ShouldDrawWeaponBehind();
+            // Calculate the center of the character to pass to the weapon
+            Vector2 characterCenter = Position + new Vector2(Sprite.Width / 2f, Sprite.Height / 1.4f);
 
-        if (drawWeaponBehind)
-        {
-            EquippedWeapon?.Draw(spriteBatch, Position);
-            _sprite.Draw(spriteBatch, Position);
+            if (drawWeaponBehind)
+            {
+                EquippedWeapon?.Draw(spriteBatch, characterCenter);
+                _sprite.Draw(spriteBatch, Position);
+            }
+            else
+            {
+                _sprite.Draw(spriteBatch, Position);
+                EquippedWeapon?.Draw(spriteBatch, characterCenter);
+            }
+            _sprite.Color = originalColor;
         }
         else
         {
-            _sprite.Draw(spriteBatch, Position);
-            EquippedWeapon?.Draw(spriteBatch, Position);
+            // If the character sprite is null, still try to draw the weapon
+            // We don't have a character position, so we can't calculate a center.
+            // The weapon will draw at its last known position.
+            EquippedWeapon?.Draw(spriteBatch, Vector2.Zero);
         }
-        _sprite.Color = originalColor;
-        if (EquippedWeapon != null)
-            EquippedWeapon.Sprite.Color = weaponOriginalColor;
     }
 }
