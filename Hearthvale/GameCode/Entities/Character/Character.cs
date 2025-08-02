@@ -25,7 +25,20 @@ public abstract class Character : IDamageable, IMovable, IAnimatable
         get => _facingRight;
         set => _facingRight = value;
     }
-
+    public string CurrentAnimationName
+    {
+        get => _currentAnimationName;
+        set
+        {
+            if (_sprite != null)
+            {
+                _currentAnimationName = value;
+                // If you have a way to get the Animation object, set it here
+                // For example, if you have an atlas:
+                // _sprite.Animation = _atlas.GetAnimation(value);
+            }
+        }
+    }
     public virtual bool TakeDamage(int amount, Vector2? knockback = null)
     {
         bool wasDefeated = IsDefeated;

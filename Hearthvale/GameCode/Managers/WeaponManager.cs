@@ -1,9 +1,13 @@
 using Hearthvale.GameCode.Entities;
-using Hearthvale.GameCode.Entities.Players;
-using Hearthvale.GameCode.Entities.NPCs;
-using System.Collections.Generic;
 using Hearthvale.GameCode.Entities.Characters;
+using Hearthvale.GameCode.Entities.NPCs;
+using Hearthvale.GameCode.Entities.Players;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
+using MonoGame.Extended.Tiled;
+using MonoGameLibrary;
+using MonoGameLibrary.Graphics;
+using System.Collections.Generic;
 
 namespace Hearthvale.GameCode.Managers
 {
@@ -14,6 +18,23 @@ namespace Hearthvale.GameCode.Managers
     {
         // Optionally track all weapons if needed for inventory, pooling, etc.
         private readonly Dictionary<object, Weapon> _equippedWeapons = new();
+
+        // Required fields for NPC spawning and weapon assignment
+        private readonly TextureAtlas _heroAtlas;
+        private readonly TextureAtlas _weaponAtlas;
+        private readonly Rectangle _bounds;
+        private readonly List<NPC> _npcs;
+
+        /// <summary>
+        /// Construct a WeaponManager with required dependencies for NPC spawning.
+        /// </summary>
+        public WeaponManager(TextureAtlas heroAtlas, TextureAtlas weaponAtlas, Rectangle bounds, List<NPC> npcs)
+        {
+            _heroAtlas = heroAtlas;
+            _weaponAtlas = weaponAtlas;
+            _bounds = bounds;
+            _npcs = npcs;
+        }
 
         /// <summary>
         /// Equip a weapon to a player.
@@ -70,5 +91,6 @@ namespace Hearthvale.GameCode.Managers
             _equippedWeapons.TryGetValue(entity, out var weapon);
             return weapon;
         }
+
     }
 }

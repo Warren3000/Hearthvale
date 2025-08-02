@@ -21,6 +21,7 @@ namespace Hearthvale.GameCode.Input
         private readonly Action _meleeAttackCallback;
         private readonly Action _rotateWeaponLeftCallback;
         private readonly Action _rotateWeaponRightCallback;
+        private readonly Action _interactionCallback;
 
         public InputHandler(
             Camera2D camera,
@@ -32,7 +33,8 @@ namespace Hearthvale.GameCode.Input
             Action projectileAttackCallback,
             Action meleeAttackCallback,
             Action rotateWeaponLeftCallback,
-            Action rotateWeaponRightCallback)
+            Action rotateWeaponRightCallback,
+            Action interactionCallback)
         {
             _camera = camera;
             _movementSpeed = movementSpeed;
@@ -44,6 +46,7 @@ namespace Hearthvale.GameCode.Input
             _meleeAttackCallback = meleeAttackCallback;
             _rotateWeaponLeftCallback = rotateWeaponLeftCallback;
             _rotateWeaponRightCallback = rotateWeaponRightCallback;
+            _interactionCallback = interactionCallback;
         }
 
         public void Update(GameTime gameTime)
@@ -134,6 +137,11 @@ namespace Hearthvale.GameCode.Input
             if (keyboard.WasKeyJustPressed(Keys.E))
             {
                 _rotateWeaponRightCallback?.Invoke();
+            }
+
+            if (keyboard.WasKeyJustPressed(Keys.I))
+            {
+                _interactionCallback?.Invoke();
             }
         }
 

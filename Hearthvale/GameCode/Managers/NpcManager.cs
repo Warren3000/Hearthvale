@@ -9,7 +9,6 @@ using MonoGameLibrary;
 using MonoGameLibrary.Graphics;
 using System.Collections.Generic;
 
-
 namespace Hearthvale.GameCode.Managers
 {
     public class NpcManager
@@ -17,14 +16,20 @@ namespace Hearthvale.GameCode.Managers
         private readonly List<NPC> _npcs = new();
         private readonly Rectangle _bounds;
         private readonly TextureAtlas _heroAtlas;
+        private Tilemap _tilemap;
+        private int _wallTileId;
+
         public IEnumerable<NPC> Npcs => _npcs;
         public IEnumerable<Character> Characters => _npcs;
 
-        public NpcManager(TextureAtlas heroAtlas, Rectangle bounds)
+        public NpcManager(TextureAtlas heroAtlas, Rectangle bounds, Tilemap tilemap, int wallTileId)
         {
             _heroAtlas = heroAtlas;
             _bounds = bounds;
+            _tilemap = tilemap;
+            _wallTileId = wallTileId;
         }
+
         public void LoadNPCs(IEnumerable<TiledMapObject> npcObjects)
         {
             foreach (var obj in npcObjects)
@@ -37,8 +42,14 @@ namespace Hearthvale.GameCode.Managers
                 }
             }
         }
+
         public void SpawnNPC(string npcType, Vector2 position)
         {
+            // Clamp spawn position to map bounds
+            float clampedX = MathHelper.Clamp(position.X, _bounds.Left, _bounds.Right - 32); // 32: typical sprite width
+            float clampedY = MathHelper.Clamp(position.Y, _bounds.Top, _bounds.Bottom - 32); // 32: typical sprite height
+            Vector2 spawnPos = new Vector2(clampedX, clampedY);
+
             string animationPrefix = npcType switch
             {
                 "merchant" => "Merchant",
@@ -84,11 +95,12 @@ namespace Hearthvale.GameCode.Managers
                 // ... other types
                 _ => 10
             };
-            NPC npc = new NPC(npcType, animations, position, _bounds, defeatSound, npcHealth);
+            NPC npc = new NPC(npcType, animations, spawnPos, _bounds, defeatSound, npcHealth, _tilemap, _wallTileId);
 
             npc.FacingRight = false;
             _npcs.Add(npc);
         }
+
         public void Update(GameTime gameTime, Character player)
         {
             foreach (var npc in _npcs)
@@ -97,6 +109,7 @@ namespace Hearthvale.GameCode.Managers
             // Remove NPCs that are ready to be removed (e.g., after defeat animation)
             _npcs.RemoveAll(npc => npc.IsReadyToRemove);
         }
+
         public void Draw(SpriteBatch spriteBatch, GameUIManager uiManager)
         {
             foreach (var npc in _npcs)
@@ -108,9 +121,9 @@ namespace Hearthvale.GameCode.Managers
                 uiManager.DrawNpcHealthBar(spriteBatch, npc, barOffset, barSize);
             }
         }
+
         public void SpawnAllNpcTypesTest()
         {
-            // List of all supported NPC types (add more as needed)
             var npcTypes = new[]
             {
                 "merchant",
@@ -122,15 +135,24 @@ namespace Hearthvale.GameCode.Managers
                 "fatnun"
             };
 
-            // Spread them horizontally across the map, near the top
-            int startX = _bounds.Left + 32;
-            int y = _bounds.Top + 32;
-            int spacing = 64;
+            int mapWidth = _tilemap.Columns;
+            int mapHeight = _tilemap.Rows;
+            int tileWidth = (int)_tilemap.TileWidth;
+            int tileHeight = (int)_tilemap.TileHeight;
 
-            for (int i = 0; i < npcTypes.Length; i++)
+            int spawned = 0;
+            for (int row = 1; row < mapHeight - 1 && spawned < npcTypes.Length; row++)
             {
-                Vector2 pos = new Vector2(startX + i * spacing, y);
-                SpawnNPC(npcTypes[i], pos);
+                for (int col = 1; col < mapWidth - 1 && spawned < npcTypes.Length; col++)
+                {
+                    int tileId = _tilemap.GetTileId(col, row);
+                    if (tileId != _wallTileId)
+                    {
+                        Vector2 pos = new Vector2(col * tileWidth, row * tileHeight);
+                        SpawnNPC(npcTypes[spawned], pos);
+                        spawned++;
+                    }
+                }
             }
         }
     }

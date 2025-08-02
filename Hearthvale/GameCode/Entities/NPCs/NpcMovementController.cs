@@ -1,4 +1,5 @@
 using Microsoft.Xna.Framework;
+using MonoGameLibrary.Graphics;
 using System;
 
 namespace Hearthvale.GameCode.Entities.NPCs;
@@ -18,11 +19,16 @@ public class NpcMovementController
     private float _knockbackTimer = 0f;
     private const float KnockbackDuration = 0.2f; // seconds
 
-    public NpcMovementController(Vector2 startPosition, float speed, Rectangle bounds)
+    private Tilemap _tilemap;
+    private int _wallTileId;
+
+    public NpcMovementController(Vector2 startPosition, float speed, Rectangle bounds, Tilemap tilemap, int wallTileId)
     {
         Position = startPosition;
         _speed = speed;
         Bounds = bounds;
+        _tilemap = tilemap;
+        _wallTileId = wallTileId;
     }
 
     public void SetRandomDirection()
@@ -80,7 +86,7 @@ public class NpcMovementController
         else
         {
             Vector2 nextPosition = Position + _velocity * elapsed;
-            if (collisionCheck(nextPosition))
+            if (collisionCheck(nextPosition) || IsWall(nextPosition))
             {
                 SetIdle();
                 return;
@@ -94,6 +100,17 @@ public class NpcMovementController
             if (_directionChangeTimer <= 0)
                 SetIdle();
         }
+    }
+
+    // Helper to check for wall collision
+    private bool IsWall(Vector2 pos)
+    {
+        float centerX = pos.X + 16; // Adjust for sprite center if needed
+        float centerY = pos.Y + 16;
+        int tileCol = (int)(centerX / _tilemap.TileWidth);
+        int tileRow = (int)(centerY / _tilemap.TileHeight);
+        int tileId = _tilemap.GetTileId(tileCol, tileRow);
+        return tileId == _wallTileId;
     }
 
     public void SetPosition(Vector2 pos) => Position = pos;

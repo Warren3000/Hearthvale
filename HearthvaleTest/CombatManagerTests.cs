@@ -159,8 +159,14 @@ namespace HearthvaleTest
             atlas.AddAnimation("Mage_Idle", anim);
             atlas.AddAnimation("Mage_Walk", anim);
             var player = new Player(atlas, Vector2.Zero, null, null, null, null, null, null, 100f);
-            var npcManager = new NpcManager(atlas, new Rectangle(0, 0, 100, 100));
-            // Remove the first dummyFont declaration to avoid CS0128 and IDE0059.
+
+            // Create a dummy tileset and tilemap for testing
+            var tileset = new Tileset(new TextureRegion(dummyTexture, 0, 0, 1, 1), 1, 1);
+            var tilemap = new Tilemap(tileset, 1, 1);
+            int wallTileId = 0;
+
+            var npcManager = new NpcManager(atlas, new Rectangle(0, 0, 100, 100), tilemap, wallTileId);
+
             var dummyFont = new SpriteFont(
                 dummyTexture,
                 new List<Rectangle>(), // glyphBounds

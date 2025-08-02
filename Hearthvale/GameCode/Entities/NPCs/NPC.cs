@@ -41,12 +41,14 @@ public class NPC : Character, INpcDialog, ICombatNpc
 
     public string Name { get; private set; }
 
-    public NPC(string name, Dictionary<string, Animation> animations, Vector2 position, Rectangle bounds, SoundEffect defeatSound, int maxHealth)
+    public Weapon EquippedWeapon { get; private set; } // <-- Add this property
+
+    public NPC(string name, Dictionary<string, Animation> animations, Vector2 position, Rectangle bounds, SoundEffect defeatSound, int maxHealth, Tilemap tilemap, int wallTileId)
     {
         Name = name; // Assign the name
         var sprite = new AnimatedSprite(animations["Idle"]);
         _animationController = new NpcAnimationController(sprite, animations);
-        _movementController = new NpcMovementController(position, 60.0f, bounds);
+        _movementController = new NpcMovementController(position, 60.0f, bounds, tilemap, wallTileId);
         _healthController = new NpcHealthController(maxHealth, defeatSound);
 
         _sprite = sprite;
@@ -58,12 +60,15 @@ public class NPC : Character, INpcDialog, ICombatNpc
         _movementController.SetIdle();
     }
 
+    public override void EquipWeapon(Weapon weapon)
+    {
+        EquippedWeapon = weapon;
+    }
+
     public override bool TakeDamage(int amount, Vector2? knockback = null)
     {
-        Debug.WriteLine($"--[NPC.{Name}] TakeDamage called for {amount} damage. Checking CanTakeDamage...");
         if (_healthController.CanTakeDamage)
         {
-            Debug.WriteLine($"----[NPC.{Name}] CanTakeDamage is TRUE. Applying damage.");
             bool justDefeated = _healthController.TakeDamage(amount);
             _currentHealth = _healthController.Health;
             if (knockback.HasValue)
@@ -250,5 +255,22 @@ public class NPC : Character, INpcDialog, ICombatNpc
     protected override bool ShouldDrawWeaponBehind()
     {
         return GetVelocity().Y < 0;
+    }
+
+    public override void Draw(SpriteBatch spriteBatch)
+    {
+        // Calculate the true center of the NPC for weapon drawing
+        Vector2 npcCenter = Position + new Vector2(Sprite.Width / 2f, Sprite.Height / 2f);
+
+        // Draw weapon behind if needed
+        if (EquippedWeapon != null && ShouldDrawWeaponBehind())
+            EquippedWeapon.Draw(spriteBatch, npcCenter);
+
+        // Draw NPC sprite at its top-left position
+        Sprite.Draw(spriteBatch, Position);
+
+        // Draw weapon in front if needed
+        if (EquippedWeapon != null && !ShouldDrawWeaponBehind())
+            EquippedWeapon.Draw(spriteBatch, npcCenter);
     }
 }

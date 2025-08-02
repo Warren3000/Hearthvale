@@ -1,5 +1,6 @@
 ﻿using Hearthvale.GameCode.Data;
 using Hearthvale.GameCode.Entities;
+using Hearthvale.GameCode.Entities.NPCs;
 using Hearthvale.GameCode.Entities.Players;
 using Hearthvale.GameCode.Input;
 using Hearthvale.GameCode.Managers;
@@ -13,6 +14,7 @@ using MonoGameLibrary;
 using MonoGameLibrary.Graphics;
 using MonoGameLibrary.Scenes;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Hearthvale.Scenes
 {
@@ -40,11 +42,13 @@ namespace Hearthvale.Scenes
         private Camera2D _camera;
         private InputHandler _inputHandler;
 
+        private DungeonManager _dungeonManager;
+        private MonoGameLibrary.Graphics.Tilemap _tilemap; // <-- Change type here
+
         // Managers
         private NpcManager _npcManager;
         private GameUIManager _uiManager;
         private ScoreManager _scoreManager;
-        private MapManager _mapManager;
         private CombatEffectsManager _combatEffectsManager;
         private CombatManager _combatManager;
         private DialogManager _dialogManager;
@@ -63,19 +67,12 @@ namespace Hearthvale.Scenes
 
         public override void LoadContent()
         {
-            // Load all data from JSON files first
             DataManager.LoadContent();
-
-            // Initialize camera and managers
-            _camera = new Camera2D(Core.GraphicsDevice.Viewport) { Zoom = 3.0f };
-            _cameraManager = new CameraManager(_camera);
-            _weaponManager = new WeaponManager();
-
-            // Load assets
             _atlas = TextureAtlas.FromFile(Core.Content, "images/atlas-definition.xml");
             _heroAtlas = TextureAtlas.FromFile(Core.Content, "images/npc-atlas.xml");
             _weaponAtlas = TextureAtlas.FromFile(Core.Content, "images/weapon-atlas.xml");
             _arrowAtlas = TextureAtlas.FromFile(Core.Content, "images/arrow-atlas.xml");
+
             _bounceSoundEffect = Content.Load<SoundEffect>("audio/bounce");
             _collectSoundEffect = Content.Load<SoundEffect>("audio/collect");
             _uiSoundEffect = Core.Content.Load<SoundEffect>("audio/ui");
@@ -83,27 +80,22 @@ namespace Hearthvale.Scenes
             _font = Core.Content.Load<SpriteFont>("fonts/04B_30");
             _debugFont = Content.Load<SpriteFont>("fonts/DebugFont");
 
-            // Initialize map and NPC manager
-            _mapManager = new MapManager(Core.GraphicsDevice, Core.Content, "Tilesets/DampDungeons/Tiles/DungeonMap");
-            _npcManager = new NpcManager(_heroAtlas, _mapManager.RoomBounds);
+            _camera = new Camera2D(Core.GraphicsDevice.Viewport) { Zoom = 3.0f };
+            _cameraManager = new CameraManager(_camera);
+
+            _dungeonManager = new ProceduralDungeonManager();
+            int wallTileId = ProceduralDungeonManager.DefaultWallTileId;
+            _tilemap = ((ProceduralDungeonManager)_dungeonManager).GenerateBasicDungeon(Content);
+            _playerStart = ((ProceduralDungeonManager)_dungeonManager).GetPlayerStart(_tilemap);
+            Rectangle dungeonBounds = new Rectangle(0, 0, _tilemap.Columns * (int)_tilemap.TileWidth, _tilemap.Rows * (int)_tilemap.TileHeight);
+            _npcManager = new NpcManager(_heroAtlas, dungeonBounds, _tilemap, wallTileId);
+
             _npcManager.SpawnAllNpcTypesTest();
 
-            // Load NPCs from the map and configure them using data-driven stats
-            var entityLayer = _mapManager.GetObjectLayer("Entities");
-            if (entityLayer != null)
-            {
-                _npcManager.LoadNPCs(entityLayer.Objects);
-                foreach (var npc in _npcManager.Npcs)
-                {
-                    npc.DialogText = "I am a friendly NPC!";
-                    var npcWeaponStats = DataManager.GetWeaponStats("NpcDagger");
-                    var npcWeapon = new Weapon("Dagger", npcWeaponStats, _weaponAtlas, _arrowAtlas);
-                    _weaponManager.EquipWeapon(npc, npcWeapon);
-                }
-            }
+            _weaponManager = new WeaponManager(_heroAtlas, _weaponAtlas, dungeonBounds, _npcManager.Npcs as List<NPC>);
 
-            // Initialize score and UI managers
-            var scoreTextPosition = new Vector2(_mapManager.RoomBounds.Left, _mapManager.TileHeight * 1f);
+            // Score/UI managers
+            var scoreTextPosition = new Vector2(dungeonBounds.Left, _tilemap.TileHeight * 1f);
             var scoreTextOrigin = new Vector2(0, _font.MeasureString("Score").Y * 0.5f);
             _scoreManager = new ScoreManager(_font, scoreTextPosition, scoreTextOrigin);
             _uiManager = new GameUIManager(
@@ -112,22 +104,18 @@ namespace Hearthvale.Scenes
                 () => _uiManager.QuitGame(_uiSoundEffect, () => Core.ChangeScene(new TitleScene()))
             );
 
-            // Initialize combat systems
             _combatEffectsManager = new CombatEffectsManager(_camera);
             _combatManager = new CombatManager(
                 _npcManager, null, _scoreManager, Core.SpriteBatch, _combatEffectsManager,
-                _bounceSoundEffect, _collectSoundEffect, _mapManager.RoomBounds
+                _bounceSoundEffect, _collectSoundEffect, dungeonBounds
             );
 
-            // Initialize Player
-            _playerStart = _mapManager.GetPlayerSpawnPoint();
             _player = new Player(
                 _heroAtlas, _playerStart, _combatManager, _combatEffectsManager, _scoreManager,
                 _bounceSoundEffect, _collectSoundEffect, _playerAttackSoundEffect, MOVEMENT_SPEED
             );
             _combatManager.SetPlayer(_player);
 
-            // Create and equip player weapons from data
             _playerWeapons = new List<Weapon>
             {
                 new Weapon("Dagger", DataManager.GetWeaponStats("Dagger"), _weaponAtlas, _arrowAtlas),
@@ -136,19 +124,28 @@ namespace Hearthvale.Scenes
             };
             _weaponManager.EquipWeapon(_player, _playerWeapons[_currentPlayerWeaponIndex]);
 
-            // Initialize remaining managers
             _dialogManager = new DialogManager(_uiManager, _player, _npcManager.Characters, dialogDistance);
             _inputHandler = new InputHandler(
                 _camera, MOVEMENT_SPEED,
                 () => _uiManager.PauseGame(),
-                (movement) => _player.Move(movement, _mapManager.RoomBounds, _player.Sprite.Width, _player.Sprite.Height, _npcManager.Npcs),
+                (movement) => _player.Move(movement, dungeonBounds, _player.Sprite.Width, _player.Sprite.Height, _npcManager.Npcs, _tilemap, 2), // 2 is wallTileId
                 () => _npcManager.SpawnNPC("DefaultNPCType", _player.Position),
                 () => Core.ChangeScene(new TitleScene()),
                 () => _player.CombatController.StartProjectileAttack(),
                 () => _player.CombatController.StartMeleeAttack(),
                 RotatePlayerWeaponLeft,
-                RotatePlayerWeaponRight
+                RotatePlayerWeaponRight,
+                HandleInteraction
             );
+        }
+
+        private void HandleInteraction()
+        {
+            var aSwitch = _dungeonManager.GetElement<DungeonSwitch>("switch_1");
+            if (aSwitch != null && _player.IsNearTile(aSwitch.Column, aSwitch.Row, _tilemap.TileWidth, _tilemap.TileHeight))
+            {
+                aSwitch.Activate();
+            }
         }
 
         private void RotatePlayerWeaponLeft()
@@ -183,21 +180,22 @@ namespace Hearthvale.Scenes
             _combatManager.Update(gameTime);
             _combatEffectsManager.Update(gameTime);
             _dialogManager.Update();
-            _mapManager.Update(gameTime);
-            _player.ClampToBounds(_mapManager.RoomBounds);
+            _player.ClampToBounds(new Rectangle(0, 0, _tilemap.Columns * (int)_tilemap.TileWidth, _tilemap.Rows * (int)_tilemap.TileHeight));
             _uiManager.UpdateWeaponUI(_player.EquippedWeapon);
 
             UpdateViewport(Core.GraphicsDevice.Viewport);
+
+            // Camera follow logic
+            Rectangle dungeonBounds = new Rectangle(0, 0, _tilemap.Columns * (int)_tilemap.TileWidth, _tilemap.Rows * (int)_tilemap.TileHeight);
             Rectangle margin = new Rectangle(
                 (int)(100 / _cameraManager.Zoom), (int)(80 / _cameraManager.Zoom),
                 (int)(_viewport.Width / _cameraManager.Zoom) - (int)(200 / _cameraManager.Zoom),
                 (int)(_viewport.Height / _cameraManager.Zoom) - (int)(160 / _cameraManager.Zoom)
             );
-
-            _cameraManager.UpdateCamera(
-               _player.Position, new Point((int)_player.Sprite.Width, (int)_player.Sprite.Height),
-               margin, _mapManager, _combatEffectsManager, gameTime
-           );
+            // Follow player with margin and clamp to dungeon bounds
+            _camera.FollowWithMargin(_player.Position, margin, 0.1f);
+            _camera.ClampToMap(_tilemap.Columns, _tilemap.Rows, (int)_tilemap.TileWidth);
+            _camera.Update(gameTime);
         }
 
         public void UpdateViewport(Viewport viewport)
@@ -211,7 +209,9 @@ namespace Hearthvale.Scenes
             Matrix transform = _camera.GetViewMatrix();
             Core.SpriteBatch.Begin(transformMatrix: transform, samplerState: SamplerState.PointClamp);
 
-            _mapManager.Draw(transform);
+            // Draw procedural tilemap
+            _tilemap.Draw(Core.SpriteBatch);
+
             _player.Draw(Core.SpriteBatch);
             _npcManager.Draw(Core.SpriteBatch, _uiManager);
             _combatManager.DrawProjectiles(Core.SpriteBatch);

@@ -58,6 +58,13 @@ public class Tilemap
         Scale = Vector2.One;
         _tiles = new int[Count];
     }
+    public int GetTileId(int column, int row)
+    {
+        int index = row * Columns + column;
+        if (index >= 0 && index < _tiles.Length)
+            return _tiles[index];
+        return -1;
+    }
 
     /// <summary>
     /// Sets the tile at the given index in this tilemap to use the tile from

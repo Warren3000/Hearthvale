@@ -26,9 +26,9 @@ namespace Hearthvale.GameCode.Entities.Players
         public float WeaponOrbitRadius => _weaponOrbitRadius;
 
         private Vector2 _lastMovementDirection = Vector2.UnitX;
-        // Add this field to the Player class to fix CS0103
         private readonly float _movementSpeed;
         public Vector2 LastMovementDirection => _lastMovementDirection;
+        public PlayerCombatController CombatController => _combatController;
         public int CurrentHealth => _currentHealth;
 
         public override AnimatedSprite Sprite => _sprite;
@@ -100,9 +100,8 @@ namespace Hearthvale.GameCode.Entities.Players
             SetPosition(new Vector2(clampedX, clampedY));
         }
 
-        public void Move(Vector2 movement, Rectangle roomBounds, float spriteWidth, float spriteHeight, IEnumerable<NPC> npcs)
+        public void Move(Vector2 movement, Rectangle roomBounds, float spriteWidth, float spriteHeight, IEnumerable<NPC> npcs, Tilemap tilemap, int wallTileId)
         {
-            // Only allow player input to move if not being knocked back
             if (_movementController.IsKnockedBack) return;
 
             if (movement != Vector2.Zero)
@@ -137,7 +136,34 @@ namespace Hearthvale.GameCode.Entities.Players
                     return; // Block movement if collision
             }
 
+            // Use the center of the player for collision
+            float centerX = candidate.X + spriteWidth / 2f;
+            float centerY = candidate.Y + spriteHeight / 2f;
+            int tileCol = (int)(centerX / tilemap.TileWidth);
+            int tileRow = (int)(centerY / tilemap.TileHeight);
+            int tileId = tilemap.GetTileId(tileCol, tileRow);
+            if (tileId == wallTileId)
+                return; // Block movement if wall
+
             SetPosition(candidate);
+        }
+        // Add this method to your Player class
+        public bool IsNearTile(int column, int row, float tileWidth, float tileHeight)
+        {
+            // Calculate the center of the target tile in world coordinates.
+            Vector2 tileCenter = new Vector2(
+                column * tileWidth + tileWidth / 2,
+                row * tileHeight + tileHeight / 2
+            );
+
+            // Use the player's bounds for a more accurate center position.
+            Vector2 playerCenter = this.Bounds.Center.ToVector2();
+
+            // Define the maximum distance for interaction. Let's use the tile's width as a radius.
+            float interactionRadius = tileWidth;
+
+            // Check if the distance between the player and the tile is within the interaction radius.
+            return Vector2.Distance(playerCenter, tileCenter) <= interactionRadius;
         }
         public void SetLastMovementDirection(Vector2 dir)
         {
@@ -149,7 +175,6 @@ namespace Hearthvale.GameCode.Entities.Players
             _facingRight = facingRight;
         }
 
-        public PlayerCombatController CombatController => _combatController;
 
         protected override Vector2 GetAttackDirection()
         {

@@ -6,6 +6,11 @@
 - Performance, scalability, and maintainability goals.
 - Example: “Create a modular, maintainable RPG game with a focus on extensibility and clean architecture.”
 
+## Reference Material
+- For all combat system design, mechanics, and related gameplay features, use the Dark Chronicle Wiki as the primary source material.
+- The goal is to create a combat system inspired by Dark Chronicle, adapted for 2D gameplay.
+- When implementing combat features, reference mechanics, enemy behaviors, and systems from Dark Chronicle for consistency and inspiration.
+
 ## Platforms & Frameworks
 - This project uses MonoGame (.NET 8) for game development.
 - Tiled is used for map and level design.

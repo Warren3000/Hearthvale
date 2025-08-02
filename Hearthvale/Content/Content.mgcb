@@ -58,6 +58,15 @@
 /processorParam:Quality=Best
 /build:audio/ui.wav
 
+#begin data/CharacterStats.json
+/copy:data/CharacterStats.json
+
+#begin data/Items.json
+/copy:data/Items.json
+
+#begin data/WeaponStats.json
+/copy:data/WeaponStats.json
+
 #begin fonts/04B_30_5x.spritefont
 /importer:FontDescriptionImporter
 /processor:FontDescriptionProcessor
@@ -181,6 +190,9 @@
 /processorParam:TextureFormat=Color
 /build:images/WeaponsSpriteSheet.png
 
+#begin Levels/Level1.xml
+/copy:Levels/Level1.xml
+
 #begin Tilesets/DampDungeons/Tiles/Dungeon_Autotiles.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -192,6 +204,18 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Tilesets/DampDungeons/Tiles/Dungeon_Autotiles.png;Tilesets/DampDungeons/Tiles/Dungeon_Autotiles
+
+#begin Tilesets/DampDungeons/Tiles/Dungeon_WallsAndFloors.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Tilesets/DampDungeons/Tiles/Dungeon_WallsAndFloors.png;Tilesets/DampDungeons/Tiles/Dungeon_WallsAndFloors
 
 #begin Tilesets/DampDungeons/Tiles/Dungeon.tsx
 /importer:TiledMapTilesetImporter

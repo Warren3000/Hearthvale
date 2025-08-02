@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Level>
+  <Map tilemap="Tilesets/DampDungeons/Tiles/DungeonMap" />
+  <Elements>
+    <DungeonSwitch id="switch_1" col="5" row="10" inactiveTileId="1" activeTileId="2" />
+    <DungeonDoor id="door_1" col="8" row="10" lockedTileId="3" unlockedTileId="4" />
+    <DungeonTrap id="trap_1" trapType="Spike" />
+    <DungeonPuzzle id="puzzle_1" puzzleType="Slider" />
+    <DungeonEncounter id="encounter_1" />
+    <DungeonLoot id="loot_1" lootTableId="basic_loot" />
+  </Elements>
+  <Wiring>
+    <Wire activator="switch_1" target="door_1" />
+    <Wire activator="puzzle_1" target="trap_1" />
+  </Wiring>
+</Level>
