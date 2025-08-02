@@ -1,8 +1,9 @@
+using Hearthvale.GameCode.Data;
 using Hearthvale.GameCode.Entities;
 using Microsoft.Xna.Framework;
 using MonoGameLibrary.Graphics;
-using Xunit;
 using System.Collections.Generic;
+using Xunit;
 
 namespace HearthvaleTest
 {
@@ -63,7 +64,9 @@ namespace HearthvaleTest
             projectileAtlas.AddRegion("Arrow", 0, 0, 1, 1);
             var projAnim = new Animation(new List<TextureRegion> { region }, System.TimeSpan.FromSeconds(0.1));
             projectileAtlas.AddAnimation("Arrow-Wooden-Attack", projAnim);
-            var weapon = new Weapon("Sword", 10, atlas, projectileAtlas);
+
+            var weaponStats = new WeaponStats { BaseDamage = 10, Scale = 1.0f };
+            var weapon = new Weapon("Sword", weaponStats, atlas, projectileAtlas);
             return (weapon, atlas, projectileAtlas);
         }
     }

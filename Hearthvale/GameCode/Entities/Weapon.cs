@@ -4,6 +4,9 @@ using MonoGameLibrary.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Hearthvale.GameCode.Data;
+using Microsoft.Xna.Framework.Audio;
+using Hearthvale.GameCode.Managers;
 
 namespace Hearthvale.GameCode.Entities;
 public class Weapon
@@ -23,12 +26,14 @@ public class Weapon
     public float Length { get; private set; }
     public float Scale
     {
-        get => Sprite.Scale.X; // Assuming uniform scaling
+        get => Sprite != null ? Sprite.Scale.X : 1.0f; // Default to 1.0f if Sprite is null
         set
         {
-            Sprite.Scale = new Vector2(value, value);
-            // Update the weapon's effective length when its scale changes
-            Length = Sprite.Region.Height * value;
+            if (Sprite != null)
+            {
+                Sprite.Scale = new Vector2(value, value);
+                Length = Sprite.Region.Height * value;
+            }
         }
     }
 
@@ -44,26 +49,26 @@ public class Weapon
     
     public bool IsSlashing => _currentSwingState == SwingState.Slashing;
 
-    public Weapon(string name, int baseDamage, TextureAtlas atlas, TextureAtlas projectileAtlas)
+    
+    public Weapon(string name, WeaponStats stats, TextureAtlas atlas, TextureAtlas projectileAtlas)
     {
         Name = name;
         _atlas = atlas;
         _projectileAtlas = projectileAtlas;
-        Damage = baseDamage;
+        Damage = stats.BaseDamage;
 
         try
         {
             var region = atlas.GetRegion(name);
             var animation = new Animation(new List<TextureRegion> { region }, TimeSpan.FromSeconds(0.2));
-            
-            // Initialize the sprite first.
+
             Sprite = new AnimatedSprite(animation)
             {
                 Origin = new Vector2(0, region.Height)
             };
-            Length = region.Height;
+            Scale = stats.Scale;
+            Length = region.Height * Scale; // Apply scale to length
 
-            // Now that the sprite is initialized, we can safely set the animation.
             SetAnimation("Idle");
         }
         catch (Exception ex)
@@ -72,7 +77,18 @@ public class Weapon
         }
     }
 
-    public void GainXP(int amount)
+    /// <summary>
+    /// Triggers a visual flash and plays a sound effect when the weapon levels up.
+    /// </summary>
+    public void PlayLevelUpEffect(SoundEffect? soundEffect = null)
+    {
+        Sprite?.Flash(Color.Yellow, 0.5); // Flash yellow for 0.2 seconds
+
+        // Play sound effect if provided
+        soundEffect?.Play();
+    }
+
+    public void GainXP(int amount, SoundEffect? levelUpSound = null)
     {
         XP += amount;
         while (XP >= XpToNextLevel)
@@ -80,6 +96,9 @@ public class Weapon
             XP -= XpToNextLevel;
             Level++;
             Damage++; // Increase damage by 1 on level up
+
+            // Play level-up effect (flash + sound)
+            PlayLevelUpEffect(levelUpSound);
         }
     }
     public void Update(GameTime gameTime)

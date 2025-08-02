@@ -23,6 +23,8 @@
     <None Remove="Map\**" />
   </ItemGroup>
   <ItemGroup>
+    <None Remove="Content\Data\CharacterStats.json" />
+    <None Remove="Content\Data\WeaponStats.json" />
     <None Remove="Content\images\ArrowSpriteSheet.xcf" />
     <None Remove="Content\images\NPCSpriteSheet.xcf" />
     <None Remove="Content\images\WeaponsSpriteSheet.xcf" />
@@ -32,6 +34,12 @@
     <None Remove="Content\Tilesets\DampDungeons\Tiles\Dungeon_WaterAnimation.png" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Content\Data\CharacterStats.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\Data\WeaponStats.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Content\Tilesets\DampDungeons\Tiles\DungeonDecorations.png" />
     <Content Include="Content\Tilesets\DampDungeons\Tiles\Dungeon_Autotiles.png" />
     <Content Include="Content\Tilesets\DampDungeons\Tiles\Dungeon.tsx" />

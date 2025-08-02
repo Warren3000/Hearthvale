@@ -1,6 +1,7 @@
 using Hearthvale.GameCode.Entities;
 using Hearthvale.GameCode.Entities.Characters;
 using Hearthvale.GameCode.Entities.NPCs;
+using Hearthvale.GameCode.Data;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
@@ -166,7 +167,6 @@ public class CombatManager
         _effectsManager.ShowCombatText(_player.Position, amount.ToString(), Color.Red);
         _hitSound?.Play();
     }
-    
     public void HandleNpcHit(Character npc, int damage, Vector2? knockback = null)
     {
         Debug.WriteLine($"[CombatManager] HandleNpcHit called for '{npc.GetType().Name}' with {damage} damage.");
@@ -180,10 +180,14 @@ public class CombatManager
             Debug.WriteLine("[CombatManager] justDefeated is TRUE. Granting XP.");
             _defeatSound?.Play();
             _scoreManager.Add(1);
-            _player.EquippedWeapon?.GainXP(10); // Grant 10 XP to the equipped weapon
+
+            if (npc is NPC typedNpc)
+            {
+                var stats = DataManager.GetCharacterStats(typedNpc.Name);
+                _player.EquippedWeapon?.GainXP(stats.XpYield);
+            }
         }
     }
-
     public void DrawProjectiles(SpriteBatch spriteBatch)
     {
         foreach (var projectile in _projectiles)

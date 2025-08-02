@@ -45,23 +45,35 @@
 <summary>Click to expand</summary>
 
 - [x] **Combat System**
-    - Basic attacks/defeat; missing feedback, sound, and reactions.
-    - Player/NPC health implemented. Player health bar added.
-    - **Ranged attack mechanics added (projectile/arrow support)**
-    - **Combat logging for debugging (damage, hit, defeat events)**
-    - **NPC health values per type (e.g., knight: 20 HP, fatnun: 10 HP)**
-    - **Sound effects for attacks, hits, and defeat implemented**
-    - Refactored all managers and entities to use interfaces and base types for decoupling and testability. [NEW]
-    - Centralized weapon, attack area, and draw logic in Character base class. [NEW]
-    - Added edge case handling for missing NPC animations and dialog with defeated NPCs. [NEW]
-    - Improved error handling and code maintainability. [NEW]
+    - [x] Basic attacks/defeat; missing feedback, sound, and reactions.
+    - [x] Player/NPC health implemented. Player health bar added.
+    - [x] Ranged attack mechanics added (projectile/arrow support)
+    - [x] Combat logging for debugging (damage, hit, defeat events)
+    - [x] NPC health values per type (e.g., knight: 20 HP, fatnun: 10 HP)
+    - [x] Sound effects for attacks, hits, and defeat implemented
+    - [x] Refactored all managers and entities to use interfaces and base types for decoupling and testability.
+    - [x] Centralized weapon, attack area, and draw logic in Character base class.
+    - [x] Added edge case handling for missing NPC animations and dialog with defeated NPCs.
+    - [x] Improved error handling and code maintainability.
+    - [x] Data-driven entity and weapon stats using JSON files [NEW]
+    - [x] Add reaction animations (hit, defeat, etc.)
+    - [x] Polish defeat logic (e.g., removal timing, effects)
+    - [x] Playtesting and bug fixing
+
 - [x] **Weapon System**
-    - **Animated projectile support (arrow-atlas.xml)**
-    - **Weapon can fire animated projectiles using atlas animation**
-    - **Weapon constructor updated to accept projectile atlas**
-    - **Weapon level now starts at 1 (not 0) for all new weapons** [NEW]
-    - **XP and level-up logic updated to match new baseline** [NEW]
-    - **Weapon UI and tests updated to reflect level 1 as the starting point** [NEW]
+    - [x] Animated projectile support (arrow-atlas.xml)
+    - [x] Weapon can fire animated projectiles using atlas animation
+    - [x] Weapon constructor updated to accept projectile atlas
+    - [x] Weapon level now starts at 1 (not 0) for all new weapons
+    - [x] XP and level-up logic updated to match new baseline
+    - [x] Weapon UI and tests updated to reflect level 1 as the starting point
+    - [x] Implement weapon XP gain on kill
+    - [x] UI for weapon XP and level display
+    - [x] Integrate weapon levels with combat calculations
+    - [x] Add UI for current weapon display and switching controls
+    - [x] Weapon stats, XP, and level thresholds loaded from JSON files [NEW]
+    - [x] All weapon definitions and upgrades are now data-driven [NEW]
+
 - [ ] **Dungeon Interactivity** — Not started
 - [ ] **City Building** — Not started
 - [ ] **Time/Story** — Not started
@@ -96,15 +108,14 @@
 - [x] Basic attack mechanics (melee)
 - [x] Basic enemy defeat logic
 - [x] Damage feedback: smooth floating combat text and damage numbers
-- [x] **Ranged attack mechanics (projectile/arrow firing)**
-- [x] **Animated projectile support (arrow-atlas.xml)**
-- [x] **Combat logging for debugging (damage, hit, defeat events)**
-- [x] **NPC health values per type (e.g., knight: 20 HP, fatnun: 10 HP)**
-- [x] **Sound effects for attacks, hits, and defeat**
+- [x] Ranged attack mechanics (projectile/arrow firing)
+- [x] Animated projectile support (arrow-atlas.xml)
+- [x] Combat logging for debugging (damage, hit, defeat events)
+- [x] NPC health values per type (e.g., knight: 20 HP, fatnun: 10 HP)
+- [x] Sound effects for attacks, hits, and defeat
 - [x] Add reaction animations (hit, defeat, etc.)
 - [x] Polish defeat logic (e.g., removal timing, effects)
 - [x] Playtesting and bug fixing
-**Remaining:**
 
 </details>
 
@@ -115,26 +126,25 @@
 <summary>Details</summary>
 
 **Completed:**
-- [x] Weapon level now starts at 1 for all new weapons [NEW]
-- [x] XP and level-up logic updated to match new baseline [NEW]
-- [x] Weapon UI and tests updated to reflect level 1 as the starting point [NEW]
-
-**Remaining:**
-
-- [ ] Design weapon experience and leveling system based on kills
-    - [ ] Define XP gain per kill based on enemy type and difficulty
-    - [ ] Set XP thresholds for each weapon level (e.g., 100 XP for level 2, 200 XP for level 3)
-    - [ ] Implement weapon XP gain logic in combat manager
+- [x] Weapon level now starts at 1 for all new weapons
+- [x] XP and level-up logic updated to match new baseline
+- [x] Weapon UI and tests updated to reflect level 1 as the starting point
+- [x] Animated projectile support (arrow-atlas.xml)
+- [x] Weapon can fire animated projectiles using atlas animation
+- [x] Weapon constructor updated to accept projectile atlas
 - [x] Implement weapon XP gain on kill
-- [ ] Add weapon level-up effects and stat increases
-- [ ] Weapon Switching
-    - [ ] Allow player to switch between equipped weapons during gameplay
-    - [ ] Update weapon stats and visuals on switch
-    - [x] Add UI for current weapon display and switching controls
 - [x] UI for weapon XP and level display
 - [x] Integrate weapon levels with combat calculations
-- [ ] Implement in-game weapon switching (currently, dagger is hardcoded; allow player to change weapons during gameplay)
-- [ ] Playtesting and polish for weapon leveling
+- [x] Add UI for current weapon display and switching controls
+- [x] Design weapon experience and leveling system based on kills
+    - [x] Define XP gain per kill based on enemy type and difficulty
+    - [x] Set XP thresholds for each weapon level (e.g., 100 XP for level 2, 200 XP for level 3)
+    - [x] Implement weapon XP gain logic in combat manager
+- [x] Add weapon level-up effects and stat increases
+- [x] Weapon Switching
+    - [x] Allow player to switch between equipped weapons during gameplay
+    - [x] Update weapon stats and visuals on switch
+- [x] Playtesting and polish for weapon leveling
 
 </details>
 

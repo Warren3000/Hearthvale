@@ -6,17 +6,17 @@ namespace Hearthvale.GameCode.Managers
     public class CameraManager
     {
         private readonly Camera2D _camera;
+        private CombatEffectsManager _effectsManager;
 
         public CameraManager(Camera2D camera)
         {
             _camera = camera;
         }
 
-        public void UpdateCamera(Vector2 playerPosition, Point playerSpriteSize, Rectangle margin, MapManager mapManager, GameTime gameTime)
+        public void UpdateCamera(Vector2 playerPosition, Point playerSpriteSize, Rectangle margin, MapManager mapManager, CombatEffectsManager effectsManager, GameTime gameTime)
         {
-            // Center of the player
+            _effectsManager = effectsManager;
             Vector2 playerCenter = playerPosition + new Vector2(playerSpriteSize.X / 2f, playerSpriteSize.Y / 2f);
-
             _camera.FollowWithMargin(playerCenter, margin, 0.1f);
             _camera.ClampToMap(mapManager.MapWidthInPixels, mapManager.MapHeightInPixels, mapManager.TileWidth);
             _camera.Update(gameTime);

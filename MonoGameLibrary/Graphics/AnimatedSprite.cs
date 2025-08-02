@@ -9,6 +9,8 @@ public class AnimatedSprite : Sprite
     private TimeSpan _elapsed;
     private Animation _animation;
     public Vector2 Position { get; set; }
+    private Color? _originalColor = null;
+    private double _flashTimer = 0;
 
     /// <summary>
     /// Gets or Sets the animation for this animated sprite.
@@ -57,5 +59,23 @@ public class AnimatedSprite : Sprite
 
             Region = _animation.Frames[_currentFrame];
         }
+
+        // Handle flash timer
+        if (_flashTimer > 0)
+        {
+            _flashTimer -= gameTime.ElapsedGameTime.TotalSeconds;
+            if (_flashTimer <= 0 && _originalColor != null)
+            {
+                this.Color = _originalColor.Value;
+                _originalColor = null;
+            }
+        }
+    }
+    public void Flash(Color? flashColor = null, double duration = 0.2)
+    {
+        if (_originalColor == null)
+            _originalColor = this.Color;
+        this.Color = flashColor ?? Color.Yellow;
+        _flashTimer = duration;
     }
 }
