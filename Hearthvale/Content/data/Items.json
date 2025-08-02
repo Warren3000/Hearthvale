@@ -1,0 +1,92 @@
+﻿{
+  "potion_health": {
+    "Id": "potion_health",
+    "Name": "Health Potion",
+    "Type": "Consumable",
+    "Value": 25,
+    "Rarity": "Common",
+    "Description": "Restores a small amount of health.",
+    "HealAmount": 50,
+    "Effect": "RestoreHealth"
+  },
+  "potion_mana": {
+    "Id": "potion_mana",
+    "Name": "Mana Potion",
+    "Type": "Consumable",
+    "Value": 30,
+    "Rarity": "Common",
+    "Description": "Restores a small amount of mana.",
+    "HealAmount": 40,
+    "Effect": "RestoreMana"
+  },
+  "sword_bronze": {
+    "Id": "sword_bronze",
+    "Name": "Bronze Sword",
+    "Type": "Weapon",
+    "Value": 100,
+    "Rarity": "Common",
+    "Description": "A basic bronze sword.",
+    "Power": 5
+  },
+  "shield_wooden": {
+    "Id": "shield_wooden",
+    "Name": "Wooden Shield",
+    "Type": "Armor",
+    "Value": 80,
+    "Rarity": "Common",
+    "Description": "A simple wooden shield.",
+    "Defense": 3
+  },
+  "key_dungeon": {
+    "Id": "key_dungeon",
+    "Name": "Dungeon Key",
+    "Type": "Key",
+    "Value": 0,
+    "Rarity": "Uncommon",
+    "Description": "Opens a locked dungeon door.",
+    "Effect": "UnlockDoor"
+  },
+  "scroll_fireball": {
+    "Id": "scroll_fireball",
+    "Name": "Scroll of Fireball",
+    "Type": "Consumable",
+    "Value": 150,
+    "Rarity": "Rare",
+    "Description": "Casts a powerful fireball spell.",
+    "Effect": "CastFireball"
+  },
+  "amulet_protection": {
+    "Id": "amulet_protection",
+    "Name": "Amulet of Protection",
+    "Type": "Accessory",
+    "Value": 200,
+    "Rarity": "Rare",
+    "Description": "Reduces damage taken.",
+    "Effect": "ReduceDamage"
+  },
+  "ring_strength": {
+    "Id": "ring_strength",
+    "Name": "Ring of Strength",
+    "Type": "Accessory",
+    "Value": 180,
+    "Rarity": "Uncommon",
+    "Description": "Increases attack power.",
+    "Effect": "IncreaseAttack"
+  },
+  "gold_coin": {
+    "Id": "gold_coin",
+    "Name": "Gold Coin",
+    "Type": "Currency",
+    "Value": 1,
+    "Rarity": "Common",
+    "Description": "Standard currency."
+  },
+  "gem_ruby": {
+    "Id": "gem_ruby",
+    "Name": "Ruby Gem",
+    "Type": "Misc",
+    "Value": 500,
+    "Rarity": "Epic",
+    "Description": "A valuable ruby gem."
+  }
+}

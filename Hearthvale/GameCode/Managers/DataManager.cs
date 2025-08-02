@@ -9,6 +9,7 @@ namespace Hearthvale.GameCode.Managers
     {
         private static Dictionary<string, CharacterStats> _characterStats;
         private static Dictionary<string, WeaponStats> _weaponStats;
+        private static Dictionary<string, Item> _items;
 
         public static void LoadContent()
         {
@@ -17,6 +18,9 @@ namespace Hearthvale.GameCode.Managers
 
             var weaponStatsJson = File.ReadAllText("Content/Data/WeaponStats.json");
             _weaponStats = JsonSerializer.Deserialize<Dictionary<string, WeaponStats>>(weaponStatsJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            var itemsJson = File.ReadAllText("Content/Data/Items.json");
+            _items = JsonSerializer.Deserialize<Dictionary<string, Item>>(itemsJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
 
         public static CharacterStats GetCharacterStats(string name)
@@ -29,6 +33,11 @@ namespace Hearthvale.GameCode.Managers
         {
             _weaponStats.TryGetValue(name, out var stats);
             return stats ?? new WeaponStats { BaseDamage = 1, Scale = 0.5f }; // Return default if not found
+        }
+        public static Item GetItem(string id)
+        {
+            _items.TryGetValue(id, out var item);
+            return item;
         }
     }
 }
