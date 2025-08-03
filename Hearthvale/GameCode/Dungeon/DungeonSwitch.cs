@@ -1,7 +1,8 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using System;
 
-public class DungeonSwitch : IActivatorElement
+public class DungeonSwitch : IActivatorElement, IDungeonElement
 {
     public string Id { get; }
     public bool IsActive { get; private set; }
@@ -53,4 +54,13 @@ public class DungeonSwitch : IActivatorElement
     }
 
     public void Update(GameTime gameTime) { /* Switch logic */ }
+
+    public void DrawDebug(SpriteBatch spriteBatch, Texture2D pixel)
+    {
+        // Example debug drawing: draw a colored rectangle at the switch's tile position
+        Color color = IsActive ? Color.LimeGreen : Color.Red;
+        int tileSize = 32; // Adjust as needed for your tile size
+        Rectangle rect = new Rectangle(Column * tileSize, Row * tileSize, tileSize, tileSize);
+        spriteBatch.Draw(pixel, rect, color * 0.5f);
+    }
 }

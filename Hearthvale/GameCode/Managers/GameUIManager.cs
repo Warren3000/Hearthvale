@@ -45,6 +45,7 @@ namespace Hearthvale.GameCode.Managers
 
         public bool IsDialogOpen => _isDialogOpen;
         public bool IsPausePanelVisible => _pausePanel?.IsVisible ?? false;
+        public Texture2D WhitePixel => _whitePixel;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="GameUIManager"/> class.
@@ -423,6 +424,48 @@ namespace Hearthvale.GameCode.Managers
             {
                 spriteBatch.DrawString(_debugFont, line, position, Color.Yellow);
                 position.Y += _debugFont.LineSpacing;
+            }
+        }
+
+        public void DrawWallCollisionBoxes(SpriteBatch spriteBatch, Tilemap tilemap, int wallTileId)
+        {
+            for (int row = 0; row < tilemap.Rows; row++)
+            {
+                for (int col = 0; col < tilemap.Columns; col++)
+                {
+                    if (tilemap.GetTileId(col, row) == wallTileId)
+                    {
+                        var x = (int)(col * tilemap.TileWidth);
+                        var y = (int)(row * tilemap.TileHeight);
+                        var rect = new Rectangle(x, y, (int)tilemap.TileWidth, (int)tilemap.TileHeight);
+                        DrawRect(spriteBatch, rect, _whitePixel, Color.Red * 0.5f);
+                    }
+                }
+            }
+        }
+        public void DrawDungeonElementCollisionBoxes(SpriteBatch spriteBatch, IEnumerable<IDungeonElement> elements, Matrix viewMatrix)
+        {
+            foreach (var element in elements)
+            {
+                var boundsProperty = element.GetType().GetProperty("Bounds");
+                if (boundsProperty != null)
+                {
+                    var bounds = (Rectangle)boundsProperty.GetValue(element);
+
+                    // Transform the top-left corner of the bounds to screen space
+                    var topLeft = Vector2.Transform(new Vector2(bounds.X, bounds.Y), viewMatrix);
+                    var bottomRight = Vector2.Transform(new Vector2(bounds.Right, bounds.Bottom), viewMatrix);
+
+                    // Calculate the transformed rectangle
+                    var screenRect = new Rectangle(
+                        (int)topLeft.X,
+                        (int)topLeft.Y,
+                        (int)(bottomRight.X - topLeft.X),
+                        (int)(bottomRight.Y - topLeft.Y)
+                    );
+
+                    DrawRect(spriteBatch, screenRect, _whitePixel, Color.Red * 0.5f);
+                }
             }
         }
     }

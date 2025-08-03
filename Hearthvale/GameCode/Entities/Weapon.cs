@@ -36,6 +36,16 @@ public class Weapon
             }
         }
     }
+    public List<Vector2> HitPolygon { get; set; } = new List<Vector2>
+    {
+        // Example: a simple sword blade shape
+        new Vector2(0, 0),      // handle/base
+        new Vector2(0, -40),    // tip
+        new Vector2(8, -36),    // right edge
+        new Vector2(8, -8),     // right base
+        new Vector2(-8, -8),    // left base
+        new Vector2(-8, -36),   // left edge
+    };
 
     // Swing animation properties
     private enum SwingState { Idle, WindingUp, Slashing }
@@ -79,7 +89,7 @@ public class Weapon
 
     /// <summary>
     /// Triggers a visual flash and plays a sound effect when the weapon levels up.
-    /// </summary>
+    /// /// </summary>
     public void PlayLevelUpEffect(SoundEffect? soundEffect = null)
     {
         Sprite?.Flash(Color.Yellow, 0.5); // Flash yellow for 0.2 seconds
@@ -146,12 +156,16 @@ public class Weapon
     {
         if (Sprite == null) return;
 
-        // The weapon's position is now calculated relative to its owner's center.
         Position = ownerCenterPosition + Offset + ManualOffset;
         Sprite.Position = Position;
-        Sprite.Rotation = Rotation;
+
+        // Use the correct offset for your sprite's default orientation
+        const float visualRotationOffset = MathHelper.PiOver4; // Correct for 45-degree sprites
+        Sprite.Rotation = Rotation + visualRotationOffset;
+
         Sprite.Draw(spriteBatch, Sprite.Position);
     }
+
     public Projectile Fire(Vector2 direction, Vector2 spawnPosition)
     {
         if (_projectileAtlas == null)
@@ -220,5 +234,37 @@ public class Weapon
             Sprite.Animation = newAnimation;
         }
         _currentAnimation = animationName; // Keep track of the logical state, e.g., "Idle", "Swing"
+    }
+
+    public List<Vector2> GetTransformedHitPolygon(Vector2 ownerCenter)
+    {
+        var transformed = new List<Vector2>();
+        const float visualRotationOffset = MathHelper.PiOver2; // Correct for 45-degree sprites
+        var totalRotation = Rotation + visualRotationOffset;
+
+        foreach (var pt in HitPolygon)
+        {
+            var rotated = Vector2.Transform(pt, Matrix.CreateRotationZ(totalRotation));
+            transformed.Add(ownerCenter + rotated + Offset + ManualOffset);
+        }
+        return transformed;
+    }
+    public void DrawHitPolygon(SpriteBatch spriteBatch, Texture2D pixel, Vector2 ownerCenter, Color color)
+    {
+        var poly = GetTransformedHitPolygon(ownerCenter);
+        for (int i = 0; i < poly.Count; i++)
+        {
+            var a = poly[i];
+            var b = poly[(i + 1) % poly.Count];
+            DrawLine(spriteBatch, pixel, a, b, color);
+        }
+    }
+
+    // Simple line draw (Bresenham or use a 1x1 pixel stretched)
+    private void DrawLine(SpriteBatch spriteBatch, Texture2D pixel, Vector2 a, Vector2 b, Color color)
+    {
+        var distance = Vector2.Distance(a, b);
+        var angle = (float)Math.Atan2(b.Y - a.Y, b.X - a.X);
+        spriteBatch.Draw(pixel, a, null, color, angle, Vector2.Zero, new Vector2(distance, 1), SpriteEffects.None, 0);
     }
 }

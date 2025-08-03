@@ -17,6 +17,7 @@ public class Core : Game
     /// Gets a reference to the Core instance.
     /// </summary>
     public static Core Instance => s_instance;
+    public static Scene CurrentScene => s_activeScene;
 
     // The scene that is currently active.
     private static Scene s_activeScene;

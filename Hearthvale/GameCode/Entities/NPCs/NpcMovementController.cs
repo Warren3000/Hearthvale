@@ -21,14 +21,18 @@ public class NpcMovementController
 
     private Tilemap _tilemap;
     private int _wallTileId;
+    private int _spriteWidth;
+    private int _spriteHeight;
 
-    public NpcMovementController(Vector2 startPosition, float speed, Rectangle bounds, Tilemap tilemap, int wallTileId)
+    public NpcMovementController(Vector2 startPosition, float speed, Rectangle bounds, Tilemap tilemap, int wallTileId, int spriteWidth, int spriteHeight)
     {
         Position = startPosition;
         _speed = speed;
         Bounds = bounds;
         _tilemap = tilemap;
         _wallTileId = wallTileId;
+        _spriteWidth = spriteWidth;
+        _spriteHeight = spriteHeight;
     }
 
     public void SetRandomDirection()
@@ -105,14 +109,29 @@ public class NpcMovementController
     // Helper to check for wall collision
     private bool IsWall(Vector2 pos)
     {
-        float centerX = pos.X + 16; // Adjust for sprite center if needed
-        float centerY = pos.Y + 16;
-        int tileCol = (int)(centerX / _tilemap.TileWidth);
-        int tileRow = (int)(centerY / _tilemap.TileHeight);
-        int tileId = _tilemap.GetTileId(tileCol, tileRow);
-        return tileId == _wallTileId;
-    }
+        Rectangle candidateBounds = new Rectangle(
+            (int)pos.X + 8,
+            (int)pos.Y + 16,
+            _spriteWidth / 2,
+            _spriteHeight / 2
+        );
 
+        int leftTile = candidateBounds.Left / (int)_tilemap.TileWidth;
+        int rightTile = (candidateBounds.Right - 1) / (int)_tilemap.TileWidth;
+        int topTile = candidateBounds.Top / (int)_tilemap.TileHeight;
+        int bottomTile = (candidateBounds.Bottom - 1) / (int)_tilemap.TileHeight;
+
+        for (int col = leftTile; col <= rightTile; col++)
+        {
+            for (int row = topTile; row <= bottomTile; row++)
+            {
+                int tileId = _tilemap.GetTileId(col, row);
+                if (tileId == _wallTileId)
+                    return true; // Block movement if any part overlaps a wall
+            }
+        }
+        return false;
+    }
     public void SetPosition(Vector2 pos) => Position = pos;
     public Vector2 GetVelocity() => _velocity;
     public void SetVelocity(Vector2 v)

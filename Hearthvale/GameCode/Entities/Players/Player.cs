@@ -133,17 +133,24 @@ namespace Hearthvale.GameCode.Entities.Players
             foreach (var npc in npcs)
             {
                 if (candidateBounds.Intersects(npc.Bounds))
-                    return; // Block movement if collision
+                    return; // Block movement if collision with any NPC
             }
 
-            // Use the center of the player for collision
-            float centerX = candidate.X + spriteWidth / 2f;
-            float centerY = candidate.Y + spriteHeight / 2f;
-            int tileCol = (int)(centerX / tilemap.TileWidth);
-            int tileRow = (int)(centerY / tilemap.TileHeight);
-            int tileId = tilemap.GetTileId(tileCol, tileRow);
-            if (tileId == wallTileId)
-                return; // Block movement if wall
+            // Check all tiles overlapped by candidateBounds
+            int leftTile = candidateBounds.Left / (int)tilemap.TileWidth;
+            int rightTile = (candidateBounds.Right - 1) / (int)tilemap.TileWidth;
+            int topTile = candidateBounds.Top / (int)tilemap.TileHeight;
+            int bottomTile = (candidateBounds.Bottom - 1) / (int)tilemap.TileHeight;
+
+            for (int col = leftTile; col <= rightTile; col++)
+            {
+                for (int row = topTile; row <= bottomTile; row++)
+                {
+                    int tileId = tilemap.GetTileId(col, row);
+                    if (tileId == wallTileId)
+                        return; // Block movement if any part overlaps a wall
+                }
+            }
 
             SetPosition(candidate);
         }
@@ -186,4 +193,4 @@ namespace Hearthvale.GameCode.Entities.Players
             return LastMovementDirection.Y < 0;
         }
     }
-}
+    }

@@ -8,6 +8,7 @@ using MonoGame.Extended.Tiled;
 using MonoGameLibrary;
 using MonoGameLibrary.Graphics;
 using System.Collections.Generic;
+using Hearthvale.GameCode.Entities;
 
 namespace Hearthvale.GameCode.Managers
 {
@@ -18,18 +19,32 @@ namespace Hearthvale.GameCode.Managers
         private readonly TextureAtlas _heroAtlas;
         private Tilemap _tilemap;
         private int _wallTileId;
+        private WeaponManager _weaponManager; // Add this line
+                                              // Add these fields to the NpcManager class
+        private readonly TextureAtlas _weaponAtlas;
+        private readonly TextureAtlas _arrowAtlas;
 
         public IEnumerable<NPC> Npcs => _npcs;
         public IEnumerable<Character> Characters => _npcs;
 
-        public NpcManager(TextureAtlas heroAtlas, Rectangle bounds, Tilemap tilemap, int wallTileId)
+         public NpcManager(
+            TextureAtlas heroAtlas,
+            Rectangle bounds,
+            Tilemap tilemap,
+            int wallTileId,
+            WeaponManager weaponManager,
+            TextureAtlas weaponAtlas,      // Add this parameter
+            TextureAtlas arrowAtlas        // Add this parameter
+        )
         {
             _heroAtlas = heroAtlas;
             _bounds = bounds;
             _tilemap = tilemap;
             _wallTileId = wallTileId;
+            _weaponManager = weaponManager;
+            _weaponAtlas = weaponAtlas;    // Initialize the field
+            _arrowAtlas = arrowAtlas;      // Initialize the field
         }
-
         public void LoadNPCs(IEnumerable<TiledMapObject> npcObjects)
         {
             foreach (var obj in npcObjects)
@@ -99,6 +114,7 @@ namespace Hearthvale.GameCode.Managers
 
             npc.FacingRight = false;
             _npcs.Add(npc);
+            _weaponManager.EquipWeapon(npc, new Weapon("Dagger", DataManager.GetWeaponStats("Dagger"), _weaponAtlas, _arrowAtlas));
         }
 
         public void Update(GameTime gameTime, Character player)
@@ -155,5 +171,8 @@ namespace Hearthvale.GameCode.Managers
                 }
             }
         }
+
+        // Update the constructor to accept these parameters
+       
     }
 }

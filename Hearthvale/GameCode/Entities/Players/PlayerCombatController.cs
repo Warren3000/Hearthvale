@@ -7,6 +7,7 @@ using Hearthvale.GameCode.Managers;
 using Microsoft.Xna.Framework.Audio;
 using System.Linq;
 using System.Diagnostics;
+using Hearthvale.GameCode.Utils;
 
 namespace Hearthvale.GameCode.Entities.Players
 {
@@ -52,8 +53,9 @@ namespace Hearthvale.GameCode.Entities.Players
             {
                 if (!IsAttacking)
                 {
-                    const float rotationOffset = MathHelper.Pi / 4f;
-                    _player.EquippedWeapon.Rotation = (float)Math.Atan2(_player.LastMovementDirection.Y, _player.LastMovementDirection.X) + rotationOffset;
+                    // The base rotation should simply match the direction.
+                    // The visual offset is handled in the Weapon's Draw method.
+                    _player.EquippedWeapon.Rotation = (float)Math.Atan2(_player.LastMovementDirection.Y, _player.LastMovementDirection.X);
                 }
 
                 Vector2 playerCenter = _player.Position + new Vector2(_player.Sprite.Width / 2f, _player.Sprite.Height / 2f);
@@ -66,12 +68,22 @@ namespace Hearthvale.GameCode.Entities.Players
 
             if (_player.EquippedWeapon?.IsSlashing == true)
             {
-                Rectangle attackArea = _player.GetAttackArea();
+                Vector2 playerCenter = _player.Position + new Vector2(_player.Sprite.Width / 2f, _player.Sprite.Height / 2f);
                 var hittableNpcs = npcs.Where(n => !n.IsDefeated && !_hitNpcsThisSwing.Contains(n));
 
+                var hitPoly = _player.EquippedWeapon.GetTransformedHitPolygon(playerCenter);
                 foreach (var npc in hittableNpcs.ToList())
                 {
-                    if (attackArea.Intersects(npc.Bounds))
+                    var npcRect = npc.Bounds;
+                    // Check if any corner of the NPC's bounds is inside the hit polygon
+                    var corners = new[]
+                    {
+                        new Vector2(npcRect.Left, npcRect.Top),
+                        new Vector2(npcRect.Right, npcRect.Top),
+                        new Vector2(npcRect.Right, npcRect.Bottom),
+                        new Vector2(npcRect.Left, npcRect.Bottom)
+                    };
+                    if (corners.Any(corner => GeometryUtils.PointInPolygon(corner, hitPoly)))
                     {
                         // --- Apply Knockback ---
                         Vector2 direction = Vector2.Normalize(npc.Position - _player.Position);
@@ -90,7 +102,6 @@ namespace Hearthvale.GameCode.Entities.Players
         {
             if (!_combatManager.CanAttack()) return;
             
-            Debug.WriteLine($"[PlayerCombatController] Starting new melee attack. Clearing hit list ({_hitNpcsThisSwing.Count} items).");
             _hitNpcsThisSwing.Clear();
 
             if (_player.EquippedWeapon != null)

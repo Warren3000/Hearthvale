@@ -48,7 +48,10 @@ public class DungeonManager
             activator.OnActivated += target.Activate;
         }
     }
-
+    public IEnumerable<IDungeonElement> GetAllElements()
+    {
+        return _elements;
+    }
     /// <summary>
     /// Loads a dungeon from an XML file, creating the tilemap and all dungeon elements.
     /// </summary>

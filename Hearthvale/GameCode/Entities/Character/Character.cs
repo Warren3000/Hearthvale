@@ -1,4 +1,5 @@
 ﻿using Hearthvale.GameCode.Entities.Interfaces;
+using Hearthvale.GameCode.Entities.Players;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGameLibrary.Graphics;
@@ -90,29 +91,30 @@ public abstract class Character : IDamageable, IMovable, IAnimatable
     {
         if (EquippedWeapon == null) return Rectangle.Empty;
 
-        float attackReach = EquippedWeapon.Length;
-        int attackWidth, attackHeight;
-        Vector2 attackCenter = Position + new Vector2(Sprite.Width / 2, Sprite.Height / 2);
-        Vector2 offset = Vector2.Zero;
-        Vector2 direction = GetAttackDirection();
+        Vector2 origin = Position + new Vector2(Sprite.Width / 2, Sprite.Height / 2);
 
-        if (Math.Abs(direction.X) > Math.Abs(direction.Y))
-        {
-            attackWidth = 32;
-            attackHeight = (int)Sprite.Height;
-            offset.X = (direction.X > 0 ? 1 : -1) * attackReach;
-        }
-        else
-        {
-            attackWidth = (int)Sprite.Width;
-            attackHeight = 32;
-            offset.Y = (direction.Y > 0 ? 1 : -1) * attackReach;
-        }
+        // Add the visual offset to match the sprite's rotation
+        const float visualRotationOffset = MathHelper.PiOver4;
+        float totalRotation = EquippedWeapon.Rotation + visualRotationOffset;
+        Vector2 direction = new Vector2((float)Math.Cos(totalRotation), (float)Math.Sin(totalRotation));
 
-        int x = (int)(attackCenter.X + offset.X - attackWidth / 2);
-        int y = (int)(attackCenter.Y + offset.Y - attackHeight / 2);
+        float handleOffset = 8f; // Adjust this value to match your weapon's handle length
+        float length = EquippedWeapon.Length - handleOffset;
+        float thickness = 12f;
 
-        return new Rectangle(x, y, attackWidth, attackHeight);
+        Vector2 perp = new Vector2(-direction.Y, direction.X) * (thickness / 2);
+
+        Vector2 p1 = origin + perp;
+        Vector2 p2 = origin - perp;
+        Vector2 p3 = origin + direction * length + perp;
+        Vector2 p4 = origin + direction * length - perp;
+
+        float minX = MathF.Min(MathF.Min(p1.X, p2.X), MathF.Min(p3.X, p4.X));
+        float maxX = MathF.Max(MathF.Max(p1.X, p2.X), MathF.Max(p3.X, p4.X));
+        float minY = MathF.Min(MathF.Min(p1.Y, p2.Y), MathF.Min(p3.Y, p4.Y));
+        float maxY = MathF.Max(MathF.Max(p1.Y, p2.Y), MathF.Max(p3.Y, p4.Y));
+
+        return new Rectangle((int)minX, (int)minY, (int)(maxX - minX), (int)(maxY - minY));
     }
 
     /// <summary>
@@ -158,5 +160,20 @@ public abstract class Character : IDamageable, IMovable, IAnimatable
             // The weapon will draw at its last known position.
             EquippedWeapon?.Draw(spriteBatch, Vector2.Zero);
         }
+    }
+
+    public virtual void DrawDebug(SpriteBatch spriteBatch, Texture2D pixel)
+    {
+        // Draw bounds in green for player, red for NPC (override as needed)
+        Color color = this is Player ? Color.LimeGreen * 0.5f : Color.Red * 0.5f;
+        var rect = Bounds;
+        // Top
+        spriteBatch.Draw(pixel, new Rectangle(rect.X, rect.Y, rect.Width, 1), color);
+        // Left
+        spriteBatch.Draw(pixel, new Rectangle(rect.X, rect.Y, 1, rect.Height), color);
+        // Right
+        spriteBatch.Draw(pixel, new Rectangle(rect.Right - 1, rect.Y, 1, rect.Height), color);
+        // Bottom
+        spriteBatch.Draw(pixel, new Rectangle(rect.X, rect.Bottom - 1, rect.Width, 1), color);
     }
 }

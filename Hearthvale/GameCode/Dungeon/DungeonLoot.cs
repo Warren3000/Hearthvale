@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 
 public class DungeonLoot : IDungeonElement
 {
@@ -17,4 +18,9 @@ public class DungeonLoot : IDungeonElement
     public void Activate() { /* Reveal loot */ }
     public void Deactivate() { /* Hide loot */ }
     public void Update(GameTime gameTime) { /* Loot logic */ }
+
+    public void DrawDebug(SpriteBatch spriteBatch, Texture2D pixel)
+    {
+        // Minimal implementation; add debug drawing logic as needed
+    }
 }

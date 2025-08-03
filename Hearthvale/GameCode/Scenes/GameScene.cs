@@ -13,6 +13,7 @@ using MonoGameGum;
 using MonoGameLibrary;
 using MonoGameLibrary.Graphics;
 using MonoGameLibrary.Scenes;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
@@ -58,6 +59,9 @@ namespace Hearthvale.Scenes
         private Player _player;
         private List<Weapon> _playerWeapons;
         private int _currentPlayerWeaponIndex = 0;
+        public Player Player => _player;
+
+        private DebugManager _debugManager;
 
         public override void Initialize()
         {
@@ -88,10 +92,14 @@ namespace Hearthvale.Scenes
             _tilemap = ((ProceduralDungeonManager)_dungeonManager).GenerateBasicDungeon(Content);
             _playerStart = ((ProceduralDungeonManager)_dungeonManager).GetPlayerStart(_tilemap);
             Rectangle dungeonBounds = new Rectangle(0, 0, _tilemap.Columns * (int)_tilemap.TileWidth, _tilemap.Rows * (int)_tilemap.TileHeight);
-            _npcManager = new NpcManager(_heroAtlas, dungeonBounds, _tilemap, wallTileId);
 
+            // 1. Create NpcManager with a temporary empty WeaponManager (will be replaced)
+            var tempNpcList = new List<NPC>();
+            _weaponManager = new WeaponManager(_heroAtlas, _weaponAtlas, dungeonBounds, tempNpcList);
+
+            // 2. Now create NpcManager with the real WeaponManager
+            _npcManager = new NpcManager(_heroAtlas, dungeonBounds, _tilemap, wallTileId, _weaponManager, _weaponAtlas, _arrowAtlas);
             _npcManager.SpawnAllNpcTypesTest();
-
             _weaponManager = new WeaponManager(_heroAtlas, _weaponAtlas, dungeonBounds, _npcManager.Npcs as List<NPC>);
 
             // Score/UI managers
@@ -128,8 +136,25 @@ namespace Hearthvale.Scenes
             _inputHandler = new InputHandler(
                 _camera, MOVEMENT_SPEED,
                 () => _uiManager.PauseGame(),
-                (movement) => _player.Move(movement, dungeonBounds, _player.Sprite.Width, _player.Sprite.Height, _npcManager.Npcs, _tilemap, 2), // 2 is wallTileId
-                () => _npcManager.SpawnNPC("DefaultNPCType", _player.Position),
+                (movement) => _player.Move(movement, dungeonBounds, _player.Sprite.Width, _player.Sprite.Height, _npcManager.Npcs, _tilemap, wallTileId),
+                () =>
+                {
+                    // Get player's swing radius (weapon length or default)
+                    float swingRadius = _player.EquippedWeapon?.Length ?? 32f;
+                    float minDistance = swingRadius + 16f;
+                    var random = new Random();
+                    double angle = random.NextDouble() * Math.PI * 2;
+                    Vector2 direction = new Vector2((float)Math.Cos(angle), (float)Math.Sin(angle));
+
+                    // Calculate spawn position
+                    Vector2 spawnPos = _player.Position + direction * minDistance;
+
+                    // Clamp to dungeon bounds
+                    spawnPos.X = MathHelper.Clamp(spawnPos.X, dungeonBounds.Left, dungeonBounds.Right - _player.Sprite.Width);
+                    spawnPos.Y = MathHelper.Clamp(spawnPos.Y, dungeonBounds.Top, dungeonBounds.Bottom - _player.Sprite.Height);
+
+                    _npcManager.SpawnNPC("DefaultNPCType", spawnPos);
+                },
                 () => Core.ChangeScene(new TitleScene()),
                 () => _player.CombatController.StartProjectileAttack(),
                 () => _player.CombatController.StartMeleeAttack(),
@@ -137,6 +162,7 @@ namespace Hearthvale.Scenes
                 RotatePlayerWeaponRight,
                 HandleInteraction
             );
+            _debugManager = new DebugManager(_uiManager.WhitePixel);
         }
 
         private void HandleInteraction()
@@ -212,18 +238,41 @@ namespace Hearthvale.Scenes
             // Draw procedural tilemap
             _tilemap.Draw(Core.SpriteBatch);
 
-            _player.Draw(Core.SpriteBatch);
-            _npcManager.Draw(Core.SpriteBatch, _uiManager);
-            _combatManager.DrawProjectiles(Core.SpriteBatch);
-            _uiManager.DrawCollisionBoxes(Core.SpriteBatch, _player, _npcManager.Npcs);
-            _combatEffectsManager.Draw(Core.SpriteBatch, _font);
-
             Core.SpriteBatch.End();
             Core.SpriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
             _uiManager.DrawPlayerHealthBar(Core.SpriteBatch, _player, new Vector2(20, 20), new Vector2(100, 12));
             _scoreManager.Draw(Core.SpriteBatch);
             _uiManager.DrawDebugInfo(Core.SpriteBatch, gameTime, _player.Position, _camera.Position, _viewport);
+            _uiManager.DrawDungeonElementCollisionBoxes(Core.SpriteBatch, _dungeonManager.GetAllElements(), _camera.GetViewMatrix());
+
+            Core.SpriteBatch.End();
+            Core.SpriteBatch.Begin(transformMatrix: _camera.GetViewMatrix(), samplerState: SamplerState.PointClamp);
+
+            // Draw entities
+            _player.Draw(Core.SpriteBatch);
+
+            foreach (var npc in _npcManager.Npcs)
+            {
+                npc.Draw(Core.SpriteBatch);
+            }
+
+            if (Core.Input.Keyboard.WasKeyJustPressed(Keys.F3))
+                _debugManager.DebugDrawEnabled = !_debugManager.DebugDrawEnabled;
+            if (Core.Input.Keyboard.WasKeyJustPressed(Keys.F4))
+                _debugManager.ShowCollisionBoxes = !_debugManager.ShowCollisionBoxes;
+            if (Core.Input.Keyboard.WasKeyJustPressed(Keys.F5))
+                _debugManager.ShowAttackAreas = !_debugManager.ShowAttackAreas;
+
+            _debugManager.Draw(
+            Core.SpriteBatch,
+            _player,
+            _npcManager.Npcs,
+            _tilemap,
+            ProceduralDungeonManager.DefaultWallTileId,
+            _dungeonManager.GetAllElements(),
+            _camera.GetViewMatrix()
+);
 
             GumService.Default.Draw();
         }

@@ -165,17 +165,30 @@ namespace HearthvaleTest
             var tilemap = new Tilemap(tileset, 1, 1);
             int wallTileId = 0;
 
-            var npcManager = new NpcManager(atlas, new Rectangle(0, 0, 100, 100), tilemap, wallTileId);
+            var npcList = new List<NPC>();
+            var weaponAtlas = new TextureAtlas(dummyTexture);
+            var arrowAtlas = new TextureAtlas(dummyTexture);
+            var weaponManager = new WeaponManager(atlas, weaponAtlas, new Rectangle(0, 0, 100, 100), npcList);
+
+            var npcManager = new NpcManager(
+                atlas,
+                new Rectangle(0, 0, 100, 100),
+                tilemap,
+                wallTileId,
+                weaponManager,
+                weaponAtlas,
+                arrowAtlas
+            );
 
             var dummyFont = new SpriteFont(
                 dummyTexture,
-                new List<Rectangle>(), // glyphBounds
-                new List<Rectangle>(), // cropping
-                new List<char>(),      // characters
-                1,                     // lineSpacing
-                0,                     // spacing
-                new List<Vector3>(),   // kerning
-                null                   // defaultCharacter (char?)
+                new List<Rectangle>(),
+                new List<Rectangle>(),
+                new List<char>(),
+                1,
+                0,
+                new List<Vector3>(),
+                null
             );
             var position = Vector2.Zero;
             var origin = Vector2.Zero;

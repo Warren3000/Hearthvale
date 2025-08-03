@@ -3,6 +3,7 @@ using Hearthvale.GameCode.Entities.Players;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
+using MonoGameLibrary;
 using MonoGameLibrary.Graphics;
 using System;
 using System.Collections.Generic;
@@ -41,14 +42,12 @@ public class NPC : Character, INpcDialog, ICombatNpc
 
     public string Name { get; private set; }
 
-    public Weapon EquippedWeapon { get; private set; } // <-- Add this property
-
     public NPC(string name, Dictionary<string, Animation> animations, Vector2 position, Rectangle bounds, SoundEffect defeatSound, int maxHealth, Tilemap tilemap, int wallTileId)
     {
         Name = name; // Assign the name
         var sprite = new AnimatedSprite(animations["Idle"]);
         _animationController = new NpcAnimationController(sprite, animations);
-        _movementController = new NpcMovementController(position, 60.0f, bounds, tilemap, wallTileId);
+        _movementController = new NpcMovementController(position, 60.0f, bounds, tilemap, wallTileId, (int)sprite.Width, (int)sprite.Height);
         _healthController = new NpcHealthController(maxHealth, defeatSound);
 
         _sprite = sprite;
@@ -62,7 +61,7 @@ public class NPC : Character, INpcDialog, ICombatNpc
 
     public override void EquipWeapon(Weapon weapon)
     {
-        EquippedWeapon = weapon;
+        base.EquipWeapon(weapon);
     }
 
     public override bool TakeDamage(int amount, Vector2? knockback = null)
@@ -156,18 +155,19 @@ public class NPC : Character, INpcDialog, ICombatNpc
             }
             else
             {
-                directionToPlayer = Vector2.UnitX; // Default if positions are identical
+                directionToPlayer = Vector2.UnitX;
             }
 
             // Set facing direction based on player's position
-            if (Math.Abs(directionToPlayer.X) > System.Math.Abs(directionToPlayer.Y))
+            if (Math.Abs(directionToPlayer.X) > Math.Abs(directionToPlayer.Y))
             {
                 _facingRight = directionToPlayer.X > 0;
             }
 
-            // Align weapon rotation with the direction to the player
-            const float rotationOffset = MathHelper.Pi / 4f; // 45 degrees in radians
-            EquippedWeapon.Rotation = (float)System.Math.Atan2(directionToPlayer.Y, directionToPlayer.X) + rotationOffset;
+            // The base rotation should simply match the direction.
+            // The visual offset is handled in the Weapon's Draw method.
+            EquippedWeapon.Rotation = (float)Math.Atan2(directionToPlayer.Y, directionToPlayer.X);
+
             EquippedWeapon.Position = Position + new Vector2(Sprite.Width / 2, Sprite.Height / 2);
             EquippedWeapon.Update(gameTime);
         }
@@ -272,5 +272,10 @@ public class NPC : Character, INpcDialog, ICombatNpc
         // Draw weapon in front if needed
         if (EquippedWeapon != null && !ShouldDrawWeaponBehind())
             EquippedWeapon.Draw(spriteBatch, npcCenter);
+    }
+
+    public override Rectangle GetAttackArea()
+    {
+        return base.GetAttackArea();
     }
 }
