@@ -12,24 +12,23 @@ namespace Hearthvale.GameCode.Input
     public class InputHandler
     {
         private Camera2D _camera;
-        private readonly Action PauseGameCallback;
         private readonly Action<Vector2> _movePlayerCallback;
         private readonly float _movementSpeed;
         private readonly Action SpawnNPCCallback;
-        private readonly Action QuitCallback;
         private readonly Action _projectileAttackCallback;
         private readonly Action _meleeAttackCallback;
         private readonly Action _rotateWeaponLeftCallback;
         private readonly Action _rotateWeaponRightCallback;
         private readonly Action _interactionCallback;
 
+        // Add this field to store the movement vector
+        private Vector2 _currentMovementVector = Vector2.Zero;
+
         public InputHandler(
             Camera2D camera,
             float movementSpeed,
-            Action pauseGameCallback,
             Action<Vector2> movePlayerCallback,
             Action spawnNpcCallback,
-            Action quitCallback,
             Action projectileAttackCallback,
             Action meleeAttackCallback,
             Action rotateWeaponLeftCallback,
@@ -38,15 +37,18 @@ namespace Hearthvale.GameCode.Input
         {
             _camera = camera;
             _movementSpeed = movementSpeed;
-            PauseGameCallback = pauseGameCallback;
             _movePlayerCallback = movePlayerCallback;
             SpawnNPCCallback = spawnNpcCallback;
-            QuitCallback = quitCallback;
             _projectileAttackCallback = projectileAttackCallback;
             _meleeAttackCallback = meleeAttackCallback;
             _rotateWeaponLeftCallback = rotateWeaponLeftCallback;
             _rotateWeaponRightCallback = rotateWeaponRightCallback;
             _interactionCallback = interactionCallback;
+        }
+
+        public Vector2 GetMovement()
+        {
+            return _currentMovementVector;
         }
 
         public void Update(GameTime gameTime)
@@ -74,25 +76,17 @@ namespace Hearthvale.GameCode.Input
             if (keyboard.IsKeyDown(Keys.A)) moveDirection.X = -1;
             if (keyboard.IsKeyDown(Keys.D)) moveDirection.X = 1;
 
+            // Update the movement vector field
+            _currentMovementVector = moveDirection != Vector2.Zero ? Vector2.Normalize(moveDirection) * _movementSpeed : Vector2.Zero;
+
             if (moveDirection != Vector2.Zero)
             {
-                moveDirection.Normalize();
-                _movePlayerCallback?.Invoke(moveDirection * _movementSpeed);
+                _movePlayerCallback?.Invoke(_currentMovementVector);
             }
 
             if (keyboard.WasKeyJustPressed(Keys.K))
             {
                 _camera?.Shake(0.5f, 8f);
-            }
-
-            if (keyboard.WasKeyJustPressed(Keys.Enter))
-            {
-                PauseGameCallback?.Invoke();
-            }
-
-            if (keyboard.WasKeyJustPressed(Keys.Escape))
-            {
-                QuitCallback?.Invoke();
             }
 
             // Change IsKeyDown to WasKeyJustPressed for a single, clean attack per press.
@@ -149,14 +143,18 @@ namespace Hearthvale.GameCode.Input
         {
             // Player Movement
             Vector2 moveDirection = gamePadOne.LeftThumbStick;
+
+            // Update the movement vector field
+            _currentMovementVector = moveDirection != Vector2.Zero ? moveDirection * _movementSpeed : Vector2.Zero;
+
             if (moveDirection != Vector2.Zero)
             {
-                _movePlayerCallback?.Invoke(moveDirection * _movementSpeed);
+                _movePlayerCallback?.Invoke(_currentMovementVector);
             }
 
             if (gamePadOne.WasButtonJustPressed(Buttons.Start))
             {
-                PauseGameCallback?.Invoke();
+                // This callback is now handled in GameScene
             }
 
             // Optionally, add gamepad support for firing projectiles here

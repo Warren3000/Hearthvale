@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using Hearthvale.GameCode.Entities.Characters;
+using Hearthvale.GameCode.Entities.Interfaces;
 using Hearthvale.GameCode.Entities.NPCs;
 using Hearthvale.GameCode.Input;
 using Microsoft.Xna.Framework;
@@ -17,7 +18,7 @@ public class DialogManager
     private readonly IEnumerable<Character> _npcs;
     private readonly float _dialogDistance;
 
-    private Character _currentDialogNpc;
+    private Character _currentSpeaker;
 
     /// <summary>
     /// Gets a value indicating whether the dialog is open.
@@ -46,24 +47,40 @@ public class DialogManager
     {
         if (_uiManager.IsDialogOpen)
         {
-            // If the NPC is defeated while dialog is open, or if Enter is pressed, close it.
-            if (_currentDialogNpc == null || _currentDialogNpc.IsDefeated || InputHandler.IsKeyPressed(Keys.Enter))
+            if (_currentSpeaker == null || _currentSpeaker.IsDefeated || InputHandler.IsKeyPressed(Keys.Enter))
             {
                 _uiManager.HideDialog();
-                _currentDialogNpc = null;
+                _currentSpeaker = null;
             }
             return;
         }
 
+        // Player initiates dialog with NPCs
         foreach (var npc in _npcs)
         {
-            // Only interact with NPCs that are not defeated and have dialog
-            if (!npc.IsDefeated && npc is INpcDialog dialogNpc && Vector2.Distance(_player.Position, npc.Position) < _dialogDistance)
+            if (!npc.IsDefeated && npc is IDialog dialogCharacter && Vector2.Distance(_player.Position, npc.Position) < _dialogDistance)
             {
-                if (InputHandler.IsKeyPressed(Keys.E) && _currentDialogNpc != npc)
+                if (InputHandler.IsKeyPressed(Keys.E) && _currentSpeaker != npc)
                 {
-                    _uiManager.ShowDialog(dialogNpc.DialogText);
-                    _currentDialogNpc = npc;
+                    _uiManager.ShowDialog(dialogCharacter.DialogText);
+                    _currentSpeaker = npc;
+                    break;
+                }
+            }
+        }
+
+        // NPCs initiate dialog with player (example: if NPC wants to talk)
+        foreach (var npc in _npcs)
+        {
+            if (!npc.IsDefeated && Vector2.Distance(_player.Position, npc.Position) < _dialogDistance)
+            {
+                // Replace this condition with your own logic for when an NPC wants to talk to the player
+                bool npcWantsToTalk = false; // TODO: Set this based on your game logic
+
+                if (npcWantsToTalk && _currentSpeaker != _player)
+                {
+                    _uiManager.ShowDialog(_player.DialogText);
+                    _currentSpeaker = _player;
                     break;
                 }
             }

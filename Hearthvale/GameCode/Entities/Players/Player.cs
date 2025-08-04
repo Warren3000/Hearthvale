@@ -2,11 +2,12 @@
 using Hearthvale.GameCode.Entities.NPCs;
 using Hearthvale.GameCode.Managers;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGameLibrary.Graphics;
 using System.Collections.Generic;
-using Microsoft.Xna.Framework.Audio;
+using System.Linq;
 
 namespace Hearthvale.GameCode.Entities.Players
 {
@@ -21,7 +22,7 @@ namespace Hearthvale.GameCode.Entities.Players
         public float MovementSpeed { get; }
         public bool IsAttacking { get; set; }
         private float _attackTimer = 0f;
-        private const float AttackDuration = 0.3f;
+        private const float AttackDuration = 0.3f;  
         private float _weaponOrbitRadius = 3f;
         public float WeaponOrbitRadius => _weaponOrbitRadius;
 
@@ -84,23 +85,24 @@ namespace Hearthvale.GameCode.Entities.Players
 
         public void Update(GameTime gameTime, IEnumerable<NPC> npcs)
         {
-            _movementController.Update(gameTime, npcs); // Handles knockback
+            UpdateKnockback(gameTime); // Handles knockback and wall bounce
             _animationController.UpdateFlash((float)gameTime.ElapsedGameTime.TotalSeconds);
-            _combatController.Update(gameTime, npcs); // Now handles hit detection
+            _combatController.Update(gameTime, npcs);
             _animationController.UpdateAnimation(_movementController.IsMoving());
 
             _sprite.Position = _position;
             _sprite.Effects = _facingRight ? SpriteEffects.None : SpriteEffects.FlipHorizontally;
         }
 
-        public void ClampToBounds(Rectangle bounds)
-        {
-            float clampedX = MathHelper.Clamp(Position.X, bounds.Left, bounds.Right - Sprite.Width);
-            float clampedY = MathHelper.Clamp(Position.Y, bounds.Top, bounds.Bottom - Sprite.Height);
-            SetPosition(new Vector2(clampedX, clampedY));
-        }
-
-        public void Move(Vector2 movement, Rectangle roomBounds, float spriteWidth, float spriteHeight, IEnumerable<NPC> npcs, Tilemap tilemap, int wallTileId)
+        public void Move(
+            Vector2 movement,
+            Rectangle roomBounds,
+            float spriteWidth,
+            float spriteHeight,
+            IEnumerable<NPC> npcs,
+            Tilemap tilemap,
+            int wallTileId,
+            IEnumerable<Rectangle> obstacleRects)
         {
             if (_movementController.IsKnockedBack) return;
 
@@ -111,48 +113,21 @@ namespace Hearthvale.GameCode.Entities.Players
             }
 
             Vector2 newPosition = Position + movement;
-            float clampedX = MathHelper.Clamp(
-                newPosition.X,
-                roomBounds.Left,
-                roomBounds.Right - spriteWidth
-            );
-            float clampedY = MathHelper.Clamp(
-                newPosition.Y,
-                roomBounds.Top,
-                roomBounds.Bottom - spriteHeight
-            );
+            float clampedX = MathHelper.Clamp(newPosition.X, roomBounds.Left, roomBounds.Right - spriteWidth);
+            float clampedY = MathHelper.Clamp(newPosition.Y, roomBounds.Top, roomBounds.Bottom - spriteHeight);
             Vector2 candidate = new Vector2(clampedX, clampedY);
 
-            // Check collision with NPCs
-            Rectangle candidateBounds = new Rectangle(
-                (int)candidate.X + 8,
-                (int)candidate.Y + 16,
-                (int)Sprite.Width / 2,
-                (int)Sprite.Height / 2
-            );
+            // Defensive: ensure obstacleRects is never null
+            var allObstacles = (obstacleRects ?? Enumerable.Empty<Rectangle>()).ToList();
             foreach (var npc in npcs)
             {
-                if (candidateBounds.Intersects(npc.Bounds))
-                    return; // Block movement if collision with any NPC
+                if (!npc.IsDefeated)
+                    allObstacles.Add(npc.Bounds);
             }
 
-            // Check all tiles overlapped by candidateBounds
-            int leftTile = candidateBounds.Left / (int)tilemap.TileWidth;
-            int rightTile = (candidateBounds.Right - 1) / (int)tilemap.TileWidth;
-            int topTile = candidateBounds.Top / (int)tilemap.TileHeight;
-            int bottomTile = (candidateBounds.Bottom - 1) / (int)tilemap.TileHeight;
-
-            for (int col = leftTile; col <= rightTile; col++)
-            {
-                for (int row = topTile; row <= bottomTile; row++)
-                {
-                    int tileId = tilemap.GetTileId(col, row);
-                    if (tileId == wallTileId)
-                        return; // Block movement if any part overlaps a wall
-                }
-            }
-
-            SetPosition(candidate);
+            // Prevent movement into any obstacle
+            if (!TrySetPosition(candidate, allObstacles))
+                return;
         }
         // Add this method to your Player class
         public bool IsNearTile(int column, int row, float tileWidth, float tileHeight)

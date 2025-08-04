@@ -29,23 +29,25 @@ namespace Hearthvale.GameCode.Managers
         private readonly Action OnResume;
         private readonly Action OnQuit;
 
-        private Panel _pausePanel;
+        private Gum.Forms.Controls.Panel _pausePanel;
         private AnimatedButton _resumeButton;
-        private Panel _dialogPanel;
+        private AnimatedButton _quitButton;
+        private Gum.Forms.Controls.Panel _dialogPanel;
         private TextRuntime _dialogText;
         private bool _isDialogOpen = false;
         private Texture2D _whitePixel;
-        private Panel _weaponPanel;
+        private Gum.Forms.Controls.Panel _weaponPanel;
         private TextRuntime _weaponLevelText;
         private ColoredRectangleRuntime _weaponXpBar;
-        private Panel _equippedWeaponStatusPanel;
+        private Gum.Forms.Controls.Panel _equippedWeaponStatusPanel;
         private TextRuntime _equippedWeaponNameText;
-        private SpriteRuntime _equippedWeaponSprite;
         private TextRuntime _weaponXpText;
-
+        private SpriteRuntime _equippedWeaponSprite;
         public bool IsDialogOpen => _isDialogOpen;
         public bool IsPausePanelVisible => _pausePanel?.IsVisible ?? false;
         public Texture2D WhitePixel => _whitePixel;
+        public AnimatedButton ResumeButton => _resumeButton;
+        public AnimatedButton QuitButton => _quitButton;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="GameUIManager"/> class.
@@ -147,7 +149,7 @@ namespace Hearthvale.GameCode.Managers
 
         private void CreatePausePanel()
         {
-            _pausePanel = new Panel();
+            _pausePanel = new Gum.Forms.Controls.Panel();
             _pausePanel.Anchor(Anchor.Center);
             _pausePanel.Visual.WidthUnits = DimensionUnitType.Absolute;
             _pausePanel.Visual.HeightUnits = DimensionUnitType.Absolute;
@@ -159,6 +161,7 @@ namespace Hearthvale.GameCode.Managers
             TextureRegion backgroundRegion = _atlas.GetRegion("panel-background");
 
             NineSliceRuntime background = new NineSliceRuntime();
+            background.Name = "PausePanelBackground";
             background.Dock(Dock.Fill);
             background.Texture = backgroundRegion.Texture;
             background.TextureAddress = TextureAddress.Custom;
@@ -169,6 +172,7 @@ namespace Hearthvale.GameCode.Managers
             _pausePanel.AddChild(background);
 
             var textInstance = new TextRuntime();
+            textInstance.Tag = "PauseText";
             textInstance.Text = "PAUSED";
             textInstance.CustomFontFile = @"fonts/04b_30.fnt";
             textInstance.UseCustomFont = true;
@@ -186,19 +190,20 @@ namespace Hearthvale.GameCode.Managers
             _resumeButton.Click += (s, e) => OnResume?.Invoke();
             _pausePanel.AddChild(_resumeButton);
 
-            AnimatedButton quitButton = new AnimatedButton(_atlas);
-            quitButton.Text = "QUIT";
-            quitButton.Anchor(Anchor.BottomRight);
-            quitButton.Visual.X = -9f;
-            quitButton.Visual.Y = -9f;
-            quitButton.Width = 80;
-            quitButton.Click += (s, e) => OnQuit?.Invoke();
-            _pausePanel.AddChild(quitButton);
+            _quitButton = new AnimatedButton(_atlas);
+            _quitButton.Text = "QUIT";
+            _quitButton.Anchor(Anchor.BottomRight);
+            _quitButton.Visual.X = -9f;
+            _quitButton.Visual.Y = -9f;
+            _quitButton.Width = 80;
+            _quitButton.Click += (s, e) => OnQuit?.Invoke();
+            _pausePanel.AddChild(_quitButton);
         }
         // New unified, modern weapon UI panel
         private void CreateModernWeaponUIPanel()
         {
-            var panel = new Panel();
+            var panel = new Gum.Forms.Controls.Panel();
+            panel.Name = "WeaponPanel";
             panel.Anchor(Anchor.BottomLeft);
             panel.Visual.WidthUnits = DimensionUnitType.Absolute;
             panel.Visual.Width = 160;
@@ -232,6 +237,7 @@ namespace Hearthvale.GameCode.Managers
 
             _equippedWeaponNameText = new TextRuntime
             {
+                Tag = "EquippedWeaponNameText",
                 Text = "Weapon: None",
                 FontScale = 0.22f,
                 X = 38,
@@ -242,6 +248,7 @@ namespace Hearthvale.GameCode.Managers
 
             _weaponLevelText = new TextRuntime
             {
+                Tag = "WeaponLevelText",
                 Text = "Lvl: --",
                 FontScale = 0.18f,
                 X = 38,
@@ -250,9 +257,9 @@ namespace Hearthvale.GameCode.Managers
             };
             panel.AddChild(_weaponLevelText);
 
-            // XP Bar background
             var xpBarBackground = new ColoredRectangleRuntime
             {
+                Tag = "XpBarBackground",
                 Width = 80,
                 Height = 5,
                 X = 38,
@@ -261,9 +268,9 @@ namespace Hearthvale.GameCode.Managers
             };
             panel.AddChild(xpBarBackground);
 
-            // XP Bar foreground
             _weaponXpBar = new ColoredRectangleRuntime
             {
+                Tag = "WeaponXpBar",
                 Width = 0,
                 Height = 5,
                 X = 38,
@@ -272,9 +279,9 @@ namespace Hearthvale.GameCode.Managers
             };
             panel.AddChild(_weaponXpBar);
 
-            // XP text
             _weaponXpText = new TextRuntime
             {
+                Tag = "WeaponXpText",
                 Text = "XP: 0/0",
                 FontScale = 0.16f,
                 X = 38,
@@ -323,6 +330,7 @@ namespace Hearthvale.GameCode.Managers
                
                 if (_weaponPanel != null && _weaponPanel.IsVisible)
                 {
+                    
                     _weaponLevelText.Text = "Lvl: --";
                     _weaponXpBar.Width = 0;
                     _weaponXpText.Text = "XP: 0/0";
@@ -336,7 +344,7 @@ namespace Hearthvale.GameCode.Managers
         }
         private void CreateDialogPanel()
         {
-            _dialogPanel = new Panel();
+            _dialogPanel = new Gum.Forms.Controls.Panel();
             _dialogPanel.Anchor(Anchor.BottomRight);
             _dialogPanel.Visual.WidthUnits = DimensionUnitType.PercentageOfParent;
             _dialogPanel.Visual.Width = 80;
@@ -346,6 +354,7 @@ namespace Hearthvale.GameCode.Managers
             _dialogPanel.AddToRoot();
 
             _dialogText = new TextRuntime();
+            _dialogText.Tag = "DialogText";
             _dialogText.Text = "";
             _dialogText.FontScale = 0.5f;
             _dialogText.X = 10f;

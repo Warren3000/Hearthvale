@@ -117,10 +117,10 @@ namespace Hearthvale.GameCode.Managers
             _weaponManager.EquipWeapon(npc, new Weapon("Dagger", DataManager.GetWeaponStats("Dagger"), _weaponAtlas, _arrowAtlas));
         }
 
-        public void Update(GameTime gameTime, Character player)
+        public void Update(GameTime gameTime, Character player, List<Rectangle> rectangles)
         {
             foreach (var npc in _npcs)
-                npc.Update(gameTime, _npcs, player);
+                npc.Update(gameTime, _npcs, player, rectangles);
 
             // Remove NPCs that are ready to be removed (e.g., after defeat animation)
             _npcs.RemoveAll(npc => npc.IsReadyToRemove);

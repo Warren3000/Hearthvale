@@ -1,4 +1,6 @@
-﻿using Hearthvale.GameCode.UI;
+﻿using Gum.Managers;
+using Hearthvale.GameCode.Managers;
+using Hearthvale.GameCode.UI;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
@@ -24,6 +26,8 @@ public class TitleScene : Scene
 
     // The font used to render the title text.
     private SpriteFont _font5x;
+
+    private SpriteFont _debugFont;
 
     // The position to draw the dungeon text at.
     private Vector2 _dungeonTextPos;
@@ -67,8 +71,12 @@ public class TitleScene : Scene
     private TextureAtlas _atlas;
 
     private SoundEffect _uiSoundEffect;
-    private Panel _titleScreenButtonsPanel;
-    private Panel _optionsPanel;
+    private Gum.Forms.Controls.Panel _titleScreenButtonsPanel;
+    private Gum.Forms.Controls.Panel _optionsPanel;
+
+    private DebugManager _debugManager;
+
+    private AnimatedButton _startButton;
 
     public override void Initialize()
     {
@@ -112,6 +120,9 @@ public class TitleScene : Scene
         // Load the font for the title text.
         _font5x = Content.Load<SpriteFont>("fonts/04B_30_5x");
 
+        //Load debug font for debug manager.
+        _debugFont = Content.Load<SpriteFont>("fonts/DebugFont");
+
         // Load the background pattern texture.
         _backgroundPattern = Content.Load<Texture2D>("images/background-pattern");
 
@@ -121,6 +132,12 @@ public class TitleScene : Scene
         // Load the texture atlas from the xml configuration file.
         _atlas = TextureAtlas.FromFile(Core.Content, "images/atlas-definition.xml");
 
+        // Create a 1x1 white pixel texture for the grid
+        Texture2D whitePixel = new Texture2D(Core.GraphicsDevice, 1, 1);
+        whitePixel.SetData(new[] { Color.White });
+
+        _debugManager = new DebugManager(whitePixel);
+
 #if DEBUG
         Core.Audio.SongVolume = 0f;
 #endif
@@ -128,108 +145,130 @@ public class TitleScene : Scene
 
     public override void Update(GameTime gameTime)
     {
-        // If the user presses enter, switch to the game scene.
-        if (Core.Input.Keyboard.WasKeyJustPressed(Keys.Enter))
+        // Only handle Enter key if the title screen buttons panel is visible
+        if (_titleScreenButtonsPanel.IsVisible && Core.Input.Keyboard.WasKeyJustPressed(Keys.Enter))
         {
-            Core.ChangeScene(new GameScene());
+            if (_startButton.IsFocused)
+            {
+                HandleStartClicked(_startButton, EventArgs.Empty);
+            }
+            else if (_optionsButton.IsFocused)
+            {
+                HandleOptionsClicked(_optionsButton, EventArgs.Empty);
+            }
         }
+        // If options panel is visible, let Gum handle Enter for focused control (sliders/back button)
+        // GumService.Default.Update will route Enter to the focused control
 
-        // Update the offsets for the background pattern wrapping so that it
-        // scrolls down and to the right.
-        float offset = _scrollSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds;
-        _backgroundOffset.X -= offset;
-        _backgroundOffset.Y -= offset;
-
-        // Ensure that the offsets do not go beyond the texture bounds so it is
-        // a seamless wrap.
-        _backgroundOffset.X %= _backgroundPattern.Width;
-        _backgroundOffset.Y %= _backgroundPattern.Height;
+        // Toggle UI debug grid with F9
+        if (Core.Input.Keyboard.WasKeyJustPressed(Keys.F9))
+        {
+            _debugManager.ShowUIDebugGrid = !_debugManager.ShowUIDebugGrid;
+        }
 
         GumService.Default.Update(gameTime);
     }
 
     public override void Draw(GameTime gameTime)
     {
-        Core.GraphicsDevice.Clear(new Color(32, 40, 78, 255));
-
-        // Draw the background pattern first using the PointWrap sampler state.
-        Core.SpriteBatch.End();
-        Core.SpriteBatch.Begin(samplerState: SamplerState.PointWrap);
-        Core.SpriteBatch.Draw(_backgroundPattern, _backgroundDestination, new Rectangle(_backgroundOffset.ToPoint(), _backgroundDestination.Size), Color.White * 0.5f);
-        Core.SpriteBatch.End();
-        Core.SpriteBatch.Begin(samplerState: SamplerState.PointClamp);
-
-        if (_titleScreenButtonsPanel.IsVisible)
-        {
-            // The color to use for the drop shadow text.
-            Color dropShadowColor = Color.Black * 0.5f;
-
-            // Draw the Dungeon text slightly offset from it is original position and
-            // with a transparent color to give it a drop shadow
-            Core.SpriteBatch.DrawString(_font5x, HEARTHVALE_TEXT, _dungeonTextPos + new Vector2(10, 10), dropShadowColor, 0.0f, _dungeonTextOrigin, 1.0f, SpriteEffects.None, 1.0f);
-
-            // Draw the Dungeon text on top of that at its original position
-            Core.SpriteBatch.DrawString(_font5x, HEARTHVALE_TEXT, _dungeonTextPos, Color.White, 0.0f, _dungeonTextOrigin, 1.0f, SpriteEffects.None, 1.0f);
-        }
-
-        GumService.Default.Draw();
+        // Intentionally left blank; use DrawUI instead.
     }
 
-    private void CreateTitlePanel()
+    public override void DrawUI(GameTime gameTime)
     {
-        // Create a container to hold all of our buttons
-        _titleScreenButtonsPanel = new Panel();
-        _titleScreenButtonsPanel.Dock(Gum.Wireframe.Dock.Fill);
-        _titleScreenButtonsPanel.AddToRoot();
+        GumService.Default.Draw();
 
-        AnimatedButton startButton = new AnimatedButton(_atlas);
-        startButton.Anchor(Gum.Wireframe.Anchor.BottomLeft);
-        startButton.Visual.X = 50;
-        startButton.Visual.Y = -12;
-        startButton.Visual.Width = 70;
-        startButton.Text = "Start";
-        startButton.Click += HandleStartClicked;
-        _titleScreenButtonsPanel.AddChild(startButton);
+        // Draw the UI debug grid if enabled
+        if (_debugManager?.ShowUIDebugGrid == true)
+        {
+            _debugManager.DrawUIDebugGrid(Core.SpriteBatch, Core.GraphicsDevice.Viewport, 40, 40, Color.Black * 0.25f, _debugFont);
+        }
+    }
+    private void InitializeUI()
+    {
+        GumService.Default.Root.Children.Clear();
 
+        // Title Text (centered, large, gold/orange, with shadow)
+        var titleText = new TextRuntime
+        {
+            Text = HEARTHVALE_TEXT,
+            FontScale = 2.2f,
+            X = Core.GraphicsDevice.PresentationParameters.BackBufferWidth / 2f,
+            Y = 260f,
+            UseCustomFont = true,
+            CustomFontFile = @"fonts/04b_30.fnt",
+            Color = new Color(255, 180, 60) // Gold/orange
+        };
+        titleText.Anchor(Gum.Wireframe.Anchor.Center);
+        GumService.Default.Root.AddChild(titleText);
+
+        // --- Create a panel to hold the buttons ---
+        _titleScreenButtonsPanel = new Gum.Forms.Controls.Panel();
+        _titleScreenButtonsPanel.Visual.Width = 180f;
+        _titleScreenButtonsPanel.Visual.Height = 90f;
+        _titleScreenButtonsPanel.Visual.X = Core.GraphicsDevice.PresentationParameters.BackBufferWidth / 2f - 90f;
+        _titleScreenButtonsPanel.Visual.Y = 740;
+        GumService.Default.Root.AddChild(_titleScreenButtonsPanel);
+
+        // Start Button
+        _startButton = new AnimatedButton(_atlas);
+        _startButton.Text = "START";
+        _startButton.Width = 180f;
+        _startButton.Height = 38f;
+        _startButton.Click += HandleStartClicked;
+        _titleScreenButtonsPanel.AddChild(_startButton);
+
+        // Options Button
         _optionsButton = new AnimatedButton(_atlas);
-        _optionsButton.Anchor(Gum.Wireframe.Anchor.BottomRight);
-        _optionsButton.Visual.X = -50;
-        _optionsButton.Visual.Y = -12;
-        _optionsButton.Visual.Width = 70;
-        _optionsButton.Text = "Options";
+        _optionsButton.Text = "OPTIONS";
+        _optionsButton.Width = 180f;
+        _optionsButton.Height = 38f;
+        _optionsButton.Y = 55f;
         _optionsButton.Click += HandleOptionsClicked;
         _titleScreenButtonsPanel.AddChild(_optionsButton);
 
-        startButton.IsFocused = true;
+        // "Press Enter" text below buttons
+        var pressEnterText = new TextRuntime
+        {
+            Text = PRESS_ENTER_TEXT,
+            FontScale = 0.5f,
+            X = Core.GraphicsDevice.PresentationParameters.BackBufferWidth / 2f,
+            Y = 440f,
+            Color = new Color(255, 255, 255, 180)
+        };
+        pressEnterText.Anchor(Gum.Wireframe.Anchor.Center);
+        GumService.Default.Root.AddChild(pressEnterText);
+
+        // Set initial focus to the start button
+        _startButton.IsFocused = true;
+
+        CreateOptionsPanel();
     }
 
-    private void HandleStartClicked(object sender, EventArgs e)
+    protected override void Dispose(bool disposing)
     {
-        // A UI interaction occurred, play the sound effect
-        Core.Audio.PlaySoundEffect(_uiSoundEffect);
+        if (IsDisposed) return;
 
-        // Change to the game scene to start the game.
-        Core.ChangeScene(new GameScene());
-    }
+        if (disposing)
+        {
+            // IMPORTANT: Unsubscribe from events to prevent them from
+            // firing in other scenes.
+            if (_startButton != null) _startButton.Click -= HandleStartClicked;
+            if (_optionsButton != null) _optionsButton.Click -= HandleOptionsClicked;
+            if (_optionsBackButton != null) _optionsBackButton.Click -= HandleOptionsButtonBack;
 
-    private void HandleOptionsClicked(object sender, EventArgs e)
-    {
-        // A UI interaction occurred, play the sound effect
-        Core.Audio.PlaySoundEffect(_uiSoundEffect);
 
-        // Set the title panel to be invisible.
-        _titleScreenButtonsPanel.IsVisible = false;
+            // Remove all UI elements from the global Gum root
+            // to prevent them from capturing input in other scenes.
+            GumService.Default.Root.Children.Clear();
+        }
 
-        // Set the options panel to be visible.
-        _optionsPanel.IsVisible = true;
-
-        // Give the back button on the options panel focus.
-        _optionsBackButton.IsFocused = true;
+        base.Dispose(disposing);
     }
 
     private void CreateOptionsPanel()
     {
-        _optionsPanel = new Panel();
+        _optionsPanel = new Gum.Forms.Controls.Panel();
         _optionsPanel.Dock(Gum.Wireframe.Dock.Fill);
         _optionsPanel.IsVisible = false;
         _optionsPanel.AddToRoot();
@@ -287,7 +326,7 @@ public class TitleScene : Scene
         // track.
 
         // Get a reference to the sender as a Slider.
-        var slider = (Slider)sender;
+        var slider = (Gum.Forms.Controls.Slider)sender;
 
         // Set the global sound effect volume to the value of the slider.;
         Core.Audio.SoundEffectVolume = (float)slider.Value;
@@ -306,7 +345,7 @@ public class TitleScene : Scene
         // track.
 
         // Get a reference to the sender as a Slider.
-        var slider = (Slider)sender;
+        var slider = (Gum.Forms.Controls.Slider)sender;
 
         // Set the global song volume to the value of the slider.
         Core.Audio.SongVolume = (float)slider.Value;
@@ -334,14 +373,49 @@ public class TitleScene : Scene
         _optionsButton.IsFocused = true;
     }
 
-    private void InitializeUI()
+    private void HandleStartClicked(object sender, EventArgs e)
     {
-        // Clear out any previous UI in case we came here from
-        // a different screen:
-        GumService.Default.Root.Children.Clear();
+        // Play UI sound effect
+        Core.Audio.PlaySoundEffect(_uiSoundEffect);
 
-        CreateTitlePanel();
-        CreateOptionsPanel();
+        // Transition to the main game scene
+        Core.ChangeScene(new GameScene());
     }
 
+    private void HandleOptionsClicked(object sender, EventArgs e)
+    {
+        // Play UI sound effect
+        Core.Audio.PlaySoundEffect(_uiSoundEffect);
+
+        // Show the options panel and hide the title buttons panel
+        if (_optionsPanel != null)
+            _optionsPanel.IsVisible = true;
+        if (_titleScreenButtonsPanel != null)
+            _titleScreenButtonsPanel.IsVisible = false;
+    }
+
+    private NineSliceRuntime CreateButtonNineSlice(float width, float height)
+    {
+        // Get the region from your atlas (ensure "button-background" exists in your atlas XML)
+        TextureRegion region = _atlas.GetRegion("unfocused-button");
+
+        var nineSlice = new NineSliceRuntime();
+        nineSlice.Texture = region.Texture;
+        nineSlice.TextureAddress = TextureAddress.Custom;
+        nineSlice.TextureLeft = region.SourceRectangle.Left;
+        nineSlice.TextureTop = region.SourceRectangle.Top;
+        nineSlice.TextureWidth = region.Width;
+        nineSlice.TextureHeight = region.Height;
+        nineSlice.Width = width;
+        nineSlice.Height = height;
+        nineSlice.Dock(Gum.Wireframe.Dock.Fill);
+
+        // Set slice margins (adjust these to match your image's corner thickness)
+        //nineSlice.LeftMargin = 8;
+        //nineSlice.TopMargin = 8;
+        //nineSlice.RightMargin = 8;
+        //nineSlice.BottomMargin = 8;
+
+        return nineSlice;
+    }
 }

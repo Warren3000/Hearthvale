@@ -73,6 +73,18 @@ public abstract class Scene : IDisposable
     public virtual void Draw(GameTime gameTime) { }
 
     /// <summary>
+    /// Draws the world elements of this scene.
+    /// </summary>
+    /// <param name="gameTime">A snapshot of the timing values for the current frame.</param>
+    public virtual void DrawWorld(GameTime gameTime) { }
+
+    /// <summary>
+    /// Draws the UI elements of this scene.
+    /// </summary>
+    /// <param name="gameTime">A snapshot of the timing values for the current frame.</param>
+    public virtual void DrawUI(GameTime gameTime) { }
+
+    /// <summary>
     /// Disposes of this scene.
     /// </summary>
     public void Dispose()

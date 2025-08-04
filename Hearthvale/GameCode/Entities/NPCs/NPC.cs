@@ -1,4 +1,5 @@
 ﻿using Hearthvale.GameCode.Entities.Characters;
+using Hearthvale.GameCode.Entities.Interfaces;
 using Hearthvale.GameCode.Entities.Players;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
@@ -8,16 +9,17 @@ using MonoGameLibrary.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 namespace Hearthvale.GameCode.Entities.NPCs;
 
-public class NPC : Character, INpcDialog, ICombatNpc
+public class NPC : Character, ICombatNpc, IDialog
 {
     private readonly NpcAnimationController _animationController;
     private readonly NpcMovementController _movementController;
     private readonly NpcHealthController _healthController;
 
-    public string DialogText { get; set; } = "Hello, adventurer!";
+    
     public int AttackPower { get; set; } = 1;
     private float _attackCooldown = 1.5f;
     // private float _attackTimer = 0f; // REMOVED: This is now managed by the health controller's stun timer
@@ -88,23 +90,18 @@ public class NPC : Character, INpcDialog, ICombatNpc
         _currentHealth = _healthController.Health;
     }
 
-    public void Update(GameTime gameTime, IEnumerable<NPC> allNpcs, Character player)
+    public void Update(GameTime gameTime, IEnumerable<NPC> allNpcs, Character player, IEnumerable<Rectangle> rectangles)
     {
         float elapsed = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-        // Step 1: Update health and animation states first. This is the highest priority.
         UpdateHealthAndAnimation(elapsed);
 
-        // Step 2: If defeated, do nothing else.
         if (IsDefeated)
-        {
             return;
-        }
 
-        // Step 3: If stunned by a hit, only process knockback. Do not process AI or attacks.
         if (_healthController.IsStunned)
         {
-            _movementController.Update(elapsed, _ => false); // Update knockback but not AI
+            UpdateKnockback(gameTime); // Handles knockback and wall bounce
             _sprite.Position = Position;
             return;
         }
@@ -120,7 +117,7 @@ public class NPC : Character, INpcDialog, ICombatNpc
         }
 
         // Step 5: Process regular movement and AI.
-        UpdateMovement(elapsed, allNpcs, player);
+        UpdateMovement(elapsed, allNpcs, player, rectangles);
         
         // Step 6: Update weapon position and rotation.
         UpdateWeapon(gameTime, player);
@@ -203,37 +200,33 @@ public class NPC : Character, INpcDialog, ICombatNpc
         Sprite.Update(new GameTime(new TimeSpan(), TimeSpan.FromSeconds(elapsed)));
     }
 
-    private void UpdateMovement(float elapsed, IEnumerable<NPC> allNpcs, Character player)
+    public void UpdateMovement(float elapsed, IEnumerable<NPC> allNpcs, Character player, IEnumerable<Rectangle> obstacleRects)
     {
-        _movementController.Update(elapsed, nextPos =>
+        if (_healthController.IsStunned)
+            return;
+
+        Vector2 velocity = _movementController.GetVelocity();
+        if (velocity == Vector2.Zero)
+            return;
+
+        Vector2 candidatePosition = Position + velocity * elapsed;
+
+        // Add player and other NPCs to obstacles
+        var allObstacles = obstacleRects.ToList();
+        if (!player.IsDefeated)
+            allObstacles.Add(player.Bounds);
+
+        foreach (var npc in allNpcs)
         {
-            Rectangle nextBounds = new Rectangle(
-                (int)nextPos.X + 8,
-                (int)nextPos.Y + 16,
-                (int)Sprite.Width / 2,
-                (int)Sprite.Height / 2
-            );
-            if (nextBounds.Intersects(player.Bounds))
-                return true;
-            foreach (var npc in allNpcs)
-            {
-                if (npc == this) continue;
-                if (nextBounds.Intersects(npc.Bounds))
-                    return true;
-            }
-            return false;
-        });
+            if (npc != this && !npc.IsDefeated)
+                allObstacles.Add(npc.Bounds);
+        }
 
-        float spriteWidth = Sprite.Width;
-        float spriteHeight = Sprite.Height;
-        Rectangle bounds = _movementController.Bounds;
-        float clampedX = MathHelper.Clamp(Position.X, bounds.Left, bounds.Right - spriteWidth);
-        float clampedY = MathHelper.Clamp(Position.Y, bounds.Top, bounds.Bottom - spriteHeight);
-        _movementController.Position = new Vector2(clampedX, clampedY);
+        // Prevent movement into any obstacle (walls, dungeon elements, other NPCs, player)
+        if (!TrySetPosition(candidatePosition, allObstacles))
+            return;
 
-        var velocity = _movementController.GetVelocity();
-        if (velocity.X != 0)
-            _facingRight = velocity.X > 0;
+        SetPosition(candidatePosition);
     }
 
     public override void Flash()

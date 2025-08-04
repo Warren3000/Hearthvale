@@ -1,9 +1,9 @@
-namespace Hearthvale.GameCode.Entities.NPCs
+namespace Hearthvale.GameCode.Entities.Interfaces
 {
     /// <summary>
     /// Interface for NPCs that support dialog.
     /// </summary>
-    public interface INpcDialog
+    public interface IDialog
     {
         string DialogText { get; set; }
     }

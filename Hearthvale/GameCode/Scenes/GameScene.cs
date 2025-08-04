@@ -1,10 +1,12 @@
 ﻿using Hearthvale.GameCode.Data;
 using Hearthvale.GameCode.Entities;
+using Hearthvale.GameCode.Entities.Interfaces;
 using Hearthvale.GameCode.Entities.NPCs;
 using Hearthvale.GameCode.Entities.Players;
 using Hearthvale.GameCode.Input;
 using Hearthvale.GameCode.Managers;
 using Hearthvale.GameCode.UI;
+using Hearthvale.GameCode.Utils;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
@@ -16,10 +18,11 @@ using MonoGameLibrary.Scenes;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 namespace Hearthvale.Scenes
 {
-    public class GameScene : Scene
+    public class GameScene : Scene, ICameraProvider
     {
         private Vector2 _playerStart;
 
@@ -60,8 +63,13 @@ namespace Hearthvale.Scenes
         private List<Weapon> _playerWeapons;
         private int _currentPlayerWeaponIndex = 0;
         public Player Player => _player;
+        public CameraManager CameraManager => _cameraManager;
 
         private DebugManager _debugManager;
+
+        private List<Rectangle> allObstacles = new List<Rectangle>();
+
+        private int _wallTileId; // Store wall tile ID for easy access
 
         public override void Initialize()
         {
@@ -88,17 +96,32 @@ namespace Hearthvale.Scenes
             _cameraManager = new CameraManager(_camera);
 
             _dungeonManager = new ProceduralDungeonManager();
-            int wallTileId = ProceduralDungeonManager.DefaultWallTileId;
+            _wallTileId = ProceduralDungeonManager.DefaultWallTileId; // <-- Wire up wallTileId
             _tilemap = ((ProceduralDungeonManager)_dungeonManager).GenerateBasicDungeon(Content);
             _playerStart = ((ProceduralDungeonManager)_dungeonManager).GetPlayerStart(_tilemap);
             Rectangle dungeonBounds = new Rectangle(0, 0, _tilemap.Columns * (int)_tilemap.TileWidth, _tilemap.Rows * (int)_tilemap.TileHeight);
+
+            // Gather dungeon element rectangles
+            var dungeonRects = _dungeonManager.GetAllElements()
+                .Select(e => {
+                    var boundsProp = e.GetType().GetProperty("Bounds");
+                    return boundsProp != null ? (Rectangle)boundsProp.GetValue(e) : Rectangle.Empty;
+                })
+                .Where(r => r != Rectangle.Empty)
+                .ToList();
+
+            // Combine all obstacles
+
+            // Gather wall rectangles using MapUtils
+            var wallRects = MapUtils.GetWallRectangles(_tilemap, _wallTileId);
+            allObstacles = wallRects.Concat(dungeonRects).ToList();
 
             // 1. Create NpcManager with a temporary empty WeaponManager (will be replaced)
             var tempNpcList = new List<NPC>();
             _weaponManager = new WeaponManager(_heroAtlas, _weaponAtlas, dungeonBounds, tempNpcList);
 
             // 2. Now create NpcManager with the real WeaponManager
-            _npcManager = new NpcManager(_heroAtlas, dungeonBounds, _tilemap, wallTileId, _weaponManager, _weaponAtlas, _arrowAtlas);
+            _npcManager = new NpcManager(_heroAtlas, dungeonBounds, _tilemap, _wallTileId, _weaponManager, _weaponAtlas, _arrowAtlas);
             _npcManager.SpawnAllNpcTypesTest();
             _weaponManager = new WeaponManager(_heroAtlas, _weaponAtlas, dungeonBounds, _npcManager.Npcs as List<NPC>);
 
@@ -106,10 +129,7 @@ namespace Hearthvale.Scenes
             var scoreTextPosition = new Vector2(dungeonBounds.Left, _tilemap.TileHeight * 1f);
             var scoreTextOrigin = new Vector2(0, _font.MeasureString("Score").Y * 0.5f);
             _scoreManager = new ScoreManager(_font, scoreTextPosition, scoreTextOrigin);
-            _uiManager = new GameUIManager(
-                _atlas, _font, _debugFont,
-                () => _uiManager.ResumeGame(_uiSoundEffect),
-                () => _uiManager.QuitGame(_uiSoundEffect, () => Core.ChangeScene(new TitleScene()))
+            _uiManager = new GameUIManager(_atlas, _font, _debugFont, () => _uiManager.ResumeGame(_uiSoundEffect), () => _uiManager.QuitGame(_uiSoundEffect, () => Core.ChangeScene(new TitleScene()))
             );
 
             _combatEffectsManager = new CombatEffectsManager(_camera);
@@ -135,8 +155,7 @@ namespace Hearthvale.Scenes
             _dialogManager = new DialogManager(_uiManager, _player, _npcManager.Characters, dialogDistance);
             _inputHandler = new InputHandler(
                 _camera, MOVEMENT_SPEED,
-                () => _uiManager.PauseGame(),
-                (movement) => _player.Move(movement, dungeonBounds, _player.Sprite.Width, _player.Sprite.Height, _npcManager.Npcs, _tilemap, wallTileId),
+                (movement) => _player.Move(movement, dungeonBounds, _player.Sprite.Width, _player.Sprite.Height, _npcManager.Npcs, _tilemap, _wallTileId, allObstacles ?? new List<Rectangle>()),
                 () =>
                 {
                     // Get player's swing radius (weapon length or default)
@@ -155,7 +174,6 @@ namespace Hearthvale.Scenes
 
                     _npcManager.SpawnNPC("DefaultNPCType", spawnPos);
                 },
-                () => Core.ChangeScene(new TitleScene()),
                 () => _player.CombatController.StartProjectileAttack(),
                 () => _player.CombatController.StartMeleeAttack(),
                 RotatePlayerWeaponLeft,
@@ -192,17 +210,40 @@ namespace Hearthvale.Scenes
         {
             GumService.Default.Update(gameTime);
 
-            if (_uiManager.IsDialogOpen && InputHandler.IsKeyPressed(Keys.Enter))
+            // Toggle UI debug grid with F9
+            if (Core.Input.Keyboard.WasKeyJustPressed(Keys.F9))
             {
-                _uiManager.HideDialog();
+                _debugManager.ShowUIDebugGrid = !_debugManager.ShowUIDebugGrid;
             }
 
-            if (_uiManager.IsPausePanelVisible)
+            // Handle Pause/Unpause
+            if (Core.Input.Keyboard.WasKeyJustPressed(Keys.Escape))
+            {
+                if (_uiManager.IsPausePanelVisible)
+                    _uiManager.ResumeGame(_uiSoundEffect);
+                else
+                    _uiManager.PauseGame();
+            }
+
+            // Dialog close with Enter
+            if (_uiManager.IsDialogOpen && Core.Input.Keyboard.WasKeyJustPressed(Keys.Enter))
+            {
+                _uiManager.HideDialog();
                 return;
+            }
+
+            // If pause panel is visible, let Gum handle the input.
+            if (_uiManager.IsPausePanelVisible)
+            {
+                // The GumService.Default.Update call at the top of this method
+                // will handle Enter/Space presses on the focused button.
+                // We return here to prevent any other game logic from running while paused.
+                return;
+            }
 
             _inputHandler.Update(gameTime);
             _player.Update(gameTime, _npcManager.Npcs);
-            _npcManager.Update(gameTime, _player);
+            _npcManager.Update(gameTime, _player, allObstacles);
             _combatManager.Update(gameTime);
             _combatEffectsManager.Update(gameTime);
             _dialogManager.Update();
@@ -222,6 +263,16 @@ namespace Hearthvale.Scenes
             _camera.FollowWithMargin(_player.Position, margin, 0.1f);
             _camera.ClampToMap(_tilemap.Columns, _tilemap.Rows, (int)_tilemap.TileWidth);
             _camera.Update(gameTime);
+
+
+            // Update player movement
+            _player.Move(
+                _inputHandler.GetMovement(), dungeonBounds, _player.Sprite.Width, _player.Sprite.Height,
+                _npcManager.Npcs, _tilemap, _wallTileId, allObstacles ?? new List<Rectangle>());
+
+            // Update NPCs
+            foreach (var npc in _npcManager.Npcs)
+                npc.Update(gameTime, _npcManager.Npcs, _player, allObstacles);
         }
 
         public void UpdateViewport(Viewport viewport)
@@ -229,52 +280,59 @@ namespace Hearthvale.Scenes
             _viewport = viewport;
         }
 
-        public override void Draw(GameTime gameTime)
+        public override void DrawWorld(GameTime gameTime)
         {
-            Core.SpriteBatch.End();
-            Matrix transform = _camera.GetViewMatrix();
-            Core.SpriteBatch.Begin(transformMatrix: transform, samplerState: SamplerState.PointClamp);
-
             // Draw procedural tilemap
             _tilemap.Draw(Core.SpriteBatch);
 
-            Core.SpriteBatch.End();
-            Core.SpriteBatch.Begin(samplerState: SamplerState.PointClamp);
+            // Draw entities
+            _player.Draw(Core.SpriteBatch);
+            foreach (var npc in _npcManager.Npcs)
+                npc.Draw(Core.SpriteBatch);
 
+            // Draw debug overlays that should follow the camera
+            _uiManager.DrawDungeonElementCollisionBoxes(Core.SpriteBatch, _dungeonManager.GetAllElements(), _camera.GetViewMatrix());
+            _debugManager.Draw(Core.SpriteBatch, _player, _npcManager.Npcs, _tilemap, ProceduralDungeonManager.DefaultWallTileId, _dungeonManager.GetAllElements(), _camera.GetViewMatrix());
+        }
+
+        public override void DrawUI(GameTime gameTime)
+        {
+            GumService.Default.Draw();
+            // Draw UI in screen space (no camera transform)
             _uiManager.DrawPlayerHealthBar(Core.SpriteBatch, _player, new Vector2(20, 20), new Vector2(100, 12));
             _scoreManager.Draw(Core.SpriteBatch);
             _uiManager.DrawDebugInfo(Core.SpriteBatch, gameTime, _player.Position, _camera.Position, _viewport);
-            _uiManager.DrawDungeonElementCollisionBoxes(Core.SpriteBatch, _dungeonManager.GetAllElements(), _camera.GetViewMatrix());
 
-            Core.SpriteBatch.End();
-            Core.SpriteBatch.Begin(transformMatrix: _camera.GetViewMatrix(), samplerState: SamplerState.PointClamp);
-
-            // Draw entities
-            _player.Draw(Core.SpriteBatch);
-
-            foreach (var npc in _npcManager.Npcs)
+            // Draw the UI debug grid if enabled
+            if (_debugManager?.ShowUIDebugGrid == true)
             {
-                npc.Draw(Core.SpriteBatch);
+                _debugManager.DrawUIDebugGrid(Core.SpriteBatch, Core.GraphicsDevice.Viewport, 40, 40, Color.Black * 0.25f, _debugFont);
+            }
+        }
+
+        // Optionally, override Draw to do nothing or throw NotImplementedException
+        public override void Draw(GameTime gameTime)
+        {
+            // Intentionally left blank; use DrawWorld and DrawUI instead.
+        }
+
+        public Matrix GetViewMatrix()
+        {
+            return _cameraManager.GetViewMatrix();
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (IsDisposed) return;
+
+            if (disposing)
+            {
+                // Remove all UI elements from the global Gum root
+                // to prevent them from capturing input in other scenes.
+                GumService.Default.Root.Children.Clear();
             }
 
-            if (Core.Input.Keyboard.WasKeyJustPressed(Keys.F3))
-                _debugManager.DebugDrawEnabled = !_debugManager.DebugDrawEnabled;
-            if (Core.Input.Keyboard.WasKeyJustPressed(Keys.F4))
-                _debugManager.ShowCollisionBoxes = !_debugManager.ShowCollisionBoxes;
-            if (Core.Input.Keyboard.WasKeyJustPressed(Keys.F5))
-                _debugManager.ShowAttackAreas = !_debugManager.ShowAttackAreas;
-
-            _debugManager.Draw(
-            Core.SpriteBatch,
-            _player,
-            _npcManager.Npcs,
-            _tilemap,
-            ProceduralDungeonManager.DefaultWallTileId,
-            _dungeonManager.GetAllElements(),
-            _camera.GetViewMatrix()
-);
-
-            GumService.Default.Draw();
+            base.Dispose(disposing);
         }
     }
 }

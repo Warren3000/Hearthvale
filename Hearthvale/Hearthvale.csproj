@@ -47,7 +47,7 @@
     <Content Include="Content\Tilesets\DampDungeons\Tiles\Dungeon_WaterAnimation.png" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Gum.MonoGame" Version="2025.5.1.1" />
+    <PackageReference Include="Gum.MonoGame" Version="2025.8.3.1" />
     <PackageReference Include="MonoGame.Extended" Version="4.1.0" />
     <PackageReference Include="MonoGame.Extended.Content.Pipeline" Version="4.1.0" />
     <PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.8.*" />

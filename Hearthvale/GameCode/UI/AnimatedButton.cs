@@ -1,5 +1,6 @@
 ﻿using Gum.DataTypes;
 using Gum.DataTypes.Variables;
+using Gum.Forms.Controls;
 using Gum.Graphics.Animation;
 using Gum.Managers;
 using Microsoft.Xna.Framework.Input;
@@ -14,7 +15,7 @@ namespace Hearthvale.GameCode.UI;
 /// A custom button implementation that inherits from Gum's Button class to provide
 /// animated visual feedback when focused.
 /// </summary>
-internal class AnimatedButton : Button
+public class AnimatedButton : Gum.Forms.Controls.Button
 {
     /// <summary>
     /// Creates a new AnimatedButton instance using graphics from the specified texture atlas.

@@ -165,11 +165,16 @@ public class Core : Game
     {
         GraphicsDevice.Clear(Color.CornflowerBlue);
 
-        SpriteBatch.Begin(samplerState: SamplerState.PointClamp);
+        // Use GetViewMatrix() from ICameraProvider
+        Matrix cameraMatrix = (CurrentScene as ICameraProvider)?.GetViewMatrix() ?? Matrix.Identity;
 
-        // If there is an active scene, draw it.
-        s_activeScene?.Draw(gameTime);
+        SpriteBatch.Begin(transformMatrix: cameraMatrix, samplerState: SamplerState.PointClamp);
+        s_activeScene?.DrawWorld(gameTime);
+        SpriteBatch.End();
 
+        // Draw UI (screen space, no transform)
+        SpriteBatch.Begin(SpriteSortMode.BackToFront, BlendState.AlphaBlend, samplerState: SamplerState.PointClamp);
+        s_activeScene?.DrawUI(gameTime);
         SpriteBatch.End();
 
         base.Draw(gameTime);
@@ -211,3 +216,4 @@ public class Core : Game
         }
     }
 }
+
