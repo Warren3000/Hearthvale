@@ -22,6 +22,8 @@ public class DebugManager
     public bool ShowAttackAreas { get; set; } = true;
     public bool ShowUIOverlay { get; set; } = true;
     public bool ShowUIDebugGrid { get; set; } = false;
+    public bool ShowDungeonElements { get; set; } = true;
+    public bool ShowWallCollisions { get; set; } = true;
 
     private readonly Texture2D _whitePixel;
 
@@ -38,11 +40,15 @@ public class DebugManager
         ShowCollisionBoxes = true;
         ShowAttackAreas = true;
         ShowUIOverlay = true;
+        ShowDungeonElements = true;
+        ShowWallCollisions = true;
 #else
         DebugDrawEnabled = false;
         ShowCollisionBoxes = false;
         ShowAttackAreas = false;
         ShowUIOverlay = false;
+        ShowDungeonElements = false;
+        ShowWallCollisions = false;
 #endif
     }
 
@@ -51,9 +57,70 @@ public class DebugManager
     /// </summary>
     public static void Initialize(Texture2D whitePixel)
     {
-
         _instance = new DebugManager(whitePixel);
+    }
 
+    /// <summary>
+    /// Disables all debug drawing features. Useful for clean gameplay.
+    /// </summary>
+    public void DisableAllDebugDrawing()
+    {
+        DebugDrawEnabled = false;
+        ShowCollisionBoxes = false;
+        ShowAttackAreas = false;
+        ShowDungeonElements = false;
+        ShowWallCollisions = false;
+        ShowUIDebugGrid = false;
+    }
+
+    /// <summary>
+    /// Enables all debug drawing features. Useful for development.
+    /// </summary>
+    public void EnableAllDebugDrawing()
+    {
+        DebugDrawEnabled = true;
+        ShowCollisionBoxes = true;
+        ShowAttackAreas = true;
+        ShowDungeonElements = true;
+        ShowWallCollisions = true;
+        ShowUIDebugGrid = false; // Keep this off by default as it can be intrusive
+    }
+
+    /// <summary>
+    /// Sets debug drawing to game mode (minimal debug info).
+    /// </summary>
+    public void SetGameMode()
+    {
+        DebugDrawEnabled = true;
+        ShowCollisionBoxes = false;
+        ShowAttackAreas = false;
+        ShowDungeonElements = false;
+        ShowWallCollisions = false;
+        ShowUIDebugGrid = false;
+        ShowUIOverlay = true; // Keep UI overlay for debug info
+    }
+
+    /// <summary>
+    /// Sets debug drawing to development mode (full debug info).
+    /// </summary>
+    public void SetDevelopmentMode()
+    {
+        EnableAllDebugDrawing();
+    }
+
+    /// <summary>
+    /// Toggles between game mode and development mode.
+    /// </summary>
+    public void ToggleDebugMode()
+    {
+        if (ShowCollisionBoxes || ShowAttackAreas || ShowDungeonElements)
+        {
+            SetGameMode();
+        }
+        else
+        {
+            SetDevelopmentMode();
+        }
     }
 
     public void Draw(SpriteBatch spriteBatch, Player player, IEnumerable<NPC> npcs, Tilemap tilemap, int wallTileId, IEnumerable<IDungeonElement> elements, Matrix viewMatrix)
@@ -67,22 +134,27 @@ public class DebugManager
                 DrawRect(spriteBatch, npc.Bounds, Color.Red * 0.5f);
 
             // Wall collision boxes
-            for (int row = 0; row < tilemap.Rows; row++)
+            if (ShowWallCollisions)
             {
-                for (int col = 0; col < tilemap.Columns; col++)
+                for (int row = 0; row < tilemap.Rows; row++)
                 {
-                    if (tilemap.GetTileId(col, row) == wallTileId)
+                    for (int col = 0; col < tilemap.Columns; col++)
                     {
-                        var rect = new Rectangle(
-                            (int)(col * tilemap.TileWidth),
-                            (int)(row * tilemap.TileHeight),
-                            (int)tilemap.TileWidth,
-                            (int)tilemap.TileHeight
-                        );
+                        if (tilemap.GetTileId(col, row) == wallTileId)
+                        {
+                            var rect = new Rectangle(
+                                (int)(col * tilemap.TileWidth),
+                                (int)(row * tilemap.TileHeight),
+                                (int)tilemap.TileWidth,
+                                (int)tilemap.TileHeight
+                            );
+                            DrawRect(spriteBatch, rect, Color.Blue * 0.3f);
+                        }
                     }
                 }
             }
         }
+
         if (ShowAttackAreas)
         {
             // Draw players' sword swing arcs
@@ -120,22 +192,26 @@ public class DebugManager
                 }
             }
         }
+
         // Dungeon element collision boxes
-        foreach (var element in elements)
+        if (ShowDungeonElements)
         {
-            var boundsProperty = element.GetType().GetProperty("Bounds");
-            if (boundsProperty != null)
+            foreach (var element in elements)
             {
-                var bounds = (Rectangle)boundsProperty.GetValue(element);
-                var topLeft = Vector2.Transform(new Vector2(bounds.X, bounds.Y), viewMatrix);
-                var bottomRight = Vector2.Transform(new Vector2(bounds.Right, bounds.Bottom), viewMatrix);
-                var screenRect = new Rectangle(
-                    (int)topLeft.X,
-                    (int)topLeft.Y,
-                    (int)(bottomRight.X - topLeft.X),
-                    (int)(bottomRight.Y - topLeft.Y)
-                );
-                DrawRect(spriteBatch, screenRect, Color.Red * 0.5f);
+                var boundsProperty = element.GetType().GetProperty("Bounds");
+                if (boundsProperty != null)
+                {
+                    var bounds = (Rectangle)boundsProperty.GetValue(element);
+                    var topLeft = Vector2.Transform(new Vector2(bounds.X, bounds.Y), viewMatrix);
+                    var bottomRight = Vector2.Transform(new Vector2(bounds.Right, bounds.Bottom), viewMatrix);
+                    var screenRect = new Rectangle(
+                        (int)topLeft.X,
+                        (int)topLeft.Y,
+                        (int)(bottomRight.X - topLeft.X),
+                        (int)(bottomRight.Y - topLeft.Y)
+                    );
+                    DrawRect(spriteBatch, screenRect, Color.Red * 0.5f);
+                }
             }
         }
 

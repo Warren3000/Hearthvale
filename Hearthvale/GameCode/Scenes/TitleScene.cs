@@ -75,8 +75,6 @@ public class TitleScene : Scene
     private Gum.Forms.Controls.Panel _titleScreenButtonsPanel;
     private Gum.Forms.Controls.Panel _optionsPanel;
 
-    private DebugManager _debugManager;
-
     private AnimatedButton _startButton;
 
     public override void Initialize()
@@ -163,7 +161,7 @@ public class TitleScene : Scene
 
         if (InputHandler.Instance.WasDebugGridTogglePressed())
         {
-            _debugManager.ShowUIDebugGrid = !_debugManager.ShowUIDebugGrid;
+            DebugManager.Instance.ShowUIDebugGrid = DebugManager.Instance.ShowUIDebugGrid;
         }
 
         //if (GameUIManager.Instance.IsDialogOpen && InputHandler.Instance.WasDialogAdvancePressed())
@@ -185,9 +183,9 @@ public class TitleScene : Scene
         GumService.Default.Draw();
 
         // Draw the UI debug grid if enabled
-        if (_debugManager?.ShowUIDebugGrid == true)
+        if (DebugManager.Instance.ShowUIDebugGrid == true)
         {
-            _debugManager.DrawTitleScreen(Core.SpriteBatch); // Use title-specific method
+            DebugManager.Instance.DrawTitleScreen(Core.SpriteBatch); // Use title-specific method
         }
     }
     private void InitializeUI()

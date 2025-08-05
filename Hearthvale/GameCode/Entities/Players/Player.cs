@@ -30,6 +30,7 @@ namespace Hearthvale.GameCode.Entities.Players
         private readonly float _movementSpeed;
         public Vector2 LastMovementDirection => _lastMovementDirection;
         public PlayerCombatController CombatController => _combatController;
+        public override int Health => _currentHealth;
         public int CurrentHealth => _currentHealth;
 
         public override AnimatedSprite Sprite => _sprite;
@@ -166,6 +167,65 @@ namespace Hearthvale.GameCode.Entities.Players
         protected override bool ShouldDrawWeaponBehind()
         {
             return LastMovementDirection.Y < 0;
+        }
+
+        // Add these fields to store obstacle information
+        private IEnumerable<Rectangle> _currentObstacles;
+        private IEnumerable<NPC> _currentNpcs;
+
+        /// <summary>
+        /// Updates the obstacle references for knockback collision detection.
+        /// Call this from the game scene when obstacles change.
+        /// </summary>
+        public void UpdateObstacles(IEnumerable<Rectangle> obstacleRects, IEnumerable<NPC> npcs)
+        {
+            _currentObstacles = obstacleRects;
+            _currentNpcs = npcs;
+        }
+
+        protected override IEnumerable<Rectangle> GetObstacleRectangles()
+        {
+            var obstacles = new List<Rectangle>();
+            
+            // Add static obstacles
+            if (_currentObstacles != null)
+            {
+                obstacles.AddRange(_currentObstacles);
+            }
+            
+            // Add NPC bounds (except defeated ones)
+            if (_currentNpcs != null)
+            {
+                foreach (var npc in _currentNpcs)
+                {
+                    if (!npc.IsDefeated)
+                    {
+                        obstacles.Add(npc.Bounds);
+                    }
+                }
+            }
+            
+            return obstacles;
+        }
+        private bool TrySetPosition(Vector2 candidate, IEnumerable<Rectangle> obstacles)
+        {
+            // Check if candidate position would collide with any obstacle
+            Rectangle candidateBounds = new Rectangle(
+                (int)candidate.X + 8,
+                (int)candidate.Y + 16,
+                (int)Sprite.Width / 2,
+                (int)Sprite.Height / 2
+            );
+
+            foreach (var obstacle in obstacles)
+            {
+                if (candidateBounds.Intersects(obstacle))
+                    return false;
+            }
+
+            // If no collision, set the position
+            _position = candidate;
+            return true;
         }
     }
     }

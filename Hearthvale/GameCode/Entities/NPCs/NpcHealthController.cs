@@ -20,6 +20,7 @@ namespace Hearthvale.GameCode.Entities.NPCs
         public bool IsDefeated => _isDefeated;
         public bool IsReadyToRemove { get; private set; }
         public int Health => _currentHealth;
+        public int MaxHealth => _maxHealth; // ADD THIS PROPERTY
         public bool IsStunned => _stunTimer > 0f;
         public bool IsOnCooldown => _hitTimer > 0f || _stunTimer > 0f || _attackCooldownTimer > 0f;
 

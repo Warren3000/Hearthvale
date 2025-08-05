@@ -20,7 +20,7 @@ public abstract class Character : IDamageable, IMovable, IAnimatable, IDialog
     public virtual AnimatedSprite Sprite => _sprite;
     public virtual Vector2 Position => _position;
     public virtual int Health => _currentHealth;
-    public int MaxHealth => _maxHealth;
+    public virtual int MaxHealth => _maxHealth;
     public virtual bool IsDefeated => _currentHealth <= 0;
     public bool FacingRight
     {
@@ -212,112 +212,12 @@ public abstract class Character : IDamageable, IMovable, IAnimatable, IDialog
             _knockbackTimer -= elapsed;
             Vector2 nextPosition = Position + _knockbackVelocity * elapsed;
 
-            if (Tilemap != null && WallTileId != -1)
+            // Check for collision and handle bouncing
+            if (!TryMoveWithBounce(nextPosition, elapsed))
             {
-                Rectangle candidateBounds = new Rectangle(
-                    (int)nextPosition.X + 8,
-                    (int)nextPosition.Y + 16,
-                    (int)Sprite.Width / 2,
-                    (int)Sprite.Height / 2
-                );
-
-                bool collided = false;
-                int leftTile = candidateBounds.Left / (int)Tilemap.TileWidth;
-                int rightTile = (candidateBounds.Right - 1) / (int)Tilemap.TileWidth;
-                int topTile = candidateBounds.Top / (int)Tilemap.TileHeight;
-                int bottomTile = (candidateBounds.Bottom - 1) / (int)Tilemap.TileHeight;
-
-                for (int col = leftTile; col <= rightTile; col++)
-                {
-                    for (int row = topTile; row <= bottomTile; row++)
-                    {
-                        int tileId = Tilemap.GetTileId(col, row);
-                        if (tileId == WallTileId)
-                        {
-                            collided = true;
-                            break;
-                        }
-                    }
-                    if (collided) break;
-                }
-
-                if (collided)
-                {
-                    Vector2 oldPosition = Position;
-
-                    // Try X axis
-                    Vector2 testX = new Vector2(nextPosition.X, oldPosition.Y);
-                    Rectangle boundsX = new Rectangle(
-                        (int)testX.X + 8,
-                        (int)testX.Y + 16,
-                        (int)Sprite.Width / 2,
-                        (int)Sprite.Height / 2
-                    );
-                    bool xBlocked = false;
-                    leftTile = boundsX.Left / (int)Tilemap.TileWidth;
-                    rightTile = (boundsX.Right - 1) / (int)Tilemap.TileWidth;
-                    topTile = boundsX.Top / (int)Tilemap.TileHeight;
-                    bottomTile = (boundsX.Bottom - 1) / (int)Tilemap.TileHeight;
-                    for (int col = leftTile; col <= rightTile; col++)
-                    {
-                        for (int row = topTile; row <= bottomTile; row++)
-                        {
-                            int tileId = Tilemap.GetTileId(col, row);
-                            if (tileId == WallTileId)
-                            {
-                                xBlocked = true;
-                                break;
-                            }
-                        }
-                        if (xBlocked) break;
-                    }
-
-                    // Try Y axis
-                    Vector2 testY = new Vector2(oldPosition.X, nextPosition.Y);
-                    Rectangle boundsY = new Rectangle(
-                        (int)testY.X + 8,
-                        (int)testY.Y + 16,
-                        (int)Sprite.Width / 2,
-                        (int)Sprite.Height / 2
-                    );
-                    bool yBlocked = false;
-                    leftTile = boundsY.Left / (int)Tilemap.TileWidth;
-                    rightTile = (boundsY.Right - 1) / (int)Tilemap.TileWidth;
-                    topTile = boundsY.Top / (int)Tilemap.TileHeight;
-                    bottomTile = (boundsY.Bottom - 1) / (int)Tilemap.TileHeight;
-                    for (int col = leftTile; col <= rightTile; col++)
-                    {
-                        for (int row = topTile; row <= bottomTile; row++)
-                        {
-                            int tileId = Tilemap.GetTileId(col, row);
-                            if (tileId == WallTileId)
-                            {
-                                yBlocked = true;
-                                break;
-                            }
-                        }
-                        if (yBlocked) break;
-                    }
-
-                    if (xBlocked) _knockbackVelocity.X = -_knockbackVelocity.X * BounceDamping;
-                    if (yBlocked) _knockbackVelocity.Y = -_knockbackVelocity.Y * BounceDamping;
-
-                    SetPosition(oldPosition);
-
-                    if (_knockbackVelocity.LengthSquared() < 1f)
-                    {
-                        _knockbackVelocity = Vector2.Zero;
-                        _knockbackTimer = 0;
-                    }
-                }
-                else
-                {
-                    SetPosition(nextPosition);
-                }
-            }
-            else
-            {
-                SetPosition(Position + _knockbackVelocity * elapsed);
+                // If we can't move, stop knockback
+                _knockbackVelocity = Vector2.Zero;
+                _knockbackTimer = 0;
             }
 
             if (_knockbackTimer <= 0)
@@ -328,40 +228,220 @@ public abstract class Character : IDamageable, IMovable, IAnimatable, IDialog
     }
 
     /// <summary>
-    /// Checks if the character's bounds would overlap any of the provided rectangles.
+    /// Attempts to move to the new position, handling wall and obstacle bouncing.
+    /// Returns true if movement was successful (with or without bouncing), false if completely blocked.
     /// </summary>
-    /// <param name="candidatePosition">The position to test.</param>
-    /// <param name="obstacleBounds">A collection of rectangles representing obstacles.</param>
-    /// <returns>True if collision detected, false otherwise.</returns>
-    public bool WouldCollide(Vector2 candidatePosition, IEnumerable<Rectangle> obstacleBounds)
+    private bool TryMoveWithBounce(Vector2 nextPosition, float elapsed)
     {
-        Rectangle candidateRect = new Rectangle(
-            (int)candidatePosition.X + 8,
-            (int)candidatePosition.Y + 16,
-            (int)Sprite.Width / 2,
-            (int)Sprite.Height / 2
-        );
-
-        foreach (var rect in obstacleBounds)
+        Vector2 currentPos = Position;
+        Rectangle nextBounds = GetBoundsAtPosition(nextPosition);
+        
+        // Check for wall collision first
+        bool hitWall = false;
+        Vector2 wallBounce = Vector2.Zero;
+        
+        if (Tilemap != null && WallTileId != -1)
         {
-            if (candidateRect.Intersects(rect))
-                return true;
+            hitWall = CheckWallCollisionAndBounce(nextBounds, out wallBounce);
         }
-        return false;
+        
+        // Check for obstacle collision
+        bool hitObstacle = false;
+        Vector2 obstacleBounce = Vector2.Zero;
+        
+        // Get all obstacle rectangles (this should be provided by the game scene)
+        var obstacles = GetObstacleRectangles();
+        if (obstacles != null)
+        {
+            hitObstacle = CheckObstacleCollisionAndBounce(nextBounds, obstacles, out obstacleBounce);
+        }
+
+        // Apply bouncing
+        if (hitWall || hitObstacle)
+        {
+            // Combine bounce vectors if we hit multiple things
+            Vector2 totalBounce = wallBounce + obstacleBounce;
+            
+            // Apply bounce to velocity with damping
+            _knockbackVelocity += totalBounce * BounceDamping;
+            
+            // Try to move in a safe direction
+            Vector2 safePosition = FindSafePosition(currentPos, nextPosition);
+            SetPosition(safePosition);
+            
+            // If velocity is too small after bouncing, stop knockback
+            if (_knockbackVelocity.LengthSquared() < 10f)
+            {
+                return false;
+            }
+            
+            return true;
+        }
+        else
+        {
+            // No collision, move normally
+            SetPosition(nextPosition);
+            return true;
+        }
     }
 
     /// <summary>
-    /// Attempts to set the character's position, blocking movement if it would collide with any obstacles.
+    /// Gets the character's bounds at a specific position.
     /// </summary>
-    /// <param name="pos">The desired position.</param>
-    /// <param name="obstacleBounds">A collection of rectangles representing obstacles.</param>
-    /// <returns>True if movement succeeded, false if blocked.</returns>
-    public bool TrySetPosition(Vector2 pos, IEnumerable<Rectangle> obstacleBounds)
+    private Rectangle GetBoundsAtPosition(Vector2 position)
     {
-        if (WouldCollide(pos, obstacleBounds))
-            return false;
+        return new Rectangle(
+            (int)position.X + 8,
+            (int)position.Y + 16,
+            (int)Sprite.Width / 2,
+            (int)Sprite.Height / 2
+        );
+    }
 
-        SetPosition(pos);
-        return true;
+    /// <summary>
+    /// Checks for wall collision and calculates bounce vector.
+    /// </summary>
+    private bool CheckWallCollisionAndBounce(Rectangle bounds, out Vector2 bounceVector)
+    {
+        bounceVector = Vector2.Zero;
+        
+        int leftTile = bounds.Left / (int)Tilemap.TileWidth;
+        int rightTile = (bounds.Right - 1) / (int)Tilemap.TileWidth;
+        int topTile = bounds.Top / (int)Tilemap.TileHeight;
+        int bottomTile = (bounds.Bottom - 1) / (int)Tilemap.TileHeight;
+
+        bool hitWall = false;
+        bool hitHorizontalWall = false;
+        bool hitVerticalWall = false;
+
+        for (int col = leftTile; col <= rightTile; col++)
+        {
+            for (int row = topTile; row <= bottomTile; row++)
+            {
+                if (col >= 0 && col < Tilemap.Columns && row >= 0 && row < Tilemap.Rows)
+                {
+                    int tileId = Tilemap.GetTileId(col, row);
+                    if (tileId == WallTileId)
+                    {
+                        hitWall = true;
+                        
+                        // Determine which side of the wall we hit
+                        Rectangle wallRect = new Rectangle(
+                            col * (int)Tilemap.TileWidth,
+                            row * (int)Tilemap.TileHeight,
+                            (int)Tilemap.TileWidth,
+                            (int)Tilemap.TileHeight
+                        );
+                        
+                        // Check overlap amounts to determine bounce direction
+                        int overlapLeft = bounds.Right - wallRect.Left;
+                        int overlapRight = wallRect.Right - bounds.Left;
+                        int overlapTop = bounds.Bottom - wallRect.Top;
+                        int overlapBottom = wallRect.Bottom - bounds.Top;
+                        
+                        // Determine primary collision direction
+                        int minHorizontal = Math.Min(overlapLeft, overlapRight);
+                        int minVertical = Math.Min(overlapTop, overlapBottom);
+                        
+                        if (minHorizontal < minVertical)
+                        {
+                            hitVerticalWall = true;
+                        }
+                        else
+                        {
+                            hitHorizontalWall = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (hitWall)
+        {
+            if (hitVerticalWall)
+                bounceVector.X = -_knockbackVelocity.X * 1.5f; // Reverse and amplify X
+            if (hitHorizontalWall)
+                bounceVector.Y = -_knockbackVelocity.Y * 1.5f; // Reverse and amplify Y
+        }
+
+        return hitWall;
+    }
+
+    /// <summary>
+    /// Checks for obstacle collision and calculates bounce vector.
+    /// </summary>
+    private bool CheckObstacleCollisionAndBounce(Rectangle bounds, IEnumerable<Rectangle> obstacles, out Vector2 bounceVector)
+    {
+        bounceVector = Vector2.Zero;
+        bool hitObstacle = false;
+        
+        foreach (var obstacle in obstacles)
+        {
+            if (bounds.Intersects(obstacle))
+            {
+                hitObstacle = true;
+                
+                // Calculate bounce direction based on overlap
+                Vector2 obstacleCenter = obstacle.Center.ToVector2();
+                Vector2 characterCenter = bounds.Center.ToVector2();
+                Vector2 direction = characterCenter - obstacleCenter;
+                
+                if (direction.LengthSquared() > 0)
+                {
+                    direction.Normalize();
+                    bounceVector += direction * _knockbackVelocity.Length() * 0.8f;
+                }
+            }
+        }
+        
+        return hitObstacle;
+    }
+
+    /// <summary>
+    /// Finds a safe position when collision is detected.
+    /// </summary>
+    private Vector2 FindSafePosition(Vector2 currentPos, Vector2 targetPos)
+    {
+        // Try to find a position that doesn't collide
+        Vector2 direction = targetPos - currentPos;
+        
+        // Try stepping back along the movement direction
+        for (float step = 0.1f; step <= 1.0f; step += 0.1f)
+        {
+            Vector2 testPos = currentPos + direction * (1.0f - step);
+            Rectangle testBounds = GetBoundsAtPosition(testPos);
+            
+            bool safe = true;
+            
+            // Check walls
+            if (Tilemap != null && WallTileId != -1)
+            {
+                if (CheckWallCollisionAndBounce(testBounds, out _))
+                    safe = false;
+            }
+            
+            // Check obstacles
+            var obstacles = GetObstacleRectangles();
+            if (obstacles != null && safe)
+            {
+                if (CheckObstacleCollisionAndBounce(testBounds, obstacles, out _))
+                    safe = false;
+            }
+            
+            if (safe)
+                return testPos;
+        }
+        
+        // Fallback to current position
+        return currentPos;
+    }
+
+    /// <summary>
+    /// Override this in derived classes to provide obstacle rectangles for collision detection.
+    /// This should include dungeon elements, other characters, etc.
+    /// </summary>
+    protected virtual IEnumerable<Rectangle> GetObstacleRectangles()
+    {
+        return null; // Base implementation returns no obstacles
     }
 }

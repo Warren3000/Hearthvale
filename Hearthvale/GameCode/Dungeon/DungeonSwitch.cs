@@ -2,65 +2,132 @@
 using Microsoft.Xna.Framework.Graphics;
 using System;
 
-public class DungeonSwitch : IActivatorElement, IDungeonElement
+/// <summary>
+/// Types of switches available in dungeons.
+/// </summary>
+public enum SwitchType
+{
+    Toggle,      // Stays activated until toggled again
+    Timed,       // Activates for a duration then resets
+    Sequence     // Part of a sequence puzzle
+}
+
+/// <summary>
+/// Interactive switch element that can activate other dungeon elements.
+/// </summary>
+public class DungeonSwitch : IActivatorElement
 {
     public string Id { get; }
     public bool IsActive { get; private set; }
-
-    // Tilemap properties
+    public SwitchType Type { get; }
     public int Column { get; }
     public int Row { get; }
     public int InactiveTileId { get; }
     public int ActiveTileId { get; }
+    public float Duration { get; }
 
-    /// <summary>
-    /// Event triggered when the switch is activated.
-    /// </summary>
+    private float _activeTimer;
+    private bool _canActivate = true;
+
     public event Action OnActivated;
 
     /// <summary>
-    /// Event triggered when the switch's state changes, indicating the tilemap should be updated.
-    /// Parameters are: column, row, newTileId.
+    /// Creates a new dungeon switch.
     /// </summary>
-    public event Action<int, int, int> OnTileChanged;
-
-    public DungeonSwitch(string id, int column, int row, int inactiveTileId, int activeTileId)
+    /// <param name="id">Unique identifier for the switch.</param>
+    /// <param name="column">Column position in the tilemap.</param>
+    /// <param name="row">Row position in the tilemap.</param>
+    /// <param name="inactiveTileId">Tile ID when switch is inactive.</param>
+    /// <param name="activeTileId">Tile ID when switch is active.</param>
+    /// <param name="type">Type of switch behavior.</param>
+    /// <param name="duration">Duration for timed switches (in seconds).</param>
+    public DungeonSwitch(string id, int column, int row, int inactiveTileId, int activeTileId,
+        SwitchType type = SwitchType.Toggle, float duration = 0f)
     {
         Id = id;
         Column = column;
         Row = row;
         InactiveTileId = inactiveTileId;
         ActiveTileId = activeTileId;
-        IsActive = false; // Switches start inactive by default
+        Type = type;
+        Duration = duration;
     }
 
     public void Activate()
     {
-        if (!IsActive)
+        if (!_canActivate) return;
+
+        switch (Type)
         {
-            IsActive = true;
+            case SwitchType.Toggle:
+                IsActive = !IsActive;
+                break;
+            case SwitchType.Timed:
+                if (!IsActive)
+                {
+                    IsActive = true;
+                    _activeTimer = Duration;
+                }
+                break;
+            case SwitchType.Sequence:
+                IsActive = true;
+                break;
+        }
+
+        if (IsActive)
+        {
             OnActivated?.Invoke();
-            OnTileChanged?.Invoke(Column, Row, ActiveTileId);
         }
     }
 
     public void Deactivate()
     {
-        if (IsActive)
+        IsActive = false;
+        _activeTimer = 0f;
+    }
+
+    public void Update(GameTime gameTime)
+    {
+        if (Type == SwitchType.Timed && IsActive)
         {
-            IsActive = false;
-            OnTileChanged?.Invoke(Column, Row, InactiveTileId);
+            _activeTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+            if (_activeTimer <= 0f)
+            {
+                IsActive = false;
+            }
         }
     }
 
-    public void Update(GameTime gameTime) { /* Switch logic */ }
-
     public void DrawDebug(SpriteBatch spriteBatch, Texture2D pixel)
     {
-        // Example debug drawing: draw a colored rectangle at the switch's tile position
-        Color color = IsActive ? Color.LimeGreen : Color.Red;
-        int tileSize = 32; // Adjust as needed for your tile size
-        Rectangle rect = new Rectangle(Column * tileSize, Row * tileSize, tileSize, tileSize);
+        // Only draw if debug drawing is enabled
+        if (!DebugManager.Instance.DebugDrawEnabled || !DebugManager.Instance.ShowDungeonElements)
+            return;
+
+        var color = IsActive ? Color.Green : Color.Red;
+        var rect = new Rectangle(Column * 32, Row * 32, 32, 32);
         spriteBatch.Draw(pixel, rect, color * 0.5f);
+    }
+
+    /// <summary>
+    /// Attempts to interact with the switch (e.g., player activation).
+    /// </summary>
+    /// <returns>True if the switch was successfully activated.</returns>
+    public bool TryActivate()
+    {
+        if (_canActivate)
+        {
+            Activate();
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Sets whether the switch can be activated.
+    /// </summary>
+    public void SetCanActivate(bool canActivate)
+    {
+        _canActivate = canActivate;
     }
 }

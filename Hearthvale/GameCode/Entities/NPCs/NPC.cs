@@ -33,6 +33,7 @@ public class NPC : Character, ICombatNpc, IDialog
     public bool IsReadyToRemove => _healthController.IsReadyToRemove;
     public override bool IsDefeated => _healthController.IsDefeated;
     public override int Health => _healthController.Health;
+    public override int MaxHealth => _healthController.MaxHealth; // Make sure MaxHealth uses the health controller
     public override AnimatedSprite Sprite => _animationController.Sprite;
     public override Vector2 Position => _movementController.Position;
     public override Rectangle Bounds => new Rectangle(
@@ -275,5 +276,51 @@ public class NPC : Character, ICombatNpc, IDialog
     public override Rectangle GetAttackArea()
     {
         return base.GetAttackArea();
+    }
+
+    // Add these fields to store obstacle information
+    private IEnumerable<Rectangle> _currentObstacles;
+    private IEnumerable<NPC> _currentNpcs;
+    private Character _player;
+
+    /// <summary>
+    /// Updates the obstacle references for knockback collision detection.
+    /// </summary>
+    public void UpdateObstacles(IEnumerable<Rectangle> obstacleRects, IEnumerable<NPC> npcs, Character player)
+    {
+        _currentObstacles = obstacleRects;
+        _currentNpcs = npcs;
+        _player = player;
+    }
+
+    protected override IEnumerable<Rectangle> GetObstacleRectangles()
+    {
+        var obstacles = new List<Rectangle>();
+        
+        // Add static obstacles
+        if (_currentObstacles != null)
+        {
+            obstacles.AddRange(_currentObstacles);
+        }
+        
+        // Add other NPC bounds (not self, not defeated)
+        if (_currentNpcs != null)
+        {
+            foreach (var npc in _currentNpcs)
+            {
+                if (npc != this && !npc.IsDefeated)
+                {
+                    obstacles.Add(npc.Bounds);
+                }
+            }
+        }
+        
+        // Add player bounds
+        if (_player != null && !_player.IsDefeated)
+        {
+            obstacles.Add(_player.Bounds);
+        }
+        
+        return obstacles;
     }
 }

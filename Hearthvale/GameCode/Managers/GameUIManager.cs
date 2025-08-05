@@ -98,24 +98,41 @@ namespace Hearthvale.GameCode.Managers
         {
             int health = player.CurrentHealth;
             int maxHealth = player.MaxHealth;
-            float percent = (float)health / maxHealth;
+            
+            // Add safety check
+            if (maxHealth <= 0) maxHealth = 100; // Default fallback
+            
+            float percent = maxHealth > 0 ? (float)health / maxHealth : 0f;
+
+            // Health text with better scaling
+            var healthText = $"{health}/{maxHealth}";
+            float healthFontScale = 0.6f; // Reduced slightly to fit better
+            var textSize = _font.MeasureString(healthText) * healthFontScale;
+            
+            // Calculate required width based on text size with padding
+            float textPadding = 16f; // 8px padding on each side
+            float requiredWidth = Math.Max(size.X, textSize.X + textPadding);
+            
+            // Make the health bar dynamically sized based on text requirements
+            var adjustedSize = new Vector2(requiredWidth * 1.2f, size.Y * 1.4f); // 20% wider than required, 40% taller
 
             // Rounded background
-            int radius = 6;
-            DrawRoundedRect(spriteBatch, position, size, Color.FromNonPremultiplied(60, 20, 20, 220), radius);
+            int radius = 8; // Increased radius for better appearance
+            DrawRoundedRect(spriteBatch, position, adjustedSize, Color.FromNonPremultiplied(60, 20, 20, 220), radius);
 
-            // Foreground (gradient green)
+            // Foreground (gradient green to red based on health)   
             var fgColor = Color.Lerp(Color.Red, Color.LimeGreen, percent);
-            DrawRoundedRect(spriteBatch, position, new Vector2(size.X * percent, size.Y), fgColor, radius);
+            DrawRoundedRect(spriteBatch, position, new Vector2(adjustedSize.X * percent, adjustedSize.Y), fgColor, radius);
 
-            // Border
-            DrawRoundedRect(spriteBatch, position, size, Color.White * 0.2f, radius, outline: true);
+            // Border with better visibility
+            DrawRoundedRect(spriteBatch, position, adjustedSize, Color.White * 0.4f, radius, outline: true);
 
-            // Health text (smaller)
-            var healthText = $"{health}/{maxHealth}";
-            float healthFontScale = 0.6f; // 60% of normal font size
-            var textSize = _font.MeasureString(healthText) * healthFontScale;
-            var textPos = position + new Vector2(size.X / 2 - textSize.X / 2, size.Y / 2 - textSize.Y / 2);
+            // Center the text in the adjusted health bar
+            var textPos = position + new Vector2(adjustedSize.X / 2 - textSize.X / 2, adjustedSize.Y / 2 - textSize.Y / 2);
+
+            // Add text shadow for better visibility
+            var shadowPos = textPos + new Vector2(1, 1);
+            spriteBatch.DrawString(_font, healthText, shadowPos, Color.Black * 0.5f, 0f, Vector2.Zero, healthFontScale, SpriteEffects.None, 0f);
             spriteBatch.DrawString(_font, healthText, textPos, Color.White, 0f, Vector2.Zero, healthFontScale, SpriteEffects.None, 0f);
         }
         // Helper for rounded rectangles (simple approximation)
@@ -141,10 +158,14 @@ namespace Hearthvale.GameCode.Managers
         }
         public void DrawNpcHealthBar(SpriteBatch spriteBatch, NPC npc, Vector2 offset, Vector2 size)
         {
-            int health = npc.Health;
-            int maxHealth = npc.MaxHealth > 0 ? npc.MaxHealth : 1; // Use MaxHealth, not Health
             if (npc.IsDefeated) return; // Don't draw for defeated NPCs
 
+            int health = npc.Health;
+            int maxHealth = npc.MaxHealth;
+            
+            // Add safety check
+            if (maxHealth <= 0) maxHealth = 1; // Prevent division by zero
+            
             float percent = (float)health / maxHealth;
             Vector2 barPos = npc.Position + offset;
 
@@ -206,18 +227,17 @@ namespace Hearthvale.GameCode.Managers
             _quitButton.Click += (s, e) => OnQuit?.Invoke();
             _pausePanel.AddChild(_quitButton);
         }
-        // New unified, modern weapon UI panel
         private void CreateModernWeaponUIPanel()
         {
             var panel = new Gum.Forms.Controls.Panel();
             panel.Name = "WeaponPanel";
             panel.Anchor(Anchor.BottomLeft);
             panel.Visual.WidthUnits = DimensionUnitType.Absolute;
-            panel.Visual.Width = 160;
+            panel.Visual.Width = 350; // Increased from 280
             panel.Visual.HeightUnits = DimensionUnitType.Absolute;
-            panel.Visual.Height = 48; // Slightly taller for XP text
-            panel.Visual.X = 10;
-            panel.Visual.Y = -10;
+            panel.Visual.Height = 110; // Increased from 90
+            panel.Visual.X = 20; // More margin from edge
+            panel.Visual.Y = -20; // More margin from bottom
             panel.IsVisible = true;
             panel.AddToRoot();
 
@@ -234,10 +254,10 @@ namespace Hearthvale.GameCode.Managers
 
             _equippedWeaponSprite = new SpriteRuntime
             {
-                X = 8,
-                Y = 8,
-                Width = 24,
-                Height = 24,
+                X = 20, // More margin
+                Y = 20,
+                Width = 48, // Increased from 40
+                Height = 48, // Increased from 40
                 TextureAddress = TextureAddress.Custom
             };
             panel.AddChild(_equippedWeaponSprite);
@@ -246,10 +266,12 @@ namespace Hearthvale.GameCode.Managers
             {
                 Tag = "EquippedWeaponNameText",
                 Text = "Weapon: None",
-                FontScale = 0.22f,
-                X = 38,
-                Y = 8,
-                Color = new Color(220, 220, 255)
+                FontScale = 0.45f, // Increased from 0.35f
+                X = 80, // Adjusted for larger sprite
+                Y = 15,
+                Color = new Color(220, 220, 255),
+                UseCustomFont = true,
+                CustomFontFile = @"fonts/04b_30.fnt"
             };
             panel.AddChild(_equippedWeaponNameText);
 
@@ -257,20 +279,22 @@ namespace Hearthvale.GameCode.Managers
             {
                 Tag = "WeaponLevelText",
                 Text = "Lvl: --",
-                FontScale = 0.18f,
-                X = 38,
-                Y = 22,
-                Color = Color.Gold
+                FontScale = 0.35f, // Increased from 0.28f
+                X = 80, // Adjusted for larger sprite
+                Y = 38, // Adjusted spacing
+                Color = Color.Gold,
+                UseCustomFont = true,
+                CustomFontFile = @"fonts/04b_30.fnt"
             };
             panel.AddChild(_weaponLevelText);
 
             var xpBarBackground = new ColoredRectangleRuntime
             {
                 Tag = "XpBarBackground",
-                Width = 80,
-                Height = 5,
-                X = 38,
-                Y = 32,
+                Width = 180, // Increased from 150
+                Height = 10, // Increased from 8
+                X = 80, // Adjusted for larger sprite
+                Y = 60, // Adjusted spacing
                 Color = new Color(60, 60, 80)
             };
             panel.AddChild(xpBarBackground);
@@ -279,9 +303,9 @@ namespace Hearthvale.GameCode.Managers
             {
                 Tag = "WeaponXpBar",
                 Width = 0,
-                Height = 5,
-                X = 38,
-                Y = 32,
+                Height = 10, // Increased from 8
+                X = 80, // Adjusted for larger sprite
+                Y = 60, // Adjusted spacing
                 Color = Color.Gold
             };
             panel.AddChild(_weaponXpBar);
@@ -290,10 +314,12 @@ namespace Hearthvale.GameCode.Managers
             {
                 Tag = "WeaponXpText",
                 Text = "XP: 0/0",
-                FontScale = 0.16f,
-                X = 38,
-                Y = 38,
-                Color = new Color(180, 180, 220)
+                FontScale = 0.30f, // Increased from 0.25f
+                X = 80, // Adjusted for larger sprite
+                Y = 75, // Adjusted spacing for larger panel
+                Color = new Color(180, 180, 220),
+                UseCustomFont = true,
+                CustomFontFile = @"fonts/04b_30.fnt"
             };
             panel.AddChild(_weaponXpText);
 
@@ -304,12 +330,12 @@ namespace Hearthvale.GameCode.Managers
         {
             if (equippedWeapon != null)
             {
-                
+
                 if (_weaponPanel != null && _weaponPanel.IsVisible)
                 {
                     _weaponLevelText.Text = $"Lvl: {equippedWeapon.Level}";
                     float xpPercent = equippedWeapon.XpToNextLevel > 0 ? (float)equippedWeapon.XP / equippedWeapon.XpToNextLevel : 0;
-                    _weaponXpBar.Width = 50 * xpPercent;
+                    _weaponXpBar.Width = 180 * xpPercent; // Updated from 150 to match new bar width
                     _weaponXpText.Text = $"XP: {equippedWeapon.XP}/{equippedWeapon.XpToNextLevel}";
                 }
 
@@ -327,17 +353,17 @@ namespace Hearthvale.GameCode.Managers
                     }
                     else
                     {
-                       
+
                         _equippedWeaponSprite.Texture = null;
                     }
                 }
             }
             else
             {
-               
+
                 if (_weaponPanel != null && _weaponPanel.IsVisible)
                 {
-                    
+
                     _weaponLevelText.Text = "Lvl: --";
                     _weaponXpBar.Width = 0;
                     _weaponXpText.Text = "XP: 0/0";
@@ -419,27 +445,42 @@ namespace Hearthvale.GameCode.Managers
 
         public void DrawDebugInfo(SpriteBatch spriteBatch, GameTime gameTime, Vector2 heroPosition, Vector2 cameraPosition, Viewport viewport)
         {
-            // Position debug info at the bottom right
-            float margin = 16f;
+            // Only show debug info if debug drawing is enabled
+            if (!DebugManager.Instance.DebugDrawEnabled || !DebugManager.Instance.ShowUIOverlay)
+                return;
+
+            // Position debug info to avoid overlapping with other UI
+            float margin = 20f;
             var debugLines = new string[]
             {
-                $"Player Position: {heroPosition}",
-                $"Camera Position: {cameraPosition}",
-                $"Viewport Position: {viewport.X} ,{viewport.Y}",
-                $"FPS: {1f / (float)gameTime.ElapsedGameTime.TotalSeconds:0.0}"
+                $"Player: ({heroPosition.X:F0}, {heroPosition.Y:F0})",
+                $"Camera: ({cameraPosition.X:F0}, {cameraPosition.Y:F0})", 
+                $"FPS: {1f / (float)gameTime.ElapsedGameTime.TotalSeconds:F0}"
             };
 
-            // Calculate total height
-            float totalHeight = debugLines.Length * _debugFont.LineSpacing;
-            Vector2 position = new Vector2(
-                viewport.Width - 220, // 220px from right, adjust as needed
-                viewport.Height - totalHeight - margin
+            // Calculate total height needed
+            float totalHeight = debugLines.Length * _debugFont.LineSpacing * 0.8f; // Smaller scale
+            
+            // Position in bottom-right, accounting for weapon panel
+            Vector2 startPosition = new Vector2(
+                viewport.Width - 200, // 200px from right edge
+                viewport.Height - totalHeight - margin - 120 // Above weapon panel
             );
 
+            // Draw semi-transparent background
+            var bgSize = new Vector2(180, totalHeight + 8);
+            var bgRect = new Rectangle((int)(startPosition.X - 4), (int)(startPosition.Y - 4), (int)bgSize.X, (int)bgSize.Y);
+            spriteBatch.Draw(_whitePixel, bgRect, Color.Black * 0.4f);
+
+            // Draw debug text
+            Vector2 position = startPosition;
             foreach (string line in debugLines)
             {
-                spriteBatch.DrawString(_debugFont, line, position, Color.Yellow);
-                position.Y += _debugFont.LineSpacing;
+                // Text shadow
+                spriteBatch.DrawString(_debugFont, line, position + Vector2.One, Color.Black * 0.7f, 0f, Vector2.Zero, 0.8f, SpriteEffects.None, 0f);
+                // Main text
+                spriteBatch.DrawString(_debugFont, line, position, Color.Yellow, 0f, Vector2.Zero, 0.8f, SpriteEffects.None, 0f);
+                position.Y += _debugFont.LineSpacing * 0.8f;
             }
         }
 
@@ -461,6 +502,10 @@ namespace Hearthvale.GameCode.Managers
         }
         public void DrawDungeonElementCollisionBoxes(SpriteBatch spriteBatch, IEnumerable<IDungeonElement> elements, Matrix viewMatrix)
         {
+            // Only draw if debug manager allows it
+            if (!DebugManager.Instance.DebugDrawEnabled || !DebugManager.Instance.ShowDungeonElements)
+                return;
+
             foreach (var element in elements)
             {
                 var boundsProperty = element.GetType().GetProperty("Bounds");

@@ -85,7 +85,10 @@ namespace Hearthvale.Scenes
             // Initialize camera FIRST before using it
             _camera = new Camera2D(Core.GraphicsDevice.Viewport) { Zoom = 3.0f };
 
+            // Create the procedural dungeon manager and initialize it as the singleton
             _dungeonManager = new ProceduralDungeonManager();
+            DungeonManager.Initialize(_dungeonManager); // Initialize singleton with our procedural manager
+            
             _wallTileId = ProceduralDungeonManager.DefaultWallTileId;
             _tilemap = ((ProceduralDungeonManager)_dungeonManager).GenerateBasicDungeon(Content);
             _playerStart = ((ProceduralDungeonManager)_dungeonManager).GetPlayerStart(_tilemap);
@@ -157,61 +160,24 @@ namespace Hearthvale.Scenes
             _dialogManager = new DialogManager(GameUIManager.Instance, _player, _npcManager.Characters, dialogDistance);
         }
 
-        private void HandleInteraction()
-        {
-            var aSwitch = _dungeonManager.GetElement<DungeonSwitch>("switch_1");
-            if (aSwitch != null && _player.IsNearTile(aSwitch.Column, aSwitch.Row, _tilemap.TileWidth, _tilemap.TileHeight))
-            {
-                aSwitch.Activate();
-            }
-        }
-
-        private void RotatePlayerWeaponLeft()
-        {
-            if (_playerWeapons.Count == 0) return;
-            _currentPlayerWeaponIndex = (_currentPlayerWeaponIndex - 1 + _playerWeapons.Count) % _playerWeapons.Count;
-            _weaponManager.EquipWeapon(_player, _playerWeapons[_currentPlayerWeaponIndex]);
-        }
-
-        private void RotatePlayerWeaponRight()
-        {
-            if (_playerWeapons.Count == 0) return;
-            _currentPlayerWeaponIndex = (_currentPlayerWeaponIndex + 1) % _playerWeapons.Count;
-            _weaponManager.EquipWeapon(_player, _playerWeapons[_currentPlayerWeaponIndex]);
-        }
-
         public override void Update(GameTime gameTime)
         {
-            GumService.Default.Update(gameTime);
+            // Update the dungeon manager singleton
+            DungeonManager.Instance.Update(gameTime);
 
-            if (InputHandler.Instance.WasPausePressed())
+            // Only update Gum UI when paused or dialog is open
+            if (GameUIManager.Instance.IsPausePanelVisible || GameUIManager.Instance.IsDialogOpen)
             {
-                DebugManager.Instance.ShowUIDebugGrid = !DebugManager.Instance.ShowUIDebugGrid; // Use singleton
-            }
+                GumService.Default.Update(gameTime);
 
-            // Handle Pause/Unpause
-            if (Core.Input.Keyboard.WasKeyJustPressed(Keys.Escape))
-            {
-                if (GameUIManager.Instance.IsPausePanelVisible)
-                    GameUIManager.Instance.ResumeGame(_uiSoundEffect);
-                else
-                    GameUIManager.Instance.PauseGame();
-            }
-
-            // Dialog close with Enter
-            if (GameUIManager.Instance.IsDialogOpen && Core.Input.Keyboard.WasKeyJustPressed(Keys.Enter))
-            {
-                GameUIManager.Instance.HideDialog();
+                // Early return - don't process game input when UI is active
                 return;
             }
 
-            // If pause panel is visible, let Gum handle the input.
-            if (GameUIManager.Instance.IsPausePanelVisible)
-            {
-                return;
-            }
-
+            // InputHandler now handles all input including UI/Debug
             InputHandler.Instance.Update(gameTime);
+
+            // Update game systems
             _player.Update(gameTime, _npcManager.Npcs);
             _npcManager.Update(gameTime, _player, allObstacles);
             CombatManager.Instance.Update(gameTime);
@@ -222,7 +188,7 @@ namespace Hearthvale.Scenes
 
             UpdateViewport(Core.GraphicsDevice.Viewport);
 
-            // Camera follow logic - now using the properly initialized _camera
+            // Camera follow logic
             Rectangle dungeonBounds = new Rectangle(0, 0, _tilemap.Columns * (int)_tilemap.TileWidth, _tilemap.Rows * (int)_tilemap.TileHeight);
             Rectangle margin = new Rectangle(
                 (int)(100 / _camera.Zoom), (int)(80 / _camera.Zoom),
@@ -230,7 +196,6 @@ namespace Hearthvale.Scenes
                 (int)(_viewport.Height / _camera.Zoom) - (int)(160 / _camera.Zoom)
             );
             
-            // Follow player with margin and clamp to dungeon bounds
             _camera.FollowWithMargin(_player.Position, margin, 0.1f);
             _camera.ClampToMap(_tilemap.Columns, _tilemap.Rows, (int)_tilemap.TileWidth);
             _camera.Update(gameTime);
@@ -261,16 +226,28 @@ namespace Hearthvale.Scenes
                 npc.Draw(Core.SpriteBatch);
 
             // Draw debug overlays that should follow the camera
-            GameUIManager.Instance.DrawDungeonElementCollisionBoxes(Core.SpriteBatch, _dungeonManager.GetAllElements(), _camera.GetViewMatrix());
-            DebugManager.Instance.Draw(Core.SpriteBatch, _player, _npcManager.Npcs, _tilemap, ProceduralDungeonManager.DefaultWallTileId, _dungeonManager.GetAllElements(), _camera.GetViewMatrix());
+            GameUIManager.Instance.DrawDungeonElementCollisionBoxes(Core.SpriteBatch, DungeonManager.Instance.GetAllElements(), _camera.GetViewMatrix());
+            DebugManager.Instance.Draw(Core.SpriteBatch, _player, _npcManager.Npcs, _tilemap, ProceduralDungeonManager.DefaultWallTileId, DungeonManager.Instance.GetAllElements(), _camera.GetViewMatrix());
         }
 
         public override void DrawUI(GameTime gameTime)
         {
             GumService.Default.Draw();
+            
             // Draw UI in screen space (no camera transform)
-            GameUIManager.Instance.DrawPlayerHealthBar(Core.SpriteBatch, _player, new Vector2(20, 20), new Vector2(100, 12));
+            // Position health bar in top-left with proper spacing
+            var healthBarPosition = new Vector2(25, 25); // Moved away from edge
+            var healthBarSize = new Vector2(120, 16); // Slightly larger
+            GameUIManager.Instance.DrawPlayerHealthBar(Core.SpriteBatch, _player, healthBarPosition, healthBarSize);
+            
+            // Score is now positioned in top-right by ScoreManager
             ScoreManager.Instance.Draw(Core.SpriteBatch);
+            
+            // Debug info positioned to avoid overlapping with other UI elements
+            var debugInfoPosition = new Vector2(
+                _viewport.Width - 240, // 240px from right edge
+                _viewport.Height - 120 // 120px from bottom edge
+            );
             GameUIManager.Instance.DrawDebugInfo(Core.SpriteBatch, gameTime, _player.Position, _camera.Position, _viewport);
 
             // Draw the UI debug grid if enabled
@@ -284,6 +261,30 @@ namespace Hearthvale.Scenes
         public override void Draw(GameTime gameTime)
         {
             // Intentionally left blank; use DrawWorld and DrawUI instead.
+        }
+        
+        private void HandleInteraction()
+        {
+            // Now we can use the singleton instance
+            var aSwitch = DungeonManager.Instance.GetElement<DungeonSwitch>("switch_1");
+            if (aSwitch != null && _player.IsNearTile(aSwitch.Column, aSwitch.Row, _tilemap.TileWidth, _tilemap.TileHeight))
+            {
+                aSwitch.Activate();
+            }
+        }
+
+        private void RotatePlayerWeaponLeft()
+        {
+            if (_playerWeapons.Count == 0) return;
+            _currentPlayerWeaponIndex = (_currentPlayerWeaponIndex - 1 + _playerWeapons.Count) % _playerWeapons.Count;
+            _weaponManager.EquipWeapon(_player, _playerWeapons[_currentPlayerWeaponIndex]);
+        }
+
+        private void RotatePlayerWeaponRight()
+        {
+            if (_playerWeapons.Count == 0) return;
+            _currentPlayerWeaponIndex = (_currentPlayerWeaponIndex + 1) % _playerWeapons.Count;
+            _weaponManager.EquipWeapon(_player, _playerWeapons[_currentPlayerWeaponIndex]);
         }
 
         public Matrix GetViewMatrix()

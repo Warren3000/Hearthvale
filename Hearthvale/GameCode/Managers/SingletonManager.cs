@@ -83,7 +83,7 @@ namespace Hearthvale.GameCode.Managers
             DataManager.Initialize(); // Initialize DataManager singleton
             CameraManager.Initialize(camera); // Initialize CameraManager singleton
 
-            // Re-initialize InputHandler with game-specific callbacks
+            // Re-initialize InputHandler with game-specific callbacks including UI/Debug
             InputHandler.Initialize(
                 camera,
                 movementSpeed,
@@ -93,7 +93,15 @@ namespace Hearthvale.GameCode.Managers
                 meleeAttackCallback,
                 rotateWeaponLeftCallback,
                 rotateWeaponRightCallback,
-                interactionCallback
+                interactionCallback,
+                // Debug and UI callbacks
+                () => DebugManager.Instance.ToggleDebugMode(),
+                () => DebugManager.Instance.ShowUIDebugGrid = !DebugManager.Instance.ShowUIDebugGrid,
+                () => GameUIManager.Instance.PauseGame(),
+                () => GameUIManager.Instance.ResumeGame(uiSoundEffect),
+                () => GameUIManager.Instance.IsPausePanelVisible,
+                () => GameUIManager.Instance.HideDialog(),
+                () => GameUIManager.Instance.IsDialogOpen
             );
 
             _isInitialized = true;

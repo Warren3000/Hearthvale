@@ -2,72 +2,133 @@
 using Microsoft.Xna.Framework.Graphics;
 using System;
 
+/// <summary>
+/// Types of doors available in dungeons.
+/// </summary>
+public enum DoorType
+{
+    Normal,         // Opens/closes normally
+    Locked,         // Requires a key
+    PressurePlate,  // Activated by pressure plates
+    Timed,          // Closes after a duration
+    OneWay          // Can only be opened from one side
+}
+
+/// <summary>
+/// Interactive door element that can block or allow passage.
+/// </summary>
 public class DungeonDoor : IDungeonElement
 {
     public string Id { get; }
-    public bool IsLocked { get; private set; }
-    public bool IsActive => !IsLocked;
-
-    // Tilemap properties
+    public bool IsActive { get; private set; }
+    public DoorType Type { get; }
     public int Column { get; }
     public int Row { get; }
     public int LockedTileId { get; }
     public int UnlockedTileId { get; }
+    public string KeyRequired { get; }
+    public bool IsOpen { get; private set; }
 
-    // Add this property:
-    public Rectangle Bounds { get; }
+    private float _closeTimer;
+    private const float DefaultCloseTime = 5f;
 
     /// <summary>
-    /// Event triggered when the door's state changes, indicating the tilemap should be updated.
-    /// Parameters are: column, row, newTileId.
+    /// Creates a new dungeon door.
     /// </summary>
-    public event Action<int, int, int> OnTileChanged;
-
-    public DungeonDoor(string id, int column, int row, int lockedTileId, int unlockedTileId, float tileWidth = 32, float tileHeight = 32)
+    /// <param name="id">Unique identifier for the door.</param>
+    /// <param name="column">Column position in the tilemap.</param>
+    /// <param name="row">Row position in the tilemap.</param>
+    /// <param name="lockedTileId">Tile ID when door is closed/locked.</param>
+    /// <param name="unlockedTileId">Tile ID when door is open.</param>
+    /// <param name="type">Type of door behavior.</param>
+    /// <param name="keyRequired">Key item required to unlock (if applicable).</param>
+    public DungeonDoor(string id, int column, int row, int lockedTileId, int unlockedTileId,
+        DoorType type = DoorType.Normal, string keyRequired = null)
     {
         Id = id;
         Column = column;
         Row = row;
         LockedTileId = lockedTileId;
         UnlockedTileId = unlockedTileId;
-        IsLocked = true;
-        Bounds = new Rectangle((int)(Column * tileWidth), (int)(Row * tileHeight), (int)tileWidth, (int)tileHeight);
+        Type = type;
+        KeyRequired = keyRequired;
     }
 
     public void Activate()
     {
-        if (IsLocked)
+        switch (Type)
         {
-            IsLocked = false;
-            OnTileChanged?.Invoke(Column, Row, UnlockedTileId);
+            case DoorType.Normal:
+            case DoorType.PressurePlate:
+                IsOpen = !IsOpen;
+                break;
+            case DoorType.Timed:
+                if (!IsOpen)
+                {
+                    IsOpen = true;
+                    _closeTimer = DefaultCloseTime;
+                }
+                break;
+            case DoorType.Locked:
+                // TODO: Check if player has required key
+                break;
+            case DoorType.OneWay:
+                // TODO: Check direction and allow opening
+                break;
         }
+
+        IsActive = IsOpen;
     }
 
     public void Deactivate()
     {
-        if (!IsLocked)
+        IsOpen = false;
+        IsActive = false;
+        _closeTimer = 0f;
+    }
+
+    public void Update(GameTime gameTime)
+    {
+        if (Type == DoorType.Timed && IsOpen)
         {
-            IsLocked = true;
-            OnTileChanged?.Invoke(Column, Row, LockedTileId);
+            _closeTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+            if (_closeTimer <= 0f)
+            {
+                IsOpen = false;
+                IsActive = false;
+            }
         }
     }
 
-    public void Update(GameTime gameTime) { /* Door animation/logic */ }
-
-    // Add this method to implement the missing interface member
     public void DrawDebug(SpriteBatch spriteBatch, Texture2D pixel)
     {
-        // Draw the Bounds rectangle using the provided pixel texture
-        var color = IsLocked ? Color.Red : Color.Green;
-        var rect = Bounds;
+        var color = IsOpen ? Color.Green : Color.Brown;
+        var rect = new Rectangle(Column * 32, Row * 32, 32, 32);
+        spriteBatch.Draw(pixel, rect, color * 0.7f);
+    }
 
-        // Top
-        spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, rect.Width, 1), color);
-        // Left
-        spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, 1, rect.Height), color);
-        // Right
-        spriteBatch.Draw(pixel, new Rectangle(rect.Right - 1, rect.Top, 1, rect.Height), color);
-        // Bottom
-        spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Bottom - 1, rect.Width, 1), color);
+    /// <summary>
+    /// Attempts to open the door with the specified key.
+    /// </summary>
+    /// <param name="keyId">The key item ID.</param>
+    /// <returns>True if the door was successfully opened.</returns>
+    public bool TryUnlock(string keyId)
+    {
+        if (Type == DoorType.Locked && KeyRequired == keyId)
+        {
+            IsOpen = true;
+            IsActive = true;
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Checks if the door blocks movement.
+    /// </summary>
+    /// <returns>True if the door blocks movement.</returns>
+    public bool BlocksMovement()
+    {
+        return !IsOpen;
     }
 }
