@@ -13,13 +13,17 @@ using System.Linq;
 
 namespace Hearthvale.GameCode.Entities.NPCs;
 
+public enum NpcAiType
+{
+    Wander,
+    ChasePlayer
+}
+
 public class NPC : Character, ICombatNpc, IDialog
 {
     private readonly NpcAnimationController _animationController;
     private readonly NpcMovementController _movementController;
     private readonly NpcHealthController _healthController;
-
-    
     public int AttackPower { get; set; } = 1;
     private float _attackCooldown = 1.5f;
     // private float _attackTimer = 0f; // REMOVED: This is now managed by the health controller's stun timer
@@ -44,6 +48,8 @@ public class NPC : Character, ICombatNpc, IDialog
 
     public string Name { get; private set; }
 
+    private NpcAiType _aiType;
+
     public NPC(string name, Dictionary<string, Animation> animations, Vector2 position, Rectangle bounds, SoundEffect defeatSound, int maxHealth, Tilemap tilemap, int wallTileId)
     {
         Name = name; // Assign the name
@@ -59,6 +65,15 @@ public class NPC : Character, ICombatNpc, IDialog
 
         _animationController.SetAnimation("Idle");
         _movementController.SetIdle();
+
+        // Set AI type based on name
+        _aiType = name.ToLower() switch
+        {
+            "merchant" => NpcAiType.Wander,
+            "knight" => NpcAiType.ChasePlayer,
+            "heavyknight" => NpcAiType.ChasePlayer,
+            _ => NpcAiType.Wander
+        };
     }
 
     public override void EquipWeapon(Weapon weapon)
@@ -95,18 +110,14 @@ public class NPC : Character, ICombatNpc, IDialog
         float elapsed = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
         UpdateHealthAndAnimation(elapsed);
-
         if (IsDefeated)
             return;
-
         if (_healthController.IsStunned)
         {
-            UpdateKnockback(gameTime); // Handles knockback and wall bounce
+            UpdateKnockback(gameTime);
             _sprite.Position = Position;
             return;
         }
-        
-        // Step 4: Handle the attack animation timer if currently attacking.
         if (IsAttacking)
         {
             _attackAnimTimer -= elapsed;
@@ -116,21 +127,45 @@ public class NPC : Character, ICombatNpc, IDialog
             }
         }
 
-        // Step 5: Process regular movement and AI.
-        UpdateMovement(elapsed, allNpcs, player, rectangles);
-        
-        // Step 6: Update weapon position and rotation.
+        // --- AI Behavior ---
+        switch (_aiType)
+        {
+            case NpcAiType.Wander:
+                _movementController.SetChaseTarget(null); // Wander randomly
+                break;
+            case NpcAiType.ChasePlayer:
+                _movementController.SetChaseTarget(player.Position); // Chase player
+                break;
+        }
+
+        _movementController.Update(elapsed, candidatePos =>
+        {
+            var allObstacles = rectangles.ToList();
+            if (!player.IsDefeated)
+                allObstacles.Add(player.Bounds);
+            foreach (var npc in allNpcs)
+            {
+                if (npc != this && !npc.IsDefeated)
+                    allObstacles.Add(npc.Bounds);
+            }
+            Rectangle candidateRect = new Rectangle(
+                (int)candidatePos.X + 8,
+                (int)candidatePos.Y + 16,
+                (int)Sprite.Width / 2,
+                (int)Sprite.Height / 2
+            );
+            return allObstacles.Any(r => candidateRect.Intersects(r));
+        });
+
         UpdateWeapon(gameTime, player);
 
-        // Step 7: Decide whether to initiate a new attack.
-        // This can only happen if not already attacking and not on any cooldown.
-        float attackRange = EquippedWeapon?.Length ?? 32f; // Use a default range if no weapon
+        float attackRange = EquippedWeapon?.Length ?? 32f;
         if (CanAttack && !IsAttacking && Vector2.Distance(Position, player.Position) < attackRange)
         {
             StartAttack();
         }
 
-        _sprite.Position = Position; // Ensure sprite position matches movement
+        _sprite.Position = Position;
     }
 
     public void StartAttack()
@@ -199,36 +234,6 @@ public class NPC : Character, ICombatNpc, IDialog
         _animationController.SetAnimation(desiredAnimation);
         Sprite.Update(new GameTime(new TimeSpan(), TimeSpan.FromSeconds(elapsed)));
     }
-
-    public void UpdateMovement(float elapsed, IEnumerable<NPC> allNpcs, Character player, IEnumerable<Rectangle> obstacleRects)
-    {
-        if (_healthController.IsStunned)
-            return;
-
-        Vector2 velocity = _movementController.GetVelocity();
-        if (velocity == Vector2.Zero)
-            return;
-
-        Vector2 candidatePosition = Position + velocity * elapsed;
-
-        // Add player and other NPCs to obstacles
-        var allObstacles = obstacleRects.ToList();
-        if (!player.IsDefeated)
-            allObstacles.Add(player.Bounds);
-
-        foreach (var npc in allNpcs)
-        {
-            if (npc != this && !npc.IsDefeated)
-                allObstacles.Add(npc.Bounds);
-        }
-
-        // Prevent movement into any obstacle (walls, dungeon elements, other NPCs, player)
-        if (!TrySetPosition(candidatePosition, allObstacles))
-            return;
-
-        SetPosition(candidatePosition);
-    }
-
     public override void Flash()
     {
         _animationController.Flash();

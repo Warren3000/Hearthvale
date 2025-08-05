@@ -5,14 +5,26 @@ using System;
 using System.Collections.Generic;
 
 namespace Hearthvale.GameCode.Managers;
+
 public class CombatEffectsManager
 {
+    private static CombatEffectsManager _instance;
+    public static CombatEffectsManager Instance => _instance ?? throw new InvalidOperationException("CombatEffectsManager not initialized. Call Initialize first.");
+
     private readonly Camera2D _camera;
     private readonly List<CombatTextEffect> _combatTexts = new();
 
-    public CombatEffectsManager(Camera2D camera)
+    private CombatEffectsManager(Camera2D camera)
     {
         _camera = camera;
+    }
+
+    /// <summary>
+    /// Initializes the singleton instance. Call this once at startup.
+    /// </summary>
+    public static void Initialize(Camera2D camera)
+    {
+        _instance = new CombatEffectsManager(camera);
     }
 
     public void PlayHitEffects(Vector2 position, int damage)

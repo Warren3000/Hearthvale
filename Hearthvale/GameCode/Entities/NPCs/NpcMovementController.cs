@@ -24,6 +24,10 @@ public class NpcMovementController
     private int _spriteWidth;
     private int _spriteHeight;
 
+    // AI chase support
+    private Vector2? _chaseTarget = null;
+    private float _chaseSpeed = 40f;
+
     public NpcMovementController(Vector2 startPosition, float speed, Rectangle bounds, Tilemap tilemap, int wallTileId, int spriteWidth, int spriteHeight)
     {
         Position = startPosition;
@@ -33,6 +37,16 @@ public class NpcMovementController
         _wallTileId = wallTileId;
         _spriteWidth = spriteWidth;
         _spriteHeight = spriteHeight;
+    }
+
+    /// <summary>
+    /// Set a target position to chase (e.g., the player's position).
+    /// If null, NPC will wander randomly.
+    /// </summary>
+    public void SetChaseTarget(Vector2? target, float chaseSpeed = 40f)
+    {
+        _chaseTarget = target;
+        _chaseSpeed = chaseSpeed;
     }
 
     public void SetRandomDirection()
@@ -61,7 +75,7 @@ public class NpcMovementController
         {
             _knockbackTimer -= elapsed;
             Vector2 nextPosition = Position + _velocity * elapsed;
-            
+
             // During knockback, only stop if colliding. Don't zero out velocity yet.
             if (!collisionCheck(nextPosition))
             {
@@ -80,7 +94,24 @@ public class NpcMovementController
             return; // IMPORTANT: Skip normal AI movement during knockback
         }
 
-        // Normal AI movement logic
+        // AI chase logic
+        if (_chaseTarget.HasValue)
+        {
+            Vector2 direction = _chaseTarget.Value - Position;
+            if (direction.LengthSquared() > 0.01f)
+            {
+                direction.Normalize();
+                _velocity = direction * _chaseSpeed;
+                _isIdle = false;
+            }
+            else
+            {
+                _velocity = Vector2.Zero;
+                _isIdle = true;
+            }
+        }
+
+        // Normal AI movement logic (idle/wander)
         if (_isIdle)
         {
             _idleTimer -= elapsed;
@@ -101,7 +132,7 @@ public class NpcMovementController
                 new Vector2(Bounds.Right, Bounds.Bottom)
             );
             _directionChangeTimer -= elapsed;
-            if (_directionChangeTimer <= 0)
+            if (_directionChangeTimer <= 0 && !_chaseTarget.HasValue)
                 SetIdle();
         }
     }

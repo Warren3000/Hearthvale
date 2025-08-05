@@ -192,18 +192,30 @@ namespace HearthvaleTest
             );
             var position = Vector2.Zero;
             var origin = Vector2.Zero;
-            var scoreManager = new ScoreManager(dummyFont, position, origin);
+            ScoreManager.Initialize(dummyFont, position, origin);
             var camera = new Camera2D(graphicsDevice.Viewport);
-            var effectsManager = new CombatEffectsManager(camera);
-            var hitSound = (SoundEffect)null;
-            var defeatSound = (SoundEffect)null;
-            var combatManager = new CombatManager(npcManager, player, scoreManager, spriteBatch, effectsManager, hitSound, defeatSound, new Rectangle(0, 0, 100, 100));
-            return (combatManager, player, npcManager, scoreManager, spriteBatch, effectsManager);
+            CombatEffectsManager.Initialize(camera);
+
+            // Create dummy sound effects for testing
+            var hitSound = CreateDummySoundEffect(graphicsDevice);
+            var defeatSound = CreateDummySoundEffect(graphicsDevice);
+
+            CombatManager.Initialize(npcManager, player, ScoreManager.Instance, spriteBatch, CombatEffectsManager.Instance, hitSound, defeatSound, new Rectangle(0, 0, 100, 100));
+            return (CombatManager.Instance, player, npcManager, ScoreManager.Instance, spriteBatch, CombatEffectsManager.Instance);
         }
 
         private GraphicsDevice GraphicsDevice()
         {
             return new GraphicsDevice(GraphicsAdapter.DefaultAdapter, GraphicsProfile.Reach, new PresentationParameters());
+        }
+        /// <summary>
+        /// Creates a dummy sound effect for testing purposes.
+        /// </summary>
+        private SoundEffect CreateDummySoundEffect(GraphicsDevice graphicsDevice)
+        {
+            // Create a minimal sound effect with a single sample
+            byte[] audioData = new byte[4]; // Minimal audio data
+            return new SoundEffect(audioData, 44100, AudioChannels.Mono);
         }
     }
 }

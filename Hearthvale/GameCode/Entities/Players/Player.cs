@@ -41,7 +41,7 @@ namespace Hearthvale.GameCode.Entities.Players
             (int)Sprite.Height / 2
         );
 
-        public Player(TextureAtlas atlas, Vector2 position, CombatManager combatManager, CombatEffectsManager combatEffectsManager, ScoreManager scoreManager, SoundEffect hitSound, SoundEffect defeatSound, SoundEffect playerAttackSound, float movementSpeed)
+        public Player(TextureAtlas atlas, Vector2 position, SoundEffect hitSound, SoundEffect defeatSound, SoundEffect playerAttackSound, float movementSpeed)
         {
             _atlas = atlas;
             _sprite = new AnimatedSprite(atlas.GetAnimation("Mage_Idle"));
@@ -51,7 +51,7 @@ namespace Hearthvale.GameCode.Entities.Players
             _lastMovementDirection = Vector2.UnitX;
 
             _movementController = new PlayerMovementController(this);
-            _combatController = new PlayerCombatController(this, combatManager, combatEffectsManager, scoreManager, hitSound, defeatSound, playerAttackSound);
+            _combatController = new PlayerCombatController(this, hitSound, defeatSound, playerAttackSound);
 
             var animations = new Dictionary<string, Animation>
             {

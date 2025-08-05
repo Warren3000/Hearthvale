@@ -8,20 +8,17 @@ namespace Hearthvale.GameCode.Managers
     /// </summary>
     public class ScoreManager
     {
+        private static ScoreManager _instance;
+        public static ScoreManager Instance => _instance ?? throw new System.InvalidOperationException("ScoreManager not initialized. Call Initialize first.");
+
         private int _score;
-        private readonly Vector2 _position;
-        private readonly Vector2 _origin;
-        private readonly SpriteFont _font;
+        private Vector2 _position;
+        private Vector2 _origin;
+        private SpriteFont _font;
 
         public int Score => _score;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ScoreManager"/> class.
-        /// </summary>
-        /// <param name="font">The font used to draw the score.</param>
-        /// <param name="position">The position to draw the score.</param>
-        /// <param name="origin">The origin for score text alignment.</param>
-        public ScoreManager(SpriteFont font, Vector2 position, Vector2 origin)
+        private ScoreManager(SpriteFont font, Vector2 position, Vector2 origin)
         {
             _font = font;
             _position = position;
@@ -30,24 +27,23 @@ namespace Hearthvale.GameCode.Managers
         }
 
         /// <summary>
-        /// Adds the specified amount to the score.
+        /// Initializes the singleton instance. Call this once at startup.
         /// </summary>
+        public static void Initialize(SpriteFont font, Vector2 position, Vector2 origin)
+        {
+            _instance = new ScoreManager(font, position, origin);
+        }
+
         public void Add(int amount)
         {
             _score += amount;
         }
 
-        /// <summary>
-        /// Sets the score to the specified value.
-        /// </summary>
         public void Set(int value)
         {
             _score = value;
         }
 
-        /// <summary>
-        /// Draws the score using the provided SpriteBatch.
-        /// </summary>
         public void Draw(SpriteBatch spriteBatch)
         {
             spriteBatch.DrawString(

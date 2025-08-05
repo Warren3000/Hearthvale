@@ -1,5 +1,6 @@
 ﻿using Hearthvale.GameCode.Entities.NPCs;
 using Hearthvale.GameCode.Entities.Players;
+using Hearthvale.GameCode.Input;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended;
@@ -7,11 +8,15 @@ using MonoGameGum;
 using MonoGameGum.Forms.Controls;
 using MonoGameLibrary;
 using MonoGameLibrary.Graphics;
+using RenderingLibrary;
 using System;
 using System.Collections.Generic;
 
 public class DebugManager
 {
+    private static DebugManager _instance;
+    public static DebugManager Instance => _instance ?? throw new InvalidOperationException("DebugManager not initialized. Call Initialize first.");
+
     public bool DebugDrawEnabled { get; set; } = true;
     public bool ShowCollisionBoxes { get; set; } = true;
     public bool ShowAttackAreas { get; set; } = true;
@@ -25,7 +30,7 @@ public class DebugManager
     /// </summary>
     public float FontScale { get; set; } = 1f;
 
-    public DebugManager(Texture2D whitePixel)
+    private DebugManager(Texture2D whitePixel)
     {
         _whitePixel = whitePixel;
 #if DEBUG
@@ -39,6 +44,16 @@ public class DebugManager
         ShowAttackAreas = false;
         ShowUIOverlay = false;
 #endif
+    }
+
+    /// <summary>
+    /// Initializes the singleton instance. Call this once at startup.
+    /// </summary>
+    public static void Initialize(Texture2D whitePixel)
+    {
+
+        _instance = new DebugManager(whitePixel);
+
     }
 
     public void Draw(SpriteBatch spriteBatch, Player player, IEnumerable<NPC> npcs, Tilemap tilemap, int wallTileId, IEnumerable<IDungeonElement> elements, Matrix viewMatrix)
@@ -64,7 +79,6 @@ public class DebugManager
                             (int)tilemap.TileWidth,
                             (int)tilemap.TileHeight
                         );
-                        DrawRect(spriteBatch, rect, Color.Red * 0.5f);
                     }
                 }
             }
@@ -124,6 +138,20 @@ public class DebugManager
                 DrawRect(spriteBatch, screenRect, Color.Red * 0.5f);
             }
         }
+
+        // Draw UI debug grid if enabled
+        if (ShowUIDebugGrid)
+        {
+            DrawUIDebugGrid(spriteBatch, Core.GraphicsDevice.Viewport, 40, 40, Color.Black * 0.25f);
+        }
+    }
+
+    /// <summary>
+    /// Debug drawing specifically for title screen (no tilemap, player, or NPCs)
+    /// </summary>
+    public void DrawTitleScreen(SpriteBatch spriteBatch)
+    {
+        if (!DebugDrawEnabled) return;
 
         // Draw UI debug grid if enabled
         if (ShowUIDebugGrid)

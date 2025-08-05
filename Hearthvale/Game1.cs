@@ -11,7 +11,7 @@ public class Game1 : Core
     // The background theme song.
     private Song _themeSong;
 
-    public Game1() : base("Dungeon Slime", 1920, 1080, false)
+    public Game1() : base("Hearthvale", 1920, 1080, false)
     {
 
     }

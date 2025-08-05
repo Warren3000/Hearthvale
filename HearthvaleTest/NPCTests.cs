@@ -15,7 +15,7 @@ namespace HearthvaleTest
             npc.TakeDamage(5);
             Assert.Equal(5, npc.Health);
             Assert.False(npc.IsDefeated);
-            npc.Update(new Microsoft.Xna.Framework.GameTime(System.TimeSpan.Zero, System.TimeSpan.FromSeconds(0.5)), new List<NPC> { npc }, npc);
+            npc.Update(new GameTime(TimeSpan.Zero, TimeSpan.FromSeconds(0.5)), new List<NPC> { npc }, npc, new List<Rectangle>());
             npc.TakeDamage(5);
             Assert.Equal(0, npc.Health);
             Assert.True(npc.IsDefeated);
@@ -26,7 +26,7 @@ namespace HearthvaleTest
         {
             var npc = CreateTestNpc(100);
             npc.TakeDamage(20);
-            npc.Update(new Microsoft.Xna.Framework.GameTime(System.TimeSpan.Zero, System.TimeSpan.FromSeconds(0.5)), new List<NPC> { npc }, npc);
+            npc.Update(new GameTime(TimeSpan.Zero, TimeSpan.FromSeconds(0.5)), new List<NPC> { npc }, npc, new List<Rectangle>());
             npc.Heal(10);
             Assert.Equal(90, npc.Health);
         }

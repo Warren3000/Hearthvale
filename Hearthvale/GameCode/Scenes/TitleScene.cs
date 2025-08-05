@@ -1,4 +1,5 @@
 ﻿using Gum.Managers;
+using Hearthvale.GameCode.Input;
 using Hearthvale.GameCode.Managers;
 using Hearthvale.GameCode.UI;
 using Microsoft.Xna.Framework;
@@ -92,11 +93,6 @@ public class TitleScene : Scene
         _dungeonTextPos = new Vector2(640, 300);
         _dungeonTextOrigin = size * 0.5f;
 
-        // Set the position and origin for the Slime text.
-        //size = _font5x.MeasureString(SLIME_TEXT);
-        //_slimeTextPos = new Vector2(757, 207);
-        //_slimeTextOrigin = size * 0.5f;
-
         // Set the position and origin for the press enter text.
         size = _font.MeasureString(PRESS_ENTER_TEXT);
         _pressEnterPos = new Vector2(640, 620);
@@ -132,11 +128,11 @@ public class TitleScene : Scene
         // Load the texture atlas from the xml configuration file.
         _atlas = TextureAtlas.FromFile(Core.Content, "images/atlas-definition.xml");
 
+        SingletonManager.InitializeForTitleScreen();
+
         // Create a 1x1 white pixel texture for the grid
         Texture2D whitePixel = new Texture2D(Core.GraphicsDevice, 1, 1);
         whitePixel.SetData(new[] { Color.White });
-
-        _debugManager = new DebugManager(whitePixel);
 
 #if DEBUG
         Core.Audio.SongVolume = 0f;
@@ -160,11 +156,21 @@ public class TitleScene : Scene
         // If options panel is visible, let Gum handle Enter for focused control (sliders/back button)
         // GumService.Default.Update will route Enter to the focused control
 
-        // Toggle UI debug grid with F9
-        if (Core.Input.Keyboard.WasKeyJustPressed(Keys.F9))
+        if (InputHandler.Instance.WasPausePressed())
+        {
+            // Pause/unpause logic
+        }
+
+        if (InputHandler.Instance.WasDebugGridTogglePressed())
         {
             _debugManager.ShowUIDebugGrid = !_debugManager.ShowUIDebugGrid;
         }
+
+        //if (GameUIManager.Instance.IsDialogOpen && InputHandler.Instance.WasDialogAdvancePressed())
+        //{
+        //    GameUIManager.Instance.HideDialog();
+        //    return;
+        //}
 
         GumService.Default.Update(gameTime);
     }
@@ -181,7 +187,7 @@ public class TitleScene : Scene
         // Draw the UI debug grid if enabled
         if (_debugManager?.ShowUIDebugGrid == true)
         {
-            _debugManager.DrawUIDebugGrid(Core.SpriteBatch, Core.GraphicsDevice.Viewport, 40, 40, Color.Black * 0.25f, _debugFont);
+            _debugManager.DrawTitleScreen(Core.SpriteBatch); // Use title-specific method
         }
     }
     private void InitializeUI()

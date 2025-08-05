@@ -16,22 +16,16 @@ namespace Hearthvale.GameCode.Entities.Players
         private readonly Player _player;
         private float _attackTimer = 0f;
         private const float AttackDuration = 0.25f;
-        private readonly CombatEffectsManager _effectsManager;
-        private readonly ScoreManager _scoreManager;
         private readonly SoundEffect _hitSound;
         private readonly SoundEffect _defeatSound;
         private readonly SoundEffect _playerAttackSound;
-        private readonly CombatManager _combatManager;
 
         public bool IsAttacking { get; private set; }
         private readonly List<NPC> _hitNpcsThisSwing = new();
 
-        public PlayerCombatController(Player player, CombatManager combatManager, CombatEffectsManager combatEffectsManager, ScoreManager scoreManager, SoundEffect hitSound, SoundEffect defeatSound, SoundEffect playerAttackSound)
+        public PlayerCombatController(Player player, SoundEffect hitSound, SoundEffect defeatSound, SoundEffect playerAttackSound)
         {
             _player = player;
-            _combatManager = combatManager;
-            _effectsManager = combatEffectsManager;
-            _scoreManager = scoreManager;
             _hitSound = hitSound;
             _defeatSound = defeatSound;
             _playerAttackSound = playerAttackSound;
@@ -90,7 +84,7 @@ namespace Hearthvale.GameCode.Entities.Players
                         float knockbackStrength = 150f; // Adjust as needed
                         Vector2 knockback = direction * knockbackStrength;
                         
-                        _combatManager.HandleNpcHit(npc, _player.EquippedWeapon.Damage, knockback);
+                        CombatManager.Instance.HandleNpcHit(npc, _player.EquippedWeapon.Damage, knockback);
                         
                         _hitNpcsThisSwing.Add(npc);
                     }
@@ -100,7 +94,7 @@ namespace Hearthvale.GameCode.Entities.Players
 
         public void StartMeleeAttack()
         {
-            if (!_combatManager.CanAttack()) return;
+            if (!CombatManager.Instance.CanAttack()) return;
             
             _hitNpcsThisSwing.Clear();
 
@@ -112,22 +106,22 @@ namespace Hearthvale.GameCode.Entities.Players
             IsAttacking = true;
             _player.IsAttacking = true;
             _attackTimer = AttackDuration;
-            
-            _combatManager.StartCooldown();
+
+            CombatManager.Instance.StartCooldown();
             _playerAttackSound?.Play(0.5f, 0, 0);
         }
 
         public void StartProjectileAttack()
         {
-            if (!_combatManager.CanAttack() || _player.EquippedWeapon == null) return;
+            if (!CombatManager.Instance.CanAttack() || _player.EquippedWeapon == null) return;
 
             Vector2 spawnPosition = _player.Position + new Vector2(_player.Sprite.Width / 2, _player.Sprite.Height / 2);
             var projectile = _player.EquippedWeapon.Fire(_player.LastMovementDirection, spawnPosition);
 
             if (projectile != null)
             {
-                _combatManager.RegisterProjectile(projectile);
-                _combatManager.StartCooldown();
+                CombatManager.Instance.RegisterProjectile(projectile);
+                CombatManager.Instance.StartCooldown();
                 _playerAttackSound?.Play();
             }
         }

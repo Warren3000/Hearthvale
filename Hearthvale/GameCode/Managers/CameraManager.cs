@@ -1,16 +1,28 @@
 ﻿using Hearthvale.GameCode.UI;
 using Microsoft.Xna.Framework;
+using System;
 
 namespace Hearthvale.GameCode.Managers
 {
     public class CameraManager
     {
+        private static CameraManager _instance;
+        public static CameraManager Instance => _instance ?? throw new InvalidOperationException("CameraManager not initialized. Call Initialize first.");
+
         private readonly Camera2D _camera;
         private CombatEffectsManager _effectsManager;
 
-        public CameraManager(Camera2D camera)
+        private CameraManager(Camera2D camera)
         {
             _camera = camera;
+        }
+
+        /// <summary>
+        /// Initializes the singleton instance. Call this once at startup.
+        /// </summary>
+        public static void Initialize(Camera2D camera)
+        {
+            _instance = new CameraManager(camera);
         }
 
         public void UpdateCamera(Vector2 playerPosition, Point playerSpriteSize, Rectangle margin, MapManager mapManager, CombatEffectsManager effectsManager, GameTime gameTime)

@@ -8,6 +8,7 @@ using Microsoft.Xna.Framework.Graphics;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System;
 
 namespace Hearthvale.GameCode.Managers;
 
@@ -16,6 +17,9 @@ namespace Hearthvale.GameCode.Managers;
 /// </summary>
 public class CombatManager
 {
+    private static CombatManager _instance;
+    public static CombatManager Instance => _instance ?? throw new InvalidOperationException("CombatManager not initialized. Call Initialize first.");
+
     private const float ATTACK_COOLDOWN = 0.5f; // seconds between attacks
     private const float PLAYER_DAMAGE_COOLDOWN = 1.0f; // seconds of immunity after being hit
     private const float PROJECTILE_KNOCKBACK = 150f;
@@ -58,6 +62,19 @@ public class CombatManager
         _hitSound = hitSound;
         _defeatSound = defeatSound;
         _worldBounds = worldBounds;
+    }
+    public static void Initialize(
+        NpcManager npcManager,
+        Character player,
+        ScoreManager scoreManager,
+        SpriteBatch spriteBatch,
+        CombatEffectsManager effectsManager,
+        SoundEffect hitSound,
+        SoundEffect defeatSound,
+        Rectangle worldBounds)
+    {
+        
+        _instance = new CombatManager(npcManager, player, scoreManager, spriteBatch, effectsManager, hitSound, defeatSound, worldBounds);
     }
 
     public void Update(GameTime gameTime)
@@ -179,11 +196,11 @@ public class CombatManager
         {
             Debug.WriteLine("[CombatManager] justDefeated is TRUE. Granting XP.");
             _defeatSound?.Play();
-            _scoreManager.Add(1);
+            ScoreManager.Instance.Add(1);
 
             if (npc is NPC typedNpc)
             {
-                var stats = DataManager.GetCharacterStats(typedNpc.Name);
+                var stats = DataManager.Instance.GetCharacterStats(typedNpc.Name);
                 _player.EquippedWeapon?.GainXP(stats.XpYield);
             }
         }

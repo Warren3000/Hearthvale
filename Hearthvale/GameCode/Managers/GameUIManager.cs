@@ -23,6 +23,9 @@ namespace Hearthvale.GameCode.Managers
     /// </summary>
     public class GameUIManager
     {
+        private static GameUIManager _instance;
+        public static GameUIManager Instance => _instance ?? throw new InvalidOperationException("GameUIManager not initialized. Call Initialize first.");
+
         private readonly TextureAtlas _atlas;
         private readonly SpriteFont _font;
         private readonly SpriteFont _debugFont;
@@ -60,6 +63,10 @@ namespace Hearthvale.GameCode.Managers
             OnResume = onResume;
             OnQuit = onQuit;
             InitializeUI();
+        }
+        public static void Initialize(TextureAtlas atlas, SpriteFont font, SpriteFont debugFont, Action resumeGameCallback, Action quitGameCallback)
+        {
+            _instance = new GameUIManager(atlas, font, debugFont, resumeGameCallback, quitGameCallback);
         }
 
         public void InitializeUI()

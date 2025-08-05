@@ -114,7 +114,7 @@ namespace Hearthvale.GameCode.Managers
 
             npc.FacingRight = false;
             _npcs.Add(npc);
-            _weaponManager.EquipWeapon(npc, new Weapon("Dagger", DataManager.GetWeaponStats("Dagger"), _weaponAtlas, _arrowAtlas));
+            _weaponManager.EquipWeapon(npc, new Weapon("Dagger", DataManager.Instance.GetWeaponStats("Dagger"), _weaponAtlas, _arrowAtlas));
         }
 
         public void Update(GameTime gameTime, Character player, List<Rectangle> rectangles)

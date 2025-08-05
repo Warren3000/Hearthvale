@@ -11,6 +11,9 @@ namespace Hearthvale.GameCode.Input
 {
     public class InputHandler
     {
+        private static InputHandler _instance;
+        public static InputHandler Instance => _instance ?? throw new InvalidOperationException("InputHandler not initialized. Call Initialize first.");
+
         private Camera2D _camera;
         private readonly Action<Vector2> _movePlayerCallback;
         private readonly float _movementSpeed;
@@ -44,6 +47,31 @@ namespace Hearthvale.GameCode.Input
             _rotateWeaponLeftCallback = rotateWeaponLeftCallback;
             _rotateWeaponRightCallback = rotateWeaponRightCallback;
             _interactionCallback = interactionCallback;
+        }
+        public static void Initialize(
+            Camera2D camera,
+            float movementSpeed,
+            Action<Vector2> movePlayerCallback,
+            Action spawnNpcCallback,
+            Action projectileAttackCallback,
+            Action meleeAttackCallback,
+            Action rotateWeaponLeftCallback,
+            Action rotateWeaponRightCallback,
+            Action interactionCallback)
+        {
+            // Allow re-initialization by disposing the old instance
+            _instance = new InputHandler(
+                camera, movementSpeed, movePlayerCallback, spawnNpcCallback,
+                projectileAttackCallback, meleeAttackCallback,
+                rotateWeaponLeftCallback, rotateWeaponRightCallback, interactionCallback);
+        }
+
+        /// <summary>
+        /// Resets the InputHandler singleton to allow re-initialization
+        /// </summary>
+        public static void Reset()
+        {
+            _instance = null;
         }
 
         public Vector2 GetMovement()
@@ -162,6 +190,24 @@ namespace Hearthvale.GameCode.Input
                  _projectileAttackCallback?.Invoke();
             if (gamePadOne.WasButtonJustPressed(Buttons.X))
                 _meleeAttackCallback?.Invoke();
+        }
+
+        public bool WasPausePressed()
+        {
+            var keyboard = Core.Input.Keyboard;
+            return keyboard.WasKeyJustPressed(Keys.Escape);
+        }
+
+        public bool WasDebugGridTogglePressed()
+        {
+            var keyboard = Core.Input.Keyboard;
+            return keyboard.WasKeyJustPressed(Keys.F9);
+        }
+
+        public bool WasDialogAdvancePressed()
+        {
+            var keyboard = Core.Input.Keyboard;
+            return keyboard.WasKeyJustPressed(Keys.Enter);
         }
     }
 }
