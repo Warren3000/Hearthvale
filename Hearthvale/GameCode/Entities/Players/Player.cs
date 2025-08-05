@@ -46,10 +46,13 @@ namespace Hearthvale.GameCode.Entities.Players
         {
             _atlas = atlas;
             _sprite = new AnimatedSprite(atlas.GetAnimation("Mage_Idle"));
-            _position = position;
+            _position = position; // Make sure this is set
             _movementSpeed = movementSpeed;
             _facingRight = true;
             _lastMovementDirection = Vector2.UnitX;
+
+            // Add debug output to confirm position is set
+            System.Diagnostics.Debug.WriteLine($"Player created at position: {_position}");
 
             _movementController = new PlayerMovementController(this);
             _combatController = new PlayerCombatController(this, hitSound, defeatSound, playerAttackSound);
@@ -64,6 +67,9 @@ namespace Hearthvale.GameCode.Entities.Players
             // Initialize health
             _maxHealth = 100;
             _currentHealth = _maxHealth;
+
+            // Set sprite position immediately
+            _sprite.Position = _position;
         }
 
         public override bool TakeDamage(int amount, Vector2? knockback = null)
@@ -86,24 +92,48 @@ namespace Hearthvale.GameCode.Entities.Players
 
         public void Update(GameTime gameTime, IEnumerable<NPC> npcs)
         {
+            // Add position validation at the start
+            if (float.IsNaN(_position.X) || float.IsNaN(_position.Y))
+            {
+                System.Diagnostics.Debug.WriteLine($"❌ CRITICAL: Player position is NaN at start of Update! Resetting to spawn position.");
+                _position = new Vector2(896, 80); // Use the known good spawn position
+            }
+
             UpdateKnockback(gameTime); // Handles knockback and wall bounce
+            
+            // Check after knockback update
+            if (float.IsNaN(_position.X) || float.IsNaN(_position.Y))
+            {
+                System.Diagnostics.Debug.WriteLine($"❌ CRITICAL: Player position became NaN after UpdateKnockback!");
+                _position = new Vector2(896, 80); // Reset again
+                _knockbackVelocity = Vector2.Zero;
+                _knockbackTimer = 0;
+            }
+
             _animationController.UpdateFlash((float)gameTime.ElapsedGameTime.TotalSeconds);
             _combatController.Update(gameTime, npcs);
             _animationController.UpdateAnimation(_movementController.IsMoving());
 
             _sprite.Position = _position;
             _sprite.Effects = _facingRight ? SpriteEffects.None : SpriteEffects.FlipHorizontally;
+            
+            // Final validation
+            if (float.IsNaN(_position.X) || float.IsNaN(_position.Y))
+            {
+                System.Diagnostics.Debug.WriteLine($"❌ CRITICAL: Player position is NaN at end of Update!");
+                _position = new Vector2(896, 80); // Final reset
+            }
         }
 
         public void Move(
-            Vector2 movement,
-            Rectangle roomBounds,
-            float spriteWidth,
-            float spriteHeight,
-            IEnumerable<NPC> npcs,
-            Tilemap tilemap,
-            int wallTileId,
-            IEnumerable<Rectangle> obstacleRects)
+          Vector2 movement,
+          Rectangle roomBounds,
+          float spriteWidth,
+          float spriteHeight,
+          IEnumerable<NPC> npcs,
+          Tilemap tilemap,
+          int wallTileId,
+          IEnumerable<Rectangle> obstacleRects)
         {
             if (_movementController.IsKnockedBack) return;
 
@@ -114,9 +144,24 @@ namespace Hearthvale.GameCode.Entities.Players
             }
 
             Vector2 newPosition = Position + movement;
+
+            // Add NaN check and prevention
+            if (float.IsNaN(newPosition.X) || float.IsNaN(newPosition.Y))
+            {
+                System.Diagnostics.Debug.WriteLine($"❌ CRITICAL: newPosition is NaN! Position={Position}, movement={movement}");
+                return; // Don't move if calculation results in NaN
+            }
+
             float clampedX = MathHelper.Clamp(newPosition.X, roomBounds.Left, roomBounds.Right - spriteWidth);
             float clampedY = MathHelper.Clamp(newPosition.Y, roomBounds.Top, roomBounds.Bottom - spriteHeight);
             Vector2 candidate = new Vector2(clampedX, clampedY);
+
+            // Add another NaN check after clamping
+            if (float.IsNaN(candidate.X) || float.IsNaN(candidate.Y))
+            {
+                System.Diagnostics.Debug.WriteLine($"❌ CRITICAL: candidate position is NaN after clamping! roomBounds={roomBounds}, spriteWidth={spriteWidth}, spriteHeight={spriteHeight}");
+                return; // Don't move if clamping results in NaN
+            }
 
             // Defensive: ensure obstacleRects is never null
             var allObstacles = (obstacleRects ?? Enumerable.Empty<Rectangle>()).ToList();
@@ -209,6 +254,13 @@ namespace Hearthvale.GameCode.Entities.Players
         }
         private bool TrySetPosition(Vector2 candidate, IEnumerable<Rectangle> obstacles)
         {
+            // Add NaN check at the start
+            if (float.IsNaN(candidate.X) || float.IsNaN(candidate.Y))
+            {
+                System.Diagnostics.Debug.WriteLine($"❌ CRITICAL: TrySetPosition called with NaN candidate: {candidate}");
+                return false;
+            }
+
             // Check if candidate position would collide with any obstacle
             Rectangle candidateBounds = new Rectangle(
                 (int)candidate.X + 8,
@@ -225,6 +277,13 @@ namespace Hearthvale.GameCode.Entities.Players
 
             // If no collision, set the position
             _position = candidate;
+            
+            // Add debug check after setting position
+            if (float.IsNaN(_position.X) || float.IsNaN(_position.Y))
+            {
+                System.Diagnostics.Debug.WriteLine($"❌ CRITICAL: _position became NaN after setting to {candidate}!");
+            }
+            
             return true;
         }
     }

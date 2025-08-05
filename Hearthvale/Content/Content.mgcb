@@ -193,6 +193,9 @@
 #begin Levels/Level1.xml
 /copy:Levels/Level1.xml
 
+#begin Tilesets/DampDungeons/Tiles/Autotiles.xml
+/copy:Tilesets/DampDungeons/Tiles/Autotiles.xml
+
 #begin Tilesets/DampDungeons/Tiles/Dungeon_Autotiles.png
 /importer:TextureImporter
 /processor:TextureProcessor

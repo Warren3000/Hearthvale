@@ -1,0 +1,41 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<AutotileConfiguration>
+  <TilesetInfo>
+    <Texture>Dungeon_WallsAndFloors.png</Texture>
+    <TileWidth>16</TileWidth>
+    <TileHeight>16</TileHeight>
+    <Columns>40</Columns>
+    <Rows>30</Rows>
+  </TilesetInfo>
+  
+  <WallTiles>
+    <!-- EACH TILE MUST HAVE UNIQUE COORDINATES -->
+    <Tile type="isolated" col="1" row="5" pattern="0" />        <!-- Index 201 -->
+    <Tile type="horizontal" col="1" row="4" pattern="68" />     <!-- Index 161 -->
+    <Tile type="vertical" col="0" row="5" pattern="17" />       <!-- Index 200 -->
+    <Tile type="cross" col="5" row="0" pattern="85" />         <!-- Index 5 -->
+    
+    <!-- Corners -->
+    <Tile type="corner_tl" col="1" row="17" pattern="20" />     <!-- Index 360 -->
+    <Tile type="corner_tr" col="1" row="17" pattern="80" />     <!-- Index 361 -->
+    <Tile type="corner_bl" col="4" row="18" pattern="5" />      <!-- Index 362 -->
+    <Tile type="corner_br" col="3" row="18" pattern="65" />     <!-- Index 363 -->
+    
+    <!-- T-junctions -->
+    <Tile type="t_up" col="2" row="17" pattern="84" />          <!-- Index 320 -->
+    <Tile type="t_down" col="2" row="18" pattern="69" />        <!-- Index 321 -->
+    <Tile type="t_left" col="2" row="17" pattern="21" />        <!-- Index 322 -->
+    <Tile type="t_right" col="2" row="17" pattern="81" />       <!-- Index 323 -->
+    
+    <!-- End caps -->
+    <Tile type="end_up" col="0" row="21" pattern="1" />         <!-- Index 280 -->
+    <Tile type="end_down" col="1" row="21" pattern="16" />      <!-- Index 281 -->
+    <Tile type="end_left" col="2" row="21" pattern="64" />      <!-- Index 282 -->
+    <Tile type="end_right" col="3" row="21" pattern="4" />      <!-- Index 283 -->
+    
+    <!-- Floor tiles - NO CONFLICTS with wall tiles -->
+    <Tile type="floor_basic" col="0" row="2" />       <!-- Index 80 -->
+    <Tile type="floor_variant1" col="1" row="2" />    <!-- Index 81 -->
+    <Tile type="floor_variant2" col="2" row="2" />    <!-- Index 82 -->
+  </WallTiles>
+</AutotileConfiguration>

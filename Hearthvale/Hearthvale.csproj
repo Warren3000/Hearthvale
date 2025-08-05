@@ -41,7 +41,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Content\Tilesets\DampDungeons\Tiles\DungeonDecorations.png" />
-    <Content Include="Content\Tilesets\DampDungeons\Tiles\Dungeon_Autotiles.png" />
+    <Content Include="Content\Tilesets\DampDungeons\Tiles\Dungeon_Autotiles.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Content\Tilesets\DampDungeons\Tiles\Dungeon.tsx" />
     <Content Include="Content\Tilesets\DampDungeons\Tiles\Dungeon_WallsAndFloors.png" />
     <Content Include="Content\Tilesets\DampDungeons\Tiles\Dungeon_WaterAnimation.png" />

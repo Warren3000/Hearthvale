@@ -1,6 +1,7 @@
 using Microsoft.Xna.Framework;
 using MonoGameLibrary.Graphics;
 using System;
+using Hearthvale.GameCode.Utils;
 
 namespace Hearthvale.GameCode.Entities.NPCs;
 public class NpcMovementController
@@ -157,8 +158,9 @@ public class NpcMovementController
             for (int row = topTile; row <= bottomTile; row++)
             {
                 int tileId = _tilemap.GetTileId(col, row);
-                if (tileId == _wallTileId)
-                    return true; // Block movement if any part overlaps a wall
+                // FIX: Use AutotileMapper instead of hardcoded ID
+                if (AutotileMapper.IsWallTile(tileId))
+                    return true;
             }
         }
         return false;

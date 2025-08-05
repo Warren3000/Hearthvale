@@ -1,5 +1,6 @@
 ﻿using Hearthvale.GameCode.Entities.Interfaces;
 using Hearthvale.GameCode.Entities.Players;
+using Hearthvale.GameCode.Utils;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGameLibrary.Graphics;
@@ -212,6 +213,15 @@ public abstract class Character : IDamageable, IMovable, IAnimatable, IDialog
             _knockbackTimer -= elapsed;
             Vector2 nextPosition = Position + _knockbackVelocity * elapsed;
 
+            // Add NaN protection
+            if (float.IsNaN(nextPosition.X) || float.IsNaN(nextPosition.Y))
+            {
+                System.Diagnostics.Debug.WriteLine($"❌ KNOCKBACK NaN: Position={Position}, velocity={_knockbackVelocity}, elapsed={elapsed}");
+                _knockbackVelocity = Vector2.Zero;
+                _knockbackTimer = 0;
+                return;
+            }
+
             // Check for collision and handle bouncing
             if (!TryMoveWithBounce(nextPosition, elapsed))
             {
@@ -321,7 +331,8 @@ public abstract class Character : IDamageable, IMovable, IAnimatable, IDialog
                 if (col >= 0 && col < Tilemap.Columns && row >= 0 && row < Tilemap.Rows)
                 {
                     int tileId = Tilemap.GetTileId(col, row);
-                    if (tileId == WallTileId)
+                    // Use AutotileMapper to check if this is any type of wall tile
+                    if (AutotileMapper.IsWallTile(tileId))
                     {
                         hitWall = true;
                         

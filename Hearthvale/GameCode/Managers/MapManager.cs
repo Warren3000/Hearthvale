@@ -24,16 +24,25 @@ namespace Hearthvale.GameCode.Managers
             _roomBounds = new Rectangle(0, 0, _map.Width * _map.TileWidth, _map.Height * _map.TileHeight);
         }
 
-        public void Update(GameTime gameTime)
+        /// <summary>
+        /// Protected constructor for derived classes that don't load from file
+        /// </summary>
+        protected MapManager()
         {
-            _mapRenderer.Update(gameTime);
+            // Allow derived classes to initialize their own way
         }
 
-        public void Draw(Matrix transform)
+        public virtual void Update(GameTime gameTime)
         {
-            _mapRenderer.Draw(transform);
+            _mapRenderer?.Update(gameTime);
         }
-        public Vector2 GetPlayerSpawnPoint()
+
+        public virtual void Draw(Matrix transform)
+        {
+            _mapRenderer?.Draw(transform);
+        }
+
+        public virtual Vector2 GetPlayerSpawnPoint()
         {
             var entityLayer = GetObjectLayer("Entities");
             if (entityLayer == null)
@@ -46,14 +55,14 @@ namespace Hearthvale.GameCode.Managers
             return new Vector2(playerObject.Position.X, playerObject.Position.Y);
         }
 
-        public TiledMapObjectLayer GetObjectLayer(string name)
+        public virtual TiledMapObjectLayer GetObjectLayer(string name)
         {
-            return _map.ObjectLayers.FirstOrDefault(layer => layer.Name == name);
+            return _map?.ObjectLayers.FirstOrDefault(layer => layer.Name == name);
         }
 
-        public int MapWidthInPixels => _map.WidthInPixels;
-        public int MapHeightInPixels => _map.HeightInPixels;
-        public int TileWidth => _map.TileWidth;
-        public int TileHeight => _map.TileHeight;
+        public virtual int MapWidthInPixels => _map?.WidthInPixels ?? 0;
+        public virtual int MapHeightInPixels => _map?.HeightInPixels ?? 0;
+        public virtual int TileWidth => _map?.TileWidth ?? 0;
+        public virtual int TileHeight => _map?.TileHeight ?? 0;
     }
 }

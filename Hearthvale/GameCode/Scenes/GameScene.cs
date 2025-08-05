@@ -11,6 +11,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.Tiled;
 using MonoGameGum;
 using MonoGameLibrary;
 using MonoGameLibrary.Graphics;
@@ -43,15 +44,16 @@ namespace Hearthvale.Scenes
         private TextureAtlas _arrowAtlas;
 
         private Viewport _viewport;
-        private Camera2D _camera;
+        // Remove _camera field - we'll use CameraManager instead
 
         private DungeonManager _dungeonManager;
-        private MonoGameLibrary.Graphics.Tilemap _tilemap; // <-- Change type here
+        private MonoGameLibrary.Graphics.Tilemap _tilemap;
 
         // Managers
         private NpcManager _npcManager;
         private DialogManager _dialogManager;
         private WeaponManager _weaponManager;
+        private MapManager _mapManager; // Add MapManager for CameraManager integration
 
         private Player _player;
         private List<Weapon> _playerWeapons;
@@ -82,17 +84,42 @@ namespace Hearthvale.Scenes
             _font = Core.Content.Load<SpriteFont>("fonts/04B_30");
             _debugFont = Content.Load<SpriteFont>("fonts/DebugFont");
 
-            // Initialize camera FIRST before using it
-            _camera = new Camera2D(Core.GraphicsDevice.Viewport) { Zoom = 3.0f };
+            // Initialize camera and CameraManager
+            var camera = new Camera2D(Core.GraphicsDevice.Viewport) { Zoom = 3.0f };
+            CameraManager.Initialize(camera);
+
+            // Initialize AutotileMapper BEFORE creating dungeon
+            AutotileMapper.Initialize(Content);
+
+            // Add comprehensive debug output
+            System.Diagnostics.Debug.WriteLine("=== DEBUG: Dungeon Generation Start ===");
+            AutotileMapper.DebugTileMapping();
+            AutotileMapper.DebugPrintFloorConfiguration();
+            AutotileMapper.DebugTilesetPositions();
 
             // Create the procedural dungeon manager and initialize it as the singleton
             _dungeonManager = new ProceduralDungeonManager();
-            DungeonManager.Initialize(_dungeonManager); // Initialize singleton with our procedural manager
+            DungeonManager.Initialize(_dungeonManager);
             
             _wallTileId = ProceduralDungeonManager.DefaultWallTileId;
             _tilemap = ((ProceduralDungeonManager)_dungeonManager).GenerateBasicDungeon(Content);
             _playerStart = ((ProceduralDungeonManager)_dungeonManager).GetPlayerStart(_tilemap);
+            
+            // Validate player start position
+            if (float.IsNaN(_playerStart.X) || float.IsNaN(_playerStart.Y))
+            {
+                System.Diagnostics.Debug.WriteLine("❌ CRITICAL: Player start position is NaN!");
+                _playerStart = new Vector2(100, 100); // Emergency fallback
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"✅ Valid player start: {_playerStart}");
+            }
+
             Rectangle dungeonBounds = new Rectangle(0, 0, _tilemap.Columns * (int)_tilemap.TileWidth, _tilemap.Rows * (int)_tilemap.TileHeight);
+
+            // Create MapManager for CameraManager integration
+            _mapManager = CreateMapManagerFromTilemap(_tilemap);
 
             // Gather dungeon element rectangles
             var dungeonRects = _dungeonManager.GetAllElements()
@@ -103,8 +130,8 @@ namespace Hearthvale.Scenes
                 .Where(r => r != Rectangle.Empty)
                 .ToList();
 
-            // Gather wall rectangles using MapUtils
-            var wallRects = MapUtils.GetWallRectangles(_tilemap, _wallTileId);
+            // Gather wall rectangles using MapUtils - this now properly handles autotiled walls
+            var wallRects = MapUtils.GetWallRectangles(_tilemap, _wallTileId); 
             allObstacles = wallRects.Concat(dungeonRects).ToList();
 
             // 1. Create NpcManager with a temporary empty WeaponManager (will be replaced)
@@ -113,17 +140,36 @@ namespace Hearthvale.Scenes
 
             // 2. Now create NpcManager with the real WeaponManager
             _npcManager = new NpcManager(_heroAtlas, dungeonBounds, _tilemap, _wallTileId, _weaponManager, _weaponAtlas, _arrowAtlas);
-            _npcManager.SpawnAllNpcTypesTest();
-            _weaponManager = new WeaponManager(_heroAtlas, _weaponAtlas, dungeonBounds, _npcManager.Npcs as List<NPC>);
-
-            // Create player BEFORE initializing singletons (so we can use it in callbacks)
+            
+            // Create player and set up collision properties BEFORE spawning NPCs
             _player = new Player(
                 _heroAtlas, _playerStart, _bounceSoundEffect, _collectSoundEffect, _playerAttackSoundEffect, MOVEMENT_SPEED
             );
 
+            // Set up collision properties for the player
+            _player.Tilemap = _tilemap;
+            _player.WallTileId = _wallTileId;
+
+            // Now spawn NPCs with player reference to avoid overlap
+            _npcManager.SpawnAllNpcTypesTest(_player);
+            
+            _weaponManager = new WeaponManager(_heroAtlas, _weaponAtlas, dungeonBounds, _npcManager.Npcs as List<NPC>);
+
+            // Create player and set up collision properties
+            _player = new Player(
+                _heroAtlas, _playerStart, _bounceSoundEffect, _collectSoundEffect, _playerAttackSoundEffect, MOVEMENT_SPEED
+            );
+
+            // Set up collision properties for the player
+            _player.Tilemap = _tilemap;
+            _player.WallTileId = _wallTileId;
+
+            System.Diagnostics.Debug.WriteLine($"Camera initialized to player position: {CameraManager.Instance.Position}");
+            System.Diagnostics.Debug.WriteLine($"Player position after creation: {_player.Position}");
+
             // Initialize singletons ONCE with the now-initialized camera and player
             SingletonManager.InitializeForGameScene(
-                _atlas, _font, _debugFont, _uiSoundEffect, _camera, MOVEMENT_SPEED,
+                _atlas, _font, _debugFont, _uiSoundEffect, camera, MOVEMENT_SPEED,
                 (movement) => _player.Move(movement, dungeonBounds, _player.Sprite.Width, _player.Sprite.Height, _npcManager.Npcs, _tilemap, _wallTileId, allObstacles ?? new List<Rectangle>()),
                 () => {
                     // NPC spawn logic
@@ -169,13 +215,19 @@ namespace Hearthvale.Scenes
             if (GameUIManager.Instance.IsPausePanelVisible || GameUIManager.Instance.IsDialogOpen)
             {
                 GumService.Default.Update(gameTime);
-
-                // Early return - don't process game input when UI is active
                 return;
             }
 
             // InputHandler now handles all input including UI/Debug
             InputHandler.Instance.Update(gameTime);
+
+            // Add debug output to see what's happening
+            if (gameTime.TotalGameTime.TotalSeconds % 1.0 < 0.016) // Every second roughly
+            {
+                System.Diagnostics.Debug.WriteLine($"DEBUG: Player Position: {_player?.Position ?? Vector2.Zero}");
+                System.Diagnostics.Debug.WriteLine($"DEBUG: Camera Position: {CameraManager.Instance.Position}");
+                System.Diagnostics.Debug.WriteLine($"DEBUG: Player Start was: {_playerStart}");
+            }
 
             // Update game systems
             _player.Update(gameTime, _npcManager.Npcs);
@@ -188,21 +240,27 @@ namespace Hearthvale.Scenes
 
             UpdateViewport(Core.GraphicsDevice.Viewport);
 
-            // Camera follow logic
-            Rectangle dungeonBounds = new Rectangle(0, 0, _tilemap.Columns * (int)_tilemap.TileWidth, _tilemap.Rows * (int)_tilemap.TileHeight);
+            // Update camera using CameraManager
             Rectangle margin = new Rectangle(
-                (int)(100 / _camera.Zoom), (int)(80 / _camera.Zoom),
-                (int)(_viewport.Width / _camera.Zoom) - (int)(200 / _camera.Zoom),
-                (int)(_viewport.Height / _camera.Zoom) - (int)(160 / _camera.Zoom)
+                (int)(100 / CameraManager.Instance.Zoom), (int)(80 / CameraManager.Instance.Zoom),
+                (int)(_viewport.Width / CameraManager.Instance.Zoom) - (int)(200 / CameraManager.Instance.Zoom),
+                (int)(_viewport.Height / CameraManager.Instance.Zoom) - (int)(160 / CameraManager.Instance.Zoom)
             );
             
-            _camera.FollowWithMargin(_player.Position, margin, 0.1f);
-            _camera.ClampToMap(_tilemap.Columns, _tilemap.Rows, (int)_tilemap.TileWidth);
-            _camera.Update(gameTime);
+            CameraManager.Instance.UpdateCamera(
+                _player.Position, 
+                new Point((int)_player.Sprite.Width, (int)_player.Sprite.Height),
+                margin, 
+                _mapManager, 
+                CombatEffectsManager.Instance, 
+                gameTime
+            );
 
             // Update player movement
             _player.Move(
-                InputHandler.Instance.GetMovement(), dungeonBounds, _player.Sprite.Width, _player.Sprite.Height,
+                InputHandler.Instance.GetMovement(), 
+                new Rectangle(0, 0, _tilemap.Columns * (int)_tilemap.TileWidth, _tilemap.Rows * (int)_tilemap.TileHeight), 
+                _player.Sprite.Width, _player.Sprite.Height,
                 _npcManager.Npcs, _tilemap, _wallTileId, allObstacles ?? new List<Rectangle>());
 
             // Update NPCs
@@ -226,29 +284,31 @@ namespace Hearthvale.Scenes
                 npc.Draw(Core.SpriteBatch);
 
             // Draw debug overlays that should follow the camera
-            GameUIManager.Instance.DrawDungeonElementCollisionBoxes(Core.SpriteBatch, DungeonManager.Instance.GetAllElements(), _camera.GetViewMatrix());
-            DebugManager.Instance.Draw(Core.SpriteBatch, _player, _npcManager.Npcs, _tilemap, ProceduralDungeonManager.DefaultWallTileId, DungeonManager.Instance.GetAllElements(), _camera.GetViewMatrix());
+            GameUIManager.Instance.DrawDungeonElementCollisionBoxes(Core.SpriteBatch, DungeonManager.Instance.GetAllElements(), CameraManager.Instance.GetViewMatrix());
+            DebugManager.Instance.Draw(Core.SpriteBatch, _player, _npcManager.Npcs, _tilemap, ProceduralDungeonManager.DefaultWallTileId, DungeonManager.Instance.GetAllElements(), CameraManager.Instance.GetViewMatrix());
         }
 
         public override void DrawUI(GameTime gameTime)
         {
             GumService.Default.Draw();
-            
+
             // Draw UI in screen space (no camera transform)
             // Position health bar in top-left with proper spacing
-            var healthBarPosition = new Vector2(25, 25); // Moved away from edge
-            var healthBarSize = new Vector2(120, 16); // Slightly larger
+            var healthBarPosition = new Vector2(25, 25);
+            var healthBarSize = new Vector2(120, 16);
             GameUIManager.Instance.DrawPlayerHealthBar(Core.SpriteBatch, _player, healthBarPosition, healthBarSize);
-            
+
             // Score is now positioned in top-right by ScoreManager
             ScoreManager.Instance.Draw(Core.SpriteBatch);
-            
-            // Debug info positioned to avoid overlapping with other UI elements
-            var debugInfoPosition = new Vector2(
-                _viewport.Width - 240, // 240px from right edge
-                _viewport.Height - 120 // 120px from bottom edge
+
+            // Use CameraManager for camera position
+            GameUIManager.Instance.DrawDebugInfo(
+                Core.SpriteBatch,
+                gameTime,
+                _player?.Position ?? Vector2.Zero,
+                CameraManager.Instance.Position,
+                _viewport
             );
-            GameUIManager.Instance.DrawDebugInfo(Core.SpriteBatch, gameTime, _player.Position, _camera.Position, _viewport);
 
             // Draw the UI debug grid if enabled
             if (DebugManager.Instance?.ShowUIDebugGrid == true)
@@ -292,6 +352,17 @@ namespace Hearthvale.Scenes
             return CameraManager.Instance.GetViewMatrix();
         }
 
+        /// <summary>
+        /// Creates a MapManager from the procedural tilemap for CameraManager integration
+        /// </summary>
+        private MapManager CreateMapManagerFromTilemap(Tilemap tilemap)
+        {
+            // This is a temporary implementation to provide MapManager functionality
+            // You may need to create a proper MapManager implementation or modify CameraManager
+            // For now, we'll create a simple wrapper
+            return new TilemapMapManager(tilemap, _playerStart);
+        }
+
         protected override void Dispose(bool disposing)
         {
             if (IsDisposed) return;
@@ -304,6 +375,49 @@ namespace Hearthvale.Scenes
             }
 
             base.Dispose(disposing);
+        }
+    }
+
+    /// <summary>
+    /// Simple MapManager implementation that wraps a Tilemap for CameraManager compatibility
+    /// </summary>
+    public class TilemapMapManager : MapManager
+    {
+        private readonly Tilemap _tilemap;
+        private readonly Vector2 _playerSpawnPoint;
+
+        public TilemapMapManager(Tilemap tilemap, Vector2 playerSpawnPoint)
+            : base() // Use the protected parameterless constructor
+        {
+            _tilemap = tilemap ?? throw new ArgumentNullException(nameof(tilemap));
+            _playerSpawnPoint = playerSpawnPoint;
+        }
+
+        // Override properties to use our tilemap
+        public override int MapWidthInPixels => _tilemap.Columns * (int)_tilemap.TileWidth;
+        public override int MapHeightInPixels => _tilemap.Rows * (int)_tilemap.TileHeight;
+        public override int TileWidth => (int)_tilemap.TileWidth;
+        public override int TileHeight => (int)_tilemap.TileHeight;
+
+        public override void Update(GameTime gameTime)
+        {
+            // No update needed for static tilemap - don't call base
+        }
+
+        public override void Draw(Matrix transform)
+        {
+            // Drawing is handled separately in GameScene - don't call base
+        }
+
+        public override Vector2 GetPlayerSpawnPoint()
+        {
+            return _playerSpawnPoint;
+        }
+
+        public override TiledMapObjectLayer GetObjectLayer(string name)
+        {
+            // Not applicable for procedural tilemaps
+            return null;
         }
     }
 }

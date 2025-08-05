@@ -1,14 +1,17 @@
-﻿using Hearthvale.GameCode.Entities.NPCs;
+﻿using Hearthvale.GameCode.Entities;
 using Hearthvale.GameCode.Entities.Characters;
+using Hearthvale.GameCode.Entities.NPCs;
 using Hearthvale.GameCode.Entities.Players;
+using Hearthvale.GameCode.Utils;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.Tiled;
 using MonoGameLibrary;
 using MonoGameLibrary.Graphics;
+using System;
 using System.Collections.Generic;
-using Hearthvale.GameCode.Entities;
+using System.Linq;
 
 namespace Hearthvale.GameCode.Managers
 {
@@ -58,8 +61,15 @@ namespace Hearthvale.GameCode.Managers
             }
         }
 
-        public void SpawnNPC(string npcType, Vector2 position)
+        public void SpawnNPC(string npcType, Vector2 position, Player player = null, float minDistanceFromPlayer = 48f)
         {
+            // Check distance from player if provided
+            if (player != null && Vector2.Distance(position, player.Position) < minDistanceFromPlayer)
+            {
+                System.Diagnostics.Debug.WriteLine($"Cannot spawn {npcType} at {position} - too close to player");
+                return;
+            }
+            
             // Clamp spawn position to map bounds
             float clampedX = MathHelper.Clamp(position.X, _bounds.Left, _bounds.Right - 32); // 32: typical sprite width
             float clampedY = MathHelper.Clamp(position.Y, _bounds.Top, _bounds.Bottom - 32); // 32: typical sprite height
@@ -112,9 +122,15 @@ namespace Hearthvale.GameCode.Managers
             };
             NPC npc = new NPC(npcType, animations, spawnPos, _bounds, defeatSound, npcHealth, _tilemap, _wallTileId);
 
+            // Set up collision properties for the NPC
+            npc.Tilemap = _tilemap;
+            npc.WallTileId = _wallTileId; // NPCs will also use AutotileMapper.IsWallTile
+
             npc.FacingRight = false;
             _npcs.Add(npc);
             _weaponManager.EquipWeapon(npc, new Weapon("Dagger", DataManager.Instance.GetWeaponStats("Dagger"), _weaponAtlas, _arrowAtlas));
+            
+            System.Diagnostics.Debug.WriteLine($"Successfully spawned {npcType} at {spawnPos}");
         }
 
         public void Update(GameTime gameTime, Character player, List<Rectangle> rectangles)
@@ -138,7 +154,7 @@ namespace Hearthvale.GameCode.Managers
             }
         }
 
-        public void SpawnAllNpcTypesTest()
+        public void SpawnAllNpcTypesTest(Player player = null)
         {
             var npcTypes = new[]
             {
@@ -155,24 +171,70 @@ namespace Hearthvale.GameCode.Managers
             int mapHeight = _tilemap.Rows;
             int tileWidth = (int)_tilemap.TileWidth;
             int tileHeight = (int)_tilemap.TileHeight;
-
-            int spawned = 0;
-            for (int row = 1; row < mapHeight - 1 && spawned < npcTypes.Length; row++)
+            
+            const float MIN_DISTANCE_FROM_PLAYER = 64f; // Minimum distance in pixels
+            
+            // Collect all valid spawn positions first
+            var validSpawnPositions = new List<Vector2>();
+            
+            for (int row = 1; row < mapHeight - 1; row++)
             {
-                for (int col = 1; col < mapWidth - 1 && spawned < npcTypes.Length; col++)
+                for (int col = 1; col < mapWidth - 1; col++)
                 {
                     int tileId = _tilemap.GetTileId(col, row);
-                    if (tileId != _wallTileId)
+                    // Use AutotileMapper to check if this is any type of wall tile
+                    if (!AutotileMapper.IsWallTile(tileId))
                     {
                         Vector2 pos = new Vector2(col * tileWidth, row * tileHeight);
-                        SpawnNPC(npcTypes[spawned], pos);
-                        spawned++;
+                        
+                        // Check distance from player if player is provided
+                        if (player == null || Vector2.Distance(pos, player.Position) >= MIN_DISTANCE_FROM_PLAYER)
+                        {
+                            validSpawnPositions.Add(pos);
+                        }
                     }
                 }
             }
+            
+            // Shuffle the positions to get random distribution
+            var random = new Random();
+            validSpawnPositions = validSpawnPositions.OrderBy(x => random.Next()).ToList();
+            
+            int spawned = 0;
+            foreach (var pos in validSpawnPositions)
+            {
+                if (spawned >= npcTypes.Length) break;
+                
+                // Double-check distance from player and other NPCs
+                bool canSpawn = true;
+                
+                if (player != null && Vector2.Distance(pos, player.Position) < MIN_DISTANCE_FROM_PLAYER)
+                {
+                    canSpawn = false;
+                }
+                
+                // Check distance from existing NPCs
+                const float MIN_DISTANCE_BETWEEN_NPCS = 32f;
+                foreach (var existingNpc in _npcs)
+                {
+                    if (Vector2.Distance(pos, existingNpc.Position) < MIN_DISTANCE_BETWEEN_NPCS)
+                    {
+                        canSpawn = false;
+                        break;
+                    }
+                }
+                
+                if (canSpawn)
+                {
+                    SpawnNPC(npcTypes[spawned], pos);
+                    spawned++;
+                }
+            }
+            
+            System.Diagnostics.Debug.WriteLine($"Successfully spawned {spawned} NPCs out of {npcTypes.Length} types");
         }
 
         // Update the constructor to accept these parameters
-       
+
     }
 }
