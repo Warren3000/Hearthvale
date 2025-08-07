@@ -1,7 +1,8 @@
-﻿using Hearthvale.Scenes;
+﻿using Gum.Forms.Controls;
+using Hearthvale.GameCode.Managers;
+using Hearthvale.Scenes;
 using Microsoft.Xna.Framework.Media;
 using MonoGameGum;
-using MonoGameGum.Forms.Controls;
 using MonoGameLibrary;
 
 namespace Hearthvale;
@@ -19,6 +20,10 @@ public class Game1 : Core
     protected override void Initialize()
     {
         base.Initialize();
+
+        // Initialize singleton managers
+        ConfigurationManager.Initialize();
+        DataManager.Initialize();
 
         // Start playing the background music.
         Audio.PlaySong(_themeSong);

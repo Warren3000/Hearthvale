@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework;
 using MonoGameLibrary.Graphics;
 using Xunit;
 using System.Collections.Generic;
+using MonoGame.Extended.Tiled;
 
 namespace HearthvaleTest
 {
@@ -67,9 +68,8 @@ namespace HearthvaleTest
             // Create a dummy tileset and tilemap for testing
             var tileset = new Tileset(dummyTextureRegion, 1, 1);
             var tilemap = new Tilemap(tileset, 1, 1);
-            int wallTileId = 0;
 
-            return new NPC("test", animations, new Vector2(0, 0), new Rectangle(0, 0, 100, 100), dummySound, maxHealth, tilemap, wallTileId);
+            return new NPC("test", animations, new Vector2(0, 0), new Rectangle(0, 0, 100, 100), dummySound, maxHealth, tilemap, tileset);
         }
     }
 }

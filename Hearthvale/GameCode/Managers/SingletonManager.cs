@@ -31,7 +31,7 @@ namespace Hearthvale.GameCode.Managers
             DataManager.Initialize(); // Game data is always needed
             var whitePixel = CreateWhitePixel();
             DebugManager.Initialize(whitePixel);
-
+            TilesetManager.Initialize(); // Initialize TilesetManager for wall/floor tilesets
             InputHandler.Initialize(
                 camera: null,
                 movementSpeed: 0f,

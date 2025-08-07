@@ -173,7 +173,7 @@ public class Core : Game
         SpriteBatch.End();
 
         // Draw UI (screen space, no transform)
-        SpriteBatch.Begin(SpriteSortMode.BackToFront, BlendState.AlphaBlend, samplerState: SamplerState.PointClamp);
+        SpriteBatch.Begin(SpriteSortMode.FrontToBack, BlendState.AlphaBlend, samplerState: SamplerState.PointClamp);
         s_activeScene?.DrawUI(gameTime);
         SpriteBatch.End();
 

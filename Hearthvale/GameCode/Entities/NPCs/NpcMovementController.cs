@@ -1,7 +1,9 @@
+using Hearthvale.GameCode.Managers;
+using Hearthvale.GameCode.Utils;
 using Microsoft.Xna.Framework;
+using MonoGame.Extended.Tiled;
 using MonoGameLibrary.Graphics;
 using System;
-using Hearthvale.GameCode.Utils;
 
 namespace Hearthvale.GameCode.Entities.NPCs;
 public class NpcMovementController
@@ -21,7 +23,8 @@ public class NpcMovementController
     private const float KnockbackDuration = 0.2f; // seconds
 
     private Tilemap _tilemap;
-    private int _wallTileId;
+    private Tileset _wallTileset;
+    private Tileset _floorTileset;
     private int _spriteWidth;
     private int _spriteHeight;
 
@@ -29,13 +32,12 @@ public class NpcMovementController
     private Vector2? _chaseTarget = null;
     private float _chaseSpeed = 40f;
 
-    public NpcMovementController(Vector2 startPosition, float speed, Rectangle bounds, Tilemap tilemap, int wallTileId, int spriteWidth, int spriteHeight)
+    public NpcMovementController(Vector2 startPosition, float speed, Rectangle bounds, Tilemap tilemap, int spriteWidth, int spriteHeight)
     {
         Position = startPosition;
         _speed = speed;
         Bounds = bounds;
         _tilemap = tilemap;
-        _wallTileId = wallTileId;
         _spriteWidth = spriteWidth;
         _spriteHeight = spriteHeight;
     }
@@ -153,13 +155,16 @@ public class NpcMovementController
         int topTile = candidateBounds.Top / (int)_tilemap.TileHeight;
         int bottomTile = (candidateBounds.Bottom - 1) / (int)_tilemap.TileHeight;
 
+        var wallTileset = TilesetManager.Instance.WallTileset;
+
         for (int col = leftTile; col <= rightTile; col++)
         {
             for (int row = topTile; row <= bottomTile; row++)
             {
-                int tileId = _tilemap.GetTileId(col, row);
-                // FIX: Use AutotileMapper instead of hardcoded ID
-                if (AutotileMapper.IsWallTile(tileId))
+                var tileTileset = _tilemap.GetTileset(col, row);
+                var tileId = _tilemap.GetTileId(col, row);
+                // Check if the tile at this position belongs to the wall tileset.
+                if (tileTileset == wallTileset && AutotileMapper.IsWallTile(tileId))
                     return true;
             }
         }

@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿using Hearthvale.GameCode.Managers;
+using Microsoft.Xna.Framework;
 using MonoGameLibrary.Graphics;
 using System.Collections.Generic;
 
@@ -6,21 +7,22 @@ namespace Hearthvale.GameCode.Utils
 {
     public static class MapUtils
     {
-        public static List<Rectangle> GetWallRectangles(Tilemap tilemap, int originalWallTileId)
+        public static List<Rectangle> GetWallRectangles(Tilemap tilemap)
         {
             var wallRects = new List<Rectangle>();
+            var wallTileset = TilesetManager.Instance.WallTileset;
 
             for (int row = 0; row < tilemap.Rows; row++)
             {
                 for (int col = 0; col < tilemap.Columns; col++)
                 {
-                    int tileId = tilemap.GetTileId(col, row);
-                    // Use AutotileMapper to check if this is any type of wall tile
-                    if (AutotileMapper.IsWallTile(tileId))
+                    var tileTileset = tilemap.GetTileset(col, row);
+                    var tileId = tilemap.GetTileId(col, row);
+                    if (tileTileset == TilesetManager.Instance.WallTileset && AutotileMapper.IsWallTile(tileId))
                     {
                         wallRects.Add(new Rectangle(
-                            (int)(col * tilemap.TileWidth),
-                            (int)(row * tilemap.TileHeight),
+                            col * (int)tilemap.TileWidth,
+                            row * (int)tilemap.TileHeight,
                             (int)tilemap.TileWidth,
                             (int)tilemap.TileHeight
                         ));

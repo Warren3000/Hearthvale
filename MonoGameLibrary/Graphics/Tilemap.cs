@@ -10,8 +10,10 @@ namespace MonoGameLibrary.Graphics;
 
 public class Tilemap
 {
-    private readonly Tileset _tileset;
+    // Add support for per-tile tileset
+    private readonly Tileset _defaultTileset;
     private readonly int[] _tiles;
+    private readonly Tileset[] _tileTilesets; // New: stores tileset per tile
 
     /// <summary>
     /// Gets the total number of rows in this tilemap.
@@ -36,12 +38,12 @@ public class Tilemap
     /// <summary>
     /// Gets the width, in pixels, each tile is drawn at.
     /// </summary>
-    public float TileWidth => _tileset.TileWidth * Scale.X;
+    public float TileWidth => _defaultTileset.TileWidth * Scale.X;
 
     /// <summary>
     /// Gets the height, in pixels, each tile is drawn at.
     /// </summary>
-    public float TileHeight => _tileset.TileHeight * Scale.Y;
+    public float TileHeight => _defaultTileset.TileHeight * Scale.Y;
 
     /// <summary>
     /// Creates a new tilemap.
@@ -51,12 +53,15 @@ public class Tilemap
     /// <param name="rows">The total number of rows in this tilemap.</param>
     public Tilemap(Tileset tileset, int columns, int rows)
     {
-        _tileset = tileset;
+        _defaultTileset = tileset;
         Rows = rows;
         Columns = columns;
         Count = Columns * Rows;
         Scale = Vector2.One;
         _tiles = new int[Count];
+        _tileTilesets = new Tileset[Count]; // New: initialize tileset array
+        for (int i = 0; i < Count; i++)
+            _tileTilesets[i] = _defaultTileset; // Default to wall tileset
     }
     public int GetTileId(int column, int row)
     {
@@ -64,6 +69,14 @@ public class Tilemap
         if (index >= 0 && index < _tiles.Length)
             return _tiles[index];
         return -1;
+    }
+
+    public Tileset GetTileset(int column, int row)
+    {
+        int index = row * Columns + column;
+        if (index >= 0 && index < _tileTilesets.Length)
+            return _tileTilesets[index];
+        return null;
     }
 
     /// <summary>
@@ -75,6 +88,14 @@ public class Tilemap
     public void SetTile(int index, int tilesetID)
     {
         _tiles[index] = tilesetID;
+        _tileTilesets[index] = _defaultTileset; // Default tileset
+    }
+
+    // New overload: set tile with custom tileset
+    public void SetTile(int index, int tilesetID, Tileset tileset)
+    {
+        _tiles[index] = tilesetID;
+        _tileTilesets[index] = tileset ?? _defaultTileset;
     }
 
     /// <summary>
@@ -90,6 +111,13 @@ public class Tilemap
         SetTile(index, tilesetID);
     }
 
+    // New overload: set tile with custom tileset
+    public void SetTile(int column, int row, int tilesetID, Tileset tileset)
+    {
+        int index = row * Columns + column;
+        SetTile(index, tilesetID, tileset);
+    }
+
     /// <summary>
     /// Gets the texture region of the tile from this tilemap at the specified index.
     /// </summary>
@@ -97,7 +125,7 @@ public class Tilemap
     /// <returns>The texture region of the tile from this tilemap at the specified index.</returns>
     public TextureRegion GetTile(int index)
     {
-        return _tileset.GetTile(_tiles[index]);
+        return _tileTilesets[index].GetTile(_tiles[index]);
     }
 
     /// <summary>
@@ -122,7 +150,7 @@ public class Tilemap
         for (int i = 0; i < Count; i++)
         {
             int tileSetIndex = _tiles[i];
-            TextureRegion tile = _tileset.GetTile(tileSetIndex);
+            TextureRegion tile = _tileTilesets[i].GetTile(tileSetIndex);
 
             int x = i % Columns;
             int y = i / Columns;

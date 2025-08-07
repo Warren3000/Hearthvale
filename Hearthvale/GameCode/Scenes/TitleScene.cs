@@ -13,6 +13,7 @@ using MonoGameLibrary;
 using MonoGameLibrary.Graphics;
 using MonoGameLibrary.Scenes;
 using System;
+using System.Collections.Generic;
 
 namespace Hearthvale.Scenes;
 
@@ -66,6 +67,7 @@ public class TitleScene : Scene
 
     // The back button used to exit the options menu back to the title menu.
     private AnimatedButton _optionsBackButton;
+    private DebugKeysBar _debugKeysBar;
 
     // Reference to the texture atlas that we can pass to UI elements when they
     // are created.
@@ -135,6 +137,14 @@ public class TitleScene : Scene
 #if DEBUG
         Core.Audio.SongVolume = 0f;
 #endif
+        var debugKeys = new List<(string, string)>
+        {
+            ("F7", "UI Grid"),
+            // Add more as needed for title screen
+        };
+        _debugKeysBar = new DebugKeysBar(_font, /* whitePixel: */ new Texture2D(Core.GraphicsDevice, 1, 1), debugKeys);
+        _debugKeysBar._whitePixel.SetData(new[] { Color.White });
+
     }
 
     public override void Update(GameTime gameTime)
@@ -187,6 +197,7 @@ public class TitleScene : Scene
         {
             DebugManager.Instance.DrawTitleScreen(Core.SpriteBatch); // Use title-specific method
         }
+        _debugKeysBar.Draw(Core.SpriteBatch, Core.GraphicsDevice.Viewport.Width, Core.GraphicsDevice.Viewport.Height);
     }
     private void InitializeUI()
     {

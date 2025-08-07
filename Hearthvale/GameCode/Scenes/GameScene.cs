@@ -25,6 +25,8 @@ namespace Hearthvale.Scenes
 {
     public class GameScene : Scene, ICameraProvider
     {
+        private bool _f5WasDown = false;
+        private DebugKeysBar _debugKeysBar;
         private Vector2 _playerStart;
 
         private const float dialogDistance = 40f;
@@ -62,7 +64,6 @@ namespace Hearthvale.Scenes
 
         private List<Rectangle> allObstacles = new List<Rectangle>();
 
-        private int _wallTileId; // Store wall tile ID for easy access
 
         public override void Initialize()
         {
@@ -88,23 +89,36 @@ namespace Hearthvale.Scenes
             var camera = new Camera2D(Core.GraphicsDevice.Viewport) { Zoom = 3.0f };
             CameraManager.Initialize(camera);
 
-            // Initialize AutotileMapper BEFORE creating dungeon
-            AutotileMapper.Initialize(Content);
-
-            // Add comprehensive debug output
-            System.Diagnostics.Debug.WriteLine("=== DEBUG: Dungeon Generation Start ===");
-            AutotileMapper.DebugTileMapping();
-            AutotileMapper.DebugPrintFloorConfiguration();
-            AutotileMapper.DebugTilesetPositions();
-
             // Create the procedural dungeon manager and initialize it as the singleton
             _dungeonManager = new ProceduralDungeonManager();
             DungeonManager.Initialize(_dungeonManager);
+
+            // Define dungeon assets and dimensions
+            int dungeonColumns = 100;
+            int dungeonRows = 80;
+            string wallTilesetPath = "Tilesets/DampDungeons/Tiles/dungeon-autotiles-walls";
+            Rectangle wallTilesetRect = new Rectangle(0, 0, 256, 192);
+            var wallAutotileXml = ConfigurationManager.Instance.LoadConfiguration("Content/Tilesets/DampDungeons/Tiles/Autotiles-Dungeon.xml");
+            string floorTilesetPath = "Tilesets/DampDungeons/Tiles/Dungeon_WallsAndFloors";
+            Rectangle floorTilesetRect = new Rectangle(0, 0, 96, 512);
+            var floorAutotileXml = ConfigurationManager.Instance.LoadConfiguration("Content/Tilesets/DampDungeons/Tiles/Autotiles.xml");
+
             
-            _wallTileId = ProceduralDungeonManager.DefaultWallTileId;
-            _tilemap = ((ProceduralDungeonManager)_dungeonManager).GenerateBasicDungeon(Content);
+            // Create tilesets here and assign the wall tileset to the class field
+            var wallTileset = new Tileset(new TextureRegion(Content.Load<Texture2D>(wallTilesetPath), wallTilesetRect.X, wallTilesetRect.Y, wallTilesetRect.Width, wallTilesetRect.Height), ProceduralDungeonManager.AutotileSize, ProceduralDungeonManager.AutotileSize);
+
+            var floorTileset = new Tileset(new TextureRegion(Content.Load<Texture2D>(floorTilesetPath), floorTilesetRect.X, floorTilesetRect.Y, floorTilesetRect.Width, floorTilesetRect.Height), ProceduralDungeonManager.AutotileSize, ProceduralDungeonManager.AutotileSize);
+
+            TilesetManager.Instance.SetTilesets(wallTileset, floorTileset); // Ensure TilesetManager is initialized
+
+            _tilemap = ((ProceduralDungeonManager)_dungeonManager).GenerateBasicDungeon(
+                Content,
+                dungeonColumns, dungeonRows,
+                wallTileset, wallAutotileXml,
+                floorTileset, floorAutotileXml
+            );
             _playerStart = ((ProceduralDungeonManager)_dungeonManager).GetPlayerStart(_tilemap);
-            
+
             // Validate player start position
             if (float.IsNaN(_playerStart.X) || float.IsNaN(_playerStart.Y))
             {
@@ -131,38 +145,23 @@ namespace Hearthvale.Scenes
                 .ToList();
 
             // Gather wall rectangles using MapUtils - this now properly handles autotiled walls
-            var wallRects = MapUtils.GetWallRectangles(_tilemap, _wallTileId); 
+            var wallRects = MapUtils.GetWallRectangles(_tilemap);
             allObstacles = wallRects.Concat(dungeonRects).ToList();
 
-            // 1. Create NpcManager with a temporary empty WeaponManager (will be replaced)
-            var tempNpcList = new List<NPC>();
-            _weaponManager = new WeaponManager(_heroAtlas, _weaponAtlas, dungeonBounds, tempNpcList);
-
-            // 2. Now create NpcManager with the real WeaponManager
-            _npcManager = new NpcManager(_heroAtlas, dungeonBounds, _tilemap, _wallTileId, _weaponManager, _weaponAtlas, _arrowAtlas);
-            
             // Create player and set up collision properties BEFORE spawning NPCs
             _player = new Player(
                 _heroAtlas, _playerStart, _bounceSoundEffect, _collectSoundEffect, _playerAttackSoundEffect, MOVEMENT_SPEED
             );
-
-            // Set up collision properties for the player
+            // Pass tilemap and wall info to the player for collision
             _player.Tilemap = _tilemap;
-            _player.WallTileId = _wallTileId;
 
-            // Now spawn NPCs with player reference to avoid overlap
+            // Initialize managers that depend on the player or other systems
+            _weaponManager = new WeaponManager(_heroAtlas, _weaponAtlas, dungeonBounds, new List<NPC>());
+            _npcManager = new NpcManager(_heroAtlas, dungeonBounds, _tilemap, _weaponManager, _weaponAtlas, _arrowAtlas);
+
+            // Now that managers are ready, spawn NPCs and update weapon manager's NPC list
             _npcManager.SpawnAllNpcTypesTest(_player);
-            
-            _weaponManager = new WeaponManager(_heroAtlas, _weaponAtlas, dungeonBounds, _npcManager.Npcs as List<NPC>);
-
-            // Create player and set up collision properties
-            _player = new Player(
-                _heroAtlas, _playerStart, _bounceSoundEffect, _collectSoundEffect, _playerAttackSoundEffect, MOVEMENT_SPEED
-            );
-
-            // Set up collision properties for the player
-            _player.Tilemap = _tilemap;
-            _player.WallTileId = _wallTileId;
+            _weaponManager.UpdateNpcList(_npcManager.Npcs);
 
             System.Diagnostics.Debug.WriteLine($"Camera initialized to player position: {CameraManager.Instance.Position}");
             System.Diagnostics.Debug.WriteLine($"Player position after creation: {_player.Position}");
@@ -170,7 +169,7 @@ namespace Hearthvale.Scenes
             // Initialize singletons ONCE with the now-initialized camera and player
             SingletonManager.InitializeForGameScene(
                 _atlas, _font, _debugFont, _uiSoundEffect, camera, MOVEMENT_SPEED,
-                (movement) => _player.Move(movement, dungeonBounds, _player.Sprite.Width, _player.Sprite.Height, _npcManager.Npcs, _tilemap, _wallTileId, allObstacles ?? new List<Rectangle>()),
+                (movement) => _player.Move(movement, dungeonBounds, _player.Sprite.Width, _player.Sprite.Height, _npcManager.Npcs, allObstacles ?? new List<Rectangle>()),
                 () => {
                     // NPC spawn logic
                     float swingRadius = _player.EquippedWeapon?.Length ?? 32f;
@@ -204,6 +203,18 @@ namespace Hearthvale.Scenes
             _weaponManager.EquipWeapon(_player, _playerWeapons[_currentPlayerWeaponIndex]);
 
             _dialogManager = new DialogManager(GameUIManager.Instance, _player, _npcManager.Characters, dialogDistance);
+
+            // Initialize the debug viewer for tilesets
+            TilesetDebugManager.Initialize(_debugFont);
+            var debugKeys = new List<(string, string)>
+            {
+                ("F2", "Grid"),
+                ("F3", "Debug"),
+                ("F4", "Tileset Viewer"),
+                ("F5", "Coords"),
+                // Add more as needed
+            };
+            _debugKeysBar = new DebugKeysBar(_font, GameUIManager.Instance.WhitePixel, debugKeys);
         }
 
         public override void Update(GameTime gameTime)
@@ -261,11 +272,17 @@ namespace Hearthvale.Scenes
                 InputHandler.Instance.GetMovement(), 
                 new Rectangle(0, 0, _tilemap.Columns * (int)_tilemap.TileWidth, _tilemap.Rows * (int)_tilemap.TileHeight), 
                 _player.Sprite.Width, _player.Sprite.Height,
-                _npcManager.Npcs, _tilemap, _wallTileId, allObstacles ?? new List<Rectangle>());
+                _npcManager.Npcs, allObstacles ?? new List<Rectangle>());
 
             // Update NPCs
             foreach (var npc in _npcManager.Npcs)
                 npc.Update(gameTime, _npcManager.Npcs, _player, allObstacles);
+
+            if (Keyboard.GetState().IsKeyDown(Keys.F5) && !_f5WasDown)
+            {
+                TilesetDebugManager.ToggleShowTileCoordinates();
+            }
+            _f5WasDown = Keyboard.GetState().IsKeyDown(Keys.F5);
         }
 
         public void UpdateViewport(Viewport viewport)
@@ -285,7 +302,8 @@ namespace Hearthvale.Scenes
 
             // Draw debug overlays that should follow the camera
             GameUIManager.Instance.DrawDungeonElementCollisionBoxes(Core.SpriteBatch, DungeonManager.Instance.GetAllElements(), CameraManager.Instance.GetViewMatrix());
-            DebugManager.Instance.Draw(Core.SpriteBatch, _player, _npcManager.Npcs, _tilemap, ProceduralDungeonManager.DefaultWallTileId, DungeonManager.Instance.GetAllElements(), CameraManager.Instance.GetViewMatrix());
+            TilesetDebugManager.DrawTileCoordinatesOverlay(Core.SpriteBatch, _tilemap);
+            DebugManager.Instance.Draw(Core.SpriteBatch, _player, _npcManager.Npcs, DungeonManager.Instance.GetAllElements(), CameraManager.Instance.GetViewMatrix());
         }
 
         public override void DrawUI(GameTime gameTime)
@@ -315,6 +333,10 @@ namespace Hearthvale.Scenes
             {
                 DebugManager.Instance.DrawUIDebugGrid(Core.SpriteBatch, Core.GraphicsDevice.Viewport, 40, 40, Color.Black * 0.25f, _debugFont);
             }
+
+            // Draw the tileset debug viewer if enabled
+            TilesetDebugManager.Draw(Core.SpriteBatch);
+            _debugKeysBar.Draw(Core.SpriteBatch, Core.GraphicsDevice.Viewport.Width, Core.GraphicsDevice.Viewport.Height);
         }
 
         // Optionally, override Draw to do nothing or throw NotImplementedException

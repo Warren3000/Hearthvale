@@ -22,6 +22,7 @@ namespace Hearthvale.GameCode.Managers
         private readonly TextureAtlas _heroAtlas;
         private Tilemap _tilemap;
         private int _wallTileId;
+        private Tileset _wallTileSet;
         private WeaponManager _weaponManager; // Add this line
                                               // Add these fields to the NpcManager class
         private readonly TextureAtlas _weaponAtlas;
@@ -34,7 +35,6 @@ namespace Hearthvale.GameCode.Managers
             TextureAtlas heroAtlas,
             Rectangle bounds,
             Tilemap tilemap,
-            int wallTileId,
             WeaponManager weaponManager,
             TextureAtlas weaponAtlas,      // Add this parameter
             TextureAtlas arrowAtlas        // Add this parameter
@@ -43,7 +43,6 @@ namespace Hearthvale.GameCode.Managers
             _heroAtlas = heroAtlas;
             _bounds = bounds;
             _tilemap = tilemap;
-            _wallTileId = wallTileId;
             _weaponManager = weaponManager;
             _weaponAtlas = weaponAtlas;    // Initialize the field
             _arrowAtlas = arrowAtlas;      // Initialize the field
@@ -74,6 +73,18 @@ namespace Hearthvale.GameCode.Managers
             float clampedX = MathHelper.Clamp(position.X, _bounds.Left, _bounds.Right - 32); // 32: typical sprite width
             float clampedY = MathHelper.Clamp(position.Y, _bounds.Top, _bounds.Bottom - 32); // 32: typical sprite height
             Vector2 spawnPos = new Vector2(clampedX, clampedY);
+            Rectangle npcRect = new Rectangle(
+                (int)spawnPos.X + 8,
+                (int)spawnPos.Y + 16,
+                32 / 2, // Replace 32 with actual NPC sprite width if needed
+                32 / 2
+            );
+            if (IsRectOverlappingWall(npcRect))
+            {
+                System.Diagnostics.Debug.WriteLine($"Cannot spawn {npcType} at {spawnPos} - would overlap wall");
+                return;
+            }
+
 
             string animationPrefix = npcType switch
             {
@@ -120,11 +131,10 @@ namespace Hearthvale.GameCode.Managers
                 // ... other types
                 _ => 10
             };
-            NPC npc = new NPC(npcType, animations, spawnPos, _bounds, defeatSound, npcHealth, _tilemap, _wallTileId);
+            NPC npc = new NPC(npcType, animations, spawnPos, _bounds, defeatSound, npcHealth, _tilemap, _wallTileSet);
 
             // Set up collision properties for the NPC
             npc.Tilemap = _tilemap;
-            npc.WallTileId = _wallTileId; // NPCs will also use AutotileMapper.IsWallTile
 
             npc.FacingRight = false;
             _npcs.Add(npc);
@@ -176,17 +186,28 @@ namespace Hearthvale.GameCode.Managers
             
             // Collect all valid spawn positions first
             var validSpawnPositions = new List<Vector2>();
-            
+
             for (int row = 1; row < mapHeight - 1; row++)
             {
                 for (int col = 1; col < mapWidth - 1; col++)
                 {
                     int tileId = _tilemap.GetTileId(col, row);
-                    // Use AutotileMapper to check if this is any type of wall tile
                     if (!AutotileMapper.IsWallTile(tileId))
                     {
                         Vector2 pos = new Vector2(col * tileWidth, row * tileHeight);
-                        
+
+                        // Calculate the NPC's bounding box at this position
+                        Rectangle npcRect = new Rectangle(
+                            (int)pos.X + 8,
+                            (int)pos.Y + 16,
+                            32 / 2, // Replace 32 with your actual NPC sprite width if different
+                            32 / 2  // Replace 32 with your actual NPC sprite height if different
+                        );
+
+                        // Skip if this rectangle overlaps any wall tile
+                        if (IsRectOverlappingWall(npcRect))
+                            continue;
+
                         // Check distance from player if player is provided
                         if (player == null || Vector2.Distance(pos, player.Position) >= MIN_DISTANCE_FROM_PLAYER)
                         {
@@ -195,7 +216,7 @@ namespace Hearthvale.GameCode.Managers
                     }
                 }
             }
-            
+
             // Shuffle the positions to get random distribution
             var random = new Random();
             validSpawnPositions = validSpawnPositions.OrderBy(x => random.Next()).ToList();
@@ -233,8 +254,24 @@ namespace Hearthvale.GameCode.Managers
             
             System.Diagnostics.Debug.WriteLine($"Successfully spawned {spawned} NPCs out of {npcTypes.Length} types");
         }
+        private bool IsRectOverlappingWall(Rectangle rect)
+        {
+            int leftTile = rect.Left / (int)_tilemap.TileWidth;
+            int rightTile = (rect.Right - 1) / (int)_tilemap.TileWidth;
+            int topTile = rect.Top / (int)_tilemap.TileHeight;
+            int bottomTile = (rect.Bottom - 1) / (int)_tilemap.TileHeight;
 
-        // Update the constructor to accept these parameters
+            for (int col = leftTile; col <= rightTile; col++)
+            {
+                for (int row = topTile; row <= bottomTile; row++)
+                {
+                    if (AutotileMapper.IsWallTile(_tilemap.GetTileId(col, row)))
+                        return true;
+                }
+            }
+            return false;
+        }
+
 
     }
 }

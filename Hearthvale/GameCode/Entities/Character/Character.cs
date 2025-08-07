@@ -1,8 +1,11 @@
 ﻿using Hearthvale.GameCode.Entities.Interfaces;
 using Hearthvale.GameCode.Entities.Players;
+using Hearthvale.GameCode.Managers;
 using Hearthvale.GameCode.Utils;
+using Hearthvale.Scenes;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using MonoGame.Extended.Tiled;
 using MonoGameLibrary.Graphics;
 using System;
 using System.Collections.Generic;
@@ -192,7 +195,6 @@ public abstract class Character : IDamageable, IMovable, IAnimatable, IDialog
 
     // For wall collision
     public Tilemap Tilemap { get; set; }
-    public int WallTileId { get; set; }
 
     public bool IsKnockedBack => _knockbackTimer > 0;
 
@@ -250,7 +252,7 @@ public abstract class Character : IDamageable, IMovable, IAnimatable, IDialog
         bool hitWall = false;
         Vector2 wallBounce = Vector2.Zero;
         
-        if (Tilemap != null && WallTileId != -1)
+        if (Tilemap != null && TilesetManager.Instance.WallTileset != null)
         {
             hitWall = CheckWallCollisionAndBounce(nextBounds, out wallBounce);
         }
@@ -330,10 +332,10 @@ public abstract class Character : IDamageable, IMovable, IAnimatable, IDialog
             {
                 if (col >= 0 && col < Tilemap.Columns && row >= 0 && row < Tilemap.Rows)
                 {
-                    int tileId = Tilemap.GetTileId(col, row);
-                    // Use AutotileMapper to check if this is any type of wall tile
-                    if (AutotileMapper.IsWallTile(tileId))
-                    {
+                    var tileTileset = Tilemap.GetTileset(col, row);
+                    var tileId = Tilemap.GetTileId(col, row);
+                    if (tileTileset == TilesetManager.Instance.WallTileset && AutotileMapper.IsWallTile(tileId))
+                    { 
                         hitWall = true;
                         
                         // Determine which side of the wall we hit
@@ -425,7 +427,7 @@ public abstract class Character : IDamageable, IMovable, IAnimatable, IDialog
             bool safe = true;
             
             // Check walls
-            if (Tilemap != null && WallTileId != -1)
+            if (Tilemap != null && TilesetManager.Instance.WallTileset != null)
             {
                 if (CheckWallCollisionAndBounce(testBounds, out _))
                     safe = false;

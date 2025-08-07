@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Hearthvale.GameCode.Utils;
+using System.Xml.Linq;
 
 public class ProceduralDungeonManager : DungeonManager
 {
@@ -28,61 +29,79 @@ public class ProceduralDungeonManager : DungeonManager
 
     public int WallTileId => DefaultWallTileId;
 
-    public Tilemap GenerateBasicDungeon(ContentManager content)
-    {
-        AutotileMapper.Initialize(content);
-        
-        // Add comprehensive debug output
-        System.Diagnostics.Debug.WriteLine("=== DEBUG: Dungeon Generation Start ===");
-        AutotileMapper.DebugPrintFloorConfiguration();
-        AutotileMapper.DebugTilesetPositions(); // Add this new debug method
-        
+    public Tilemap GenerateBasicDungeon(
+         ContentManager content,
+         int columns, int rows,
+         Tileset wallTileset, XDocument wallAutotileXml,
+         Tileset floorTileset, XDocument floorAutotileXml)
+        {
+        AutotileMapper.Initialize(wallAutotileXml, floorAutotileXml);
+
         _random = new Random();
         _rooms = new List<Rectangle>();
         _corridors = new List<Rectangle>();
 
-        int columns = 80;
-        int rows = 60;
-
         int initialWallTileId = AutotileMapper.GetWallTileIndex("isolated");
         int[] floorTileIds = AutotileMapper.GetFloorTileIds();
-        
-        System.Diagnostics.Debug.WriteLine($"Initial wall tile ID: {initialWallTileId}");
-        System.Diagnostics.Debug.WriteLine($"Floor tile IDs for generation: [{string.Join(", ", floorTileIds)}]");
-        System.Diagnostics.Debug.WriteLine($"Floor tile count: {floorTileIds.Length}");
 
-        // Create tileset with 16x16 tiles
-        var tileset = new Tileset(
-            new TextureRegion(content.Load<Texture2D>("Tilesets/DampDungeons/Tiles/Dungeon_WallsAndFloors"), 0, 0, 640, 480),
-            AutotileSize, AutotileSize);
+        System.Diagnostics.Debug.WriteLine($"Initial wall tile ID (for wall tileset): {initialWallTileId}");
+        System.Diagnostics.Debug.WriteLine($"Floor tile IDs (for floor tileset): [{string.Join(", ", floorTileIds)}]");
 
-        System.Diagnostics.Debug.WriteLine($"Tileset created: {tileset.Columns} columns x {tileset.Rows} rows = {tileset.Count} total tiles");
+        var tilemap = new Tilemap(floorTileset, columns, rows);
 
-        var tilemap = new Tilemap(tileset, columns, rows);
-
-        FillWithWalls(tilemap, columns, rows);
+        FillWithWalls(tilemap, columns, rows, wallTileset, initialWallTileId);
         GenerateRooms(columns, rows);
         ConnectRooms();
-        
-        // Debug room carving with detailed tile tracking
-        System.Diagnostics.Debug.WriteLine($"About to carve {_rooms.Count} rooms");
-        CarveRoomsWithDebug(tilemap, floorTileIds);
-        CarveCorridors(tilemap, floorTileIds[0]);
 
-        AutotileMapper.ApplyAutotiling(tilemap, initialWallTileId);
-        PlaceDungeonElements(tilemap, columns, rows, floorTileIds);
+        CarveRoomsWithDebug(tilemap, floorTileIds, floorTileset);
+        CarveCorridors(tilemap, floorTileIds[0], floorTileset);
+
+        AutotileMapper.ApplyAutotiling(tilemap, initialWallTileId, wallTileset, floorTileset);
+
+        PlaceDungeonElements(tilemap, columns, rows, floorTileIds, floorTileset);
 
         return tilemap;
     }
 
-    private void FillWithWalls(Tilemap tilemap, int columns, int rows)
+    // Update FillWithWalls to accept tileset parameter
+    private void FillWithWalls(Tilemap tilemap, int columns, int rows, Tileset wallTileset, int initialWallTileId)
     {
-        // Get the appropriate initial wall tile ID from XML configuration
-        int initialWallTileId = AutotileMapper.GetWallTileIndex("isolated");
-
         for (int y = 0; y < rows; y++)
             for (int x = 0; x < columns; x++)
-                tilemap.SetTile(x, y, initialWallTileId);
+                tilemap.SetTile(x, y, initialWallTileId, wallTileset);
+    }
+    private void ValidateTilesetIndices(int[] floorTileIds, Tileset floorTileset, Tileset wallTileset)
+    {
+        System.Diagnostics.Debug.WriteLine("=== TILESET VALIDATION ===");
+
+        // Check floor tile indices
+        System.Diagnostics.Debug.WriteLine($"Floor tileset has {floorTileset.Count} tiles");
+        foreach (int tileId in floorTileIds)
+        {
+            if (tileId >= floorTileset.Count || tileId < 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"❌ ERROR: Floor tile ID {tileId} is out of bounds (0-{floorTileset.Count - 1})");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"✅ Floor tile ID {tileId} is valid");
+            }
+        }
+
+        // Check wall tile indices
+        System.Diagnostics.Debug.WriteLine($"Wall tileset has {wallTileset.Count} tiles");
+        var wallTileIds = AutotileMapper.GetWallTileIndices();
+        foreach (int tileId in wallTileIds)
+        {
+            if (tileId >= wallTileset.Count || tileId < 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"❌ ERROR: Wall tile ID {tileId} is out of bounds (0-{wallTileset.Count - 1})");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"✅ Wall tile ID {tileId} is valid");
+            }
+        }
     }
 
     private void GenerateRooms(int mapWidth, int mapHeight)
@@ -203,10 +222,22 @@ public class ProceduralDungeonManager : DungeonManager
         }
     }
 
-    private void CarveRooms(Tilemap tilemap, int[] floorTileIds)
+    private void CarveRoomsWithDebug(Tilemap tilemap, int[] floorTileIds, Tileset floorTileset)
     {
+        System.Diagnostics.Debug.WriteLine($"=== CarveRooms DEBUG ===");
+
+        int totalTilesCarved = 0;
+        Dictionary<int, int> tileUsageCount = new Dictionary<int, int>();
+
+        foreach (int tileId in floorTileIds)
+        {
+            tileUsageCount[tileId] = 0;
+        }
+
         foreach (var room in _rooms)
         {
+            System.Diagnostics.Debug.WriteLine($"Carving room at ({room.X}, {room.Y}) size {room.Width}x{room.Height}");
+
             for (int y = room.Y; y < room.Y + room.Height; y++)
             {
                 for (int x = room.X; x < room.X + room.Width; x++)
@@ -214,14 +245,32 @@ public class ProceduralDungeonManager : DungeonManager
                     if (x >= 0 && x < tilemap.Columns && y >= 0 && y < tilemap.Rows)
                     {
                         int floorTileId = floorTileIds[_random.Next(floorTileIds.Length)];
-                        tilemap.SetTile(x, y, floorTileId);
+
+                        // ✅ FIXED: Use tileset parameter correctly
+                        if (floorTileset != null)
+                        {
+                            tilemap.SetTile(x, y, floorTileId, floorTileset);
+                        }
+                        else
+                        {
+                            tilemap.SetTile(x, y, floorTileId); // Use default tileset
+                        }
+
+                        tileUsageCount[floorTileId]++;
+                        totalTilesCarved++;
                     }
                 }
             }
         }
+
+        System.Diagnostics.Debug.WriteLine($"Carved {totalTilesCarved} floor tiles total:");
+        foreach (var kvp in tileUsageCount)
+        {
+            System.Diagnostics.Debug.WriteLine($"  Tile ID {kvp.Key}: used {kvp.Value} times ({(kvp.Value * 100.0 / totalTilesCarved):F1}%)");
+        }
     }
 
-    private void CarveCorridors(Tilemap tilemap, int floorTileId)
+    private void CarveCorridors(Tilemap tilemap, int floorTileId, Tileset floorTileset)
     {
         foreach (var corridor in _corridors)
         {
@@ -231,19 +280,20 @@ public class ProceduralDungeonManager : DungeonManager
                 {
                     if (x >= 0 && x < tilemap.Columns && y >= 0 && y < tilemap.Rows)
                     {
-                        tilemap.SetTile(x, y, floorTileId);
+                        // Use the floor tileset for corridor tiles
+                        tilemap.SetTile(x, y, floorTileId, floorTileset);
                     }
                 }
             }
         }
     }
 
-    private void PlaceDungeonElements(Tilemap tilemap, int columns, int rows, int[] floorTileIds)
+    private void PlaceDungeonElements(Tilemap tilemap, int columns, int rows, int[] floorTileIds, Tileset floorTileset)
     {
         if (_rooms.Count < 2) return;
 
         // Find valid floor positions
-        var floorPositions = FindFloorPositions(tilemap, columns, rows, floorTileIds);
+        var floorPositions = FindFloorPositions(tilemap, columns, rows, floorTileset);
 
         if (floorPositions.Count >= 4)
         {
@@ -303,83 +353,43 @@ public class ProceduralDungeonManager : DungeonManager
         System.Diagnostics.Debug.WriteLine("=== PLAYER SPAWN DEBUG ===");
         System.Diagnostics.Debug.WriteLine($"Tilemap size: {tilemap.Columns}x{tilemap.Rows}");
         System.Diagnostics.Debug.WriteLine($"Tile size: {tilemap.TileWidth}x{tilemap.TileHeight}");
-        
-        int floorTilesFound = 0;
-        int wallTilesFound = 0;
-        Vector2 firstFloorTile = Vector2.Zero;
-        bool foundFirstFloor = false;
-        
-        // Find a safe spawn position (not on a wall)
-        for (int row = 1; row < tilemap.Rows - 1; row++)
+
+        if (_rooms.Any())
         {
-            for (int col = 1; col < tilemap.Columns - 1; col++)
-            {
-                int tileId = tilemap.GetTileId(col, row);
-                
-                if (AutotileMapper.IsWallTile(tileId))
-                {
-                    wallTilesFound++;
-                }
-                else
-                {
-                    floorTilesFound++;
-                    if (!foundFirstFloor)
-                    {
-                        firstFloorTile = new Vector2(col * tilemap.TileWidth, row * tilemap.TileHeight);
-                        foundFirstFloor = true;
-                        System.Diagnostics.Debug.WriteLine($"First floor tile found at grid ({col}, {row}) = world ({firstFloorTile.X}, {firstFloorTile.Y}), tileId = {tileId}");
-                    }
-                    
-                    // Return the first valid floor tile we find
-                    Vector2 spawnPos = new Vector2(col * tilemap.TileWidth, row * tilemap.TileHeight);
-                    System.Diagnostics.Debug.WriteLine($"✅ Player spawn position: ({spawnPos.X}, {spawnPos.Y})");
-                    return spawnPos;
-                }
-            }
+            // Spawn in the center of the first room
+            var firstRoom = _rooms.First();
+            var spawnPos = new Vector2(
+                firstRoom.Center.X * tilemap.TileWidth,
+                firstRoom.Center.Y * tilemap.TileHeight
+            );
+            System.Diagnostics.Debug.WriteLine($"✅ Valid player start in first room: {spawnPos}");
+            return spawnPos;
         }
-        
-        System.Diagnostics.Debug.WriteLine($"Floor tiles found: {floorTilesFound}");
-        System.Diagnostics.Debug.WriteLine($"Wall tiles found: {wallTilesFound}");
-        
-        if (foundFirstFloor)
-        {
-            System.Diagnostics.Debug.WriteLine($"⚠️  Using first floor tile as fallback: {firstFloorTile}");
-            return firstFloorTile;
-        }
-        
+
         // Emergency fallback to center
         Vector2 centerPos = new Vector2(
             (tilemap.Columns / 2) * tilemap.TileWidth,
             (tilemap.Rows / 2) * tilemap.TileHeight
         );
-        
-        System.Diagnostics.Debug.WriteLine($"❌ No floor tiles found! Using center as emergency fallback: {centerPos}");
+
+        System.Diagnostics.Debug.WriteLine($"❌ No rooms found! Using center as emergency fallback: {centerPos}");
         return centerPos;
     }
 
-    private List<Point> FindFloorPositions(Tilemap tilemap, int columns, int rows, int[] floorTileIds)
+    private List<Point> FindFloorPositions(Tilemap tilemap, int columns, int rows, Tileset floorTileset)
     {
         var floorPositions = new List<Point>();
-
         for (int row = 2; row < rows - 2; row++) // Avoid edges
         {
             for (int col = 2; col < columns - 2; col++) // Avoid edges
             {
-                int tileId = tilemap.GetTileId(col, row);
-                if (AutotileMapper.IsFloorTile(tileId))
+                if (tilemap.GetTileset(col, row) == floorTileset && AutotileMapper.IsFloorTile(tilemap.GetTileId(col, row)))
                 {
                     floorPositions.Add(new Point(col, row));
                 }
             }
         }
-
         return floorPositions;
-    }
-
-    private int GetTileId(Tilemap tilemap, int column, int row)
-    {
-        // Simply use the public method instead of reflection
-        return tilemap.GetTileId(column, row);
     }
 
     /// <summary>
@@ -400,45 +410,5 @@ public class ProceduralDungeonManager : DungeonManager
     public static Point ConvertFromAutotileCoords(int col16, int row16)
     {
         return new Point(col16 / 2, row16 / 2);
-    }
-
-    private void CarveRoomsWithDebug(Tilemap tilemap, int[] floorTileIds)
-    {
-        System.Diagnostics.Debug.WriteLine($"=== CarveRooms DEBUG ===");
-        System.Diagnostics.Debug.WriteLine($"Using {floorTileIds.Length} floor tile variants: [{string.Join(", ", floorTileIds)}]");
-        
-        int totalTilesCarved = 0;
-        Dictionary<int, int> tileUsageCount = new Dictionary<int, int>();
-        
-        // Initialize usage counters
-        foreach (int tileId in floorTileIds)
-        {
-            tileUsageCount[tileId] = 0;
-        }
-
-        foreach (var room in _rooms)
-        {
-            System.Diagnostics.Debug.WriteLine($"Carving room at ({room.X}, {room.Y}) size {room.Width}x{room.Height}");
-            
-            for (int y = room.Y; y < room.Y + room.Height; y++)
-            {
-                for (int x = room.X; x < room.X + room.Width; x++)
-                {
-                    if (x >= 0 && x < tilemap.Columns && y >= 0 && y < tilemap.Rows)
-                    {
-                        int floorTileId = floorTileIds[_random.Next(floorTileIds.Length)];
-                        tilemap.SetTile(x, y, floorTileId);
-                        tileUsageCount[floorTileId]++;
-                        totalTilesCarved++;
-                    }
-                }
-            }
-        }
-        
-        System.Diagnostics.Debug.WriteLine($"Carved {totalTilesCarved} floor tiles total:");
-        foreach (var kvp in tileUsageCount)
-        {
-            System.Diagnostics.Debug.WriteLine($"  Tile ID {kvp.Key}: used {kvp.Value} times ({(kvp.Value * 100.0 / totalTilesCarved):F1}%)");
-        }
     }
 }

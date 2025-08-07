@@ -118,28 +118,28 @@ namespace Hearthvale.GameCode.Managers
 
             // Rounded background
             int radius = 8; // Increased radius for better appearance
-            DrawRoundedRect(spriteBatch, position, adjustedSize, Color.FromNonPremultiplied(60, 20, 20, 220), radius);
+            DrawRoundedRect(spriteBatch, position, adjustedSize, Color.FromNonPremultiplied(60, 20, 20, 220), radius, layerDepth: 0.1f);
 
             // Foreground (gradient green to red based on health)   
             var fgColor = Color.Lerp(Color.Red, Color.LimeGreen, percent);
-            DrawRoundedRect(spriteBatch, position, new Vector2(adjustedSize.X * percent, adjustedSize.Y), fgColor, radius);
+            DrawRoundedRect(spriteBatch, position, new Vector2(adjustedSize.X * percent, adjustedSize.Y), fgColor, radius, layerDepth: 0.2f);
 
-            // Border with better visibility
-            DrawRoundedRect(spriteBatch, position, adjustedSize, Color.White * 0.4f, radius, outline: true);
+            // Border
+            DrawRoundedRect(spriteBatch, position, adjustedSize, Color.White * 0.4f, radius, outline: true, layerDepth: 0.3f);
 
             // Center the text in the adjusted health bar
             var textPos = position + new Vector2(adjustedSize.X / 2 - textSize.X / 2, adjustedSize.Y / 2 - textSize.Y / 2);
 
             // Add text shadow for better visibility
             var shadowPos = textPos + new Vector2(1, 1);
-            spriteBatch.DrawString(_font, healthText, shadowPos, Color.Black * 0.5f, 0f, Vector2.Zero, healthFontScale, SpriteEffects.None, 0f);
-            spriteBatch.DrawString(_font, healthText, textPos, Color.White, 0f, Vector2.Zero, healthFontScale, SpriteEffects.None, 0f);
+            spriteBatch.DrawString(_font, healthText, shadowPos, Color.Black * 0.5f, 0f, Vector2.Zero, healthFontScale, SpriteEffects.None, 0.9f);
+            spriteBatch.DrawString(_font, healthText, textPos, Color.White, 0f, Vector2.Zero, healthFontScale, SpriteEffects.None, 1.0f);
         }
         // Helper for rounded rectangles (simple approximation)
-        private void DrawRoundedRect(SpriteBatch spriteBatch, Vector2 pos, Vector2 size, Color color, int radius, bool outline = false)
+        private void DrawRoundedRect(SpriteBatch spriteBatch, Vector2 pos, Vector2 size, Color color, int radius, bool outline = false, float layerDepth = 0.1f)
         {
             // Center rectangle
-            spriteBatch.Draw(_whitePixel, new Rectangle((int)pos.X + radius, (int)pos.Y, (int)size.X - 2 * radius, (int)size.Y), color);
+            spriteBatch.Draw(_whitePixel, new Rectangle((int)pos.X + radius, (int)pos.Y, (int)size.X - 2 * radius, (int)size.Y), null, color, 0f, Vector2.Zero, SpriteEffects.None, layerDepth);
             // Left and right rectangles
             spriteBatch.Draw(_whitePixel, new Rectangle((int)pos.X, (int)pos.Y + radius, radius, (int)size.Y - 2 * radius), color);
             spriteBatch.Draw(_whitePixel, new Rectangle((int)(pos.X + size.X - radius), (int)pos.Y + radius, radius, (int)size.Y - 2 * radius), color);
@@ -153,7 +153,7 @@ namespace Hearthvale.GameCode.Managers
             if (outline)
             {
                 var outlineColor = Color.White * 0.4f;
-                DrawRect(spriteBatch, new Rectangle((int)pos.X, (int)pos.Y, (int)size.X, (int)size.Y), _whitePixel, outlineColor);
+                DrawRect(spriteBatch, new Rectangle((int)pos.X, (int)pos.Y, (int)size.X, (int)size.Y), _whitePixel, outlineColor, 0.3f);
             }
         }
         public void DrawNpcHealthBar(SpriteBatch spriteBatch, NPC npc, Vector2 offset, Vector2 size)
@@ -431,16 +431,16 @@ namespace Hearthvale.GameCode.Managers
             }
         }
 
-        private void DrawRect(SpriteBatch spriteBatch, Rectangle rect, Texture2D texture, Color color)
+        private void DrawRect(SpriteBatch spriteBatch, Rectangle rect, Texture2D texture, Color color, float layerDepth = 0.1f)
         {
             // Top
-            spriteBatch.Draw(texture, new Rectangle(rect.X, rect.Y, rect.Width, 1), color);
+            spriteBatch.Draw(texture, new Rectangle(rect.X, rect.Y, rect.Width, 1), null, color, 0f, Vector2.Zero, SpriteEffects.None, layerDepth);
             // Left
-            spriteBatch.Draw(texture, new Rectangle(rect.X, rect.Y, 1, rect.Height), color);
+            spriteBatch.Draw(texture, new Rectangle(rect.X, rect.Y, 1, rect.Height), null, color, 0f, Vector2.Zero, SpriteEffects.None, layerDepth);
             // Right
-            spriteBatch.Draw(texture, new Rectangle(rect.Right - 1, rect.Y, 1, rect.Height), color);
+            spriteBatch.Draw(texture, new Rectangle(rect.Right - 1, rect.Y, 1, rect.Height), null, color, 0f, Vector2.Zero, SpriteEffects.None, layerDepth);
             // Bottom
-            spriteBatch.Draw(texture, new Rectangle(rect.X, rect.Bottom - 1, rect.Width, 1), color);
+            spriteBatch.Draw(texture, new Rectangle(rect.X, rect.Bottom - 1, rect.Width, 1), null, color, 0f, Vector2.Zero, SpriteEffects.None, layerDepth);
         }
 
         public void DrawDebugInfo(SpriteBatch spriteBatch, GameTime gameTime, Vector2 heroPosition, Vector2 cameraPosition, Viewport viewport)
@@ -470,16 +470,16 @@ namespace Hearthvale.GameCode.Managers
             // Draw semi-transparent background
             var bgSize = new Vector2(180, totalHeight + 8);
             var bgRect = new Rectangle((int)(startPosition.X - 4), (int)(startPosition.Y - 4), (int)bgSize.X, (int)bgSize.Y);
-            spriteBatch.Draw(_whitePixel, bgRect, Color.Black * 0.4f);
+            spriteBatch.Draw(_whitePixel, bgRect, null, Color.Black * 0.4f, 0f, Vector2.Zero, SpriteEffects.None, 0.1f);
 
             // Draw debug text
             Vector2 position = startPosition;
             foreach (string line in debugLines)
             {
                 // Text shadow
-                spriteBatch.DrawString(_debugFont, line, position + Vector2.One, Color.Black * 0.7f, 0f, Vector2.Zero, 0.8f, SpriteEffects.None, 0f);
+                spriteBatch.DrawString(_debugFont, line, position + Vector2.One, Color.Black * 0.7f, 0f, Vector2.Zero, 0.8f, SpriteEffects.None, 0.9f);
                 // Main text
-                spriteBatch.DrawString(_debugFont, line, position, Color.Yellow, 0f, Vector2.Zero, 0.8f, SpriteEffects.None, 0f);
+                spriteBatch.DrawString(_debugFont, line, position, Color.Yellow, 0f, Vector2.Zero, 0.8f, SpriteEffects.None, 1.0f);
                 position.Y += _debugFont.LineSpacing * 0.8f;
             }
         }

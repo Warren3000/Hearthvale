@@ -92,5 +92,17 @@ namespace Hearthvale.GameCode.Managers
             return weapon;
         }
 
+        /// <summary>
+        /// Updates the manager's internal list of NPCs.
+        /// </summary>
+        /// <param name="npcs">The current list of NPCs in the scene.</param>
+        public void UpdateNpcList(IEnumerable<NPC> npcs)
+        {
+            _npcs.Clear();
+            if (npcs != null)
+            {
+                _npcs.AddRange(npcs);
+            }
+        }
     }
 }

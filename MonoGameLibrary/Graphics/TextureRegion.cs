@@ -67,6 +67,11 @@ public class TextureRegion
         Texture = texture;
         SourceRectangle = new Rectangle(x, y, width, height);
     }
+    public TextureRegion(Texture2D texture, Rectangle coord, Rectangle size)
+    {
+        Texture = texture;
+        SourceRectangle = new Rectangle(coord.X, coord.Y, size.Width, size.Height);
+    }
     /// <summary>
     /// Submit this texture region for drawing in the current batch.
     /// </summary>

@@ -133,12 +133,6 @@ namespace Hearthvale.GameCode.Input
         /// </summary>
         private bool HandleUIAndDebugInput(KeyboardInfo keyboard)
         {
-            // Debug mode toggle (F3)
-            if (keyboard.WasKeyJustPressed(Keys.F3))
-            {
-                _toggleDebugModeCallback?.Invoke();
-                return false; // Don't consume input, allow game to continue
-            }
 
             // Debug grid toggle (Escape when not paused, or custom key)
             if (keyboard.WasKeyJustPressed(Keys.Escape))
@@ -159,6 +153,28 @@ namespace Hearthvale.GameCode.Input
             {
                 _closeDialogCallback?.Invoke();
                 return true; // Consume input, don't process further
+            }
+
+            // Toggle UIDebugGrid
+            if (keyboard.WasKeyJustPressed(Keys.F2))
+            {
+                DebugManager.Instance.ShowUIDebugGrid = !DebugManager.Instance.ShowUIDebugGrid;
+                return false;
+            }
+
+            // Toggle Collision Boxes
+            if (keyboard.WasKeyJustPressed(Keys.F3))
+            {
+                DebugManager.Instance.ShowCollisionBoxes = !DebugManager.Instance.ShowCollisionBoxes;
+                _toggleDebugModeCallback?.Invoke();
+                return false;
+            }
+
+            // Toggle Tileset Viewer
+            if (keyboard.WasKeyJustPressed(Keys.F4))
+            {
+                DebugManager.Instance.ShowTilesetViewer = !DebugManager.Instance.ShowTilesetViewer;
+                return false;
             }
 
             return false; // Input not consumed

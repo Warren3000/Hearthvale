@@ -51,18 +51,21 @@ public class NPC : Character, ICombatNpc, IDialog
 
     private NpcAiType _aiType;
 
-    public NPC(string name, Dictionary<string, Animation> animations, Vector2 position, Rectangle bounds, SoundEffect defeatSound, int maxHealth, Tilemap tilemap, int wallTileId)
+    public NPC(string name, Dictionary<string, Animation> animations, Vector2 position, Rectangle bounds, SoundEffect defeatSound, int maxHealth, Tilemap tilemap, Tileset wallTileset)
     {
         Name = name; // Assign the name
         var sprite = new AnimatedSprite(animations["Idle"]);
         _animationController = new NpcAnimationController(sprite, animations);
-        _movementController = new NpcMovementController(position, 60.0f, bounds, tilemap, wallTileId, (int)sprite.Width, (int)sprite.Height);
+        _movementController = new NpcMovementController(position, 60.0f, bounds, tilemap, (int)sprite.Width, (int)sprite.Height);
         _healthController = new NpcHealthController(maxHealth, defeatSound);
 
         _sprite = sprite;
         _position = position;
         _maxHealth = maxHealth;
         _currentHealth = maxHealth;
+
+        // Set properties for the base Character class
+        this.Tilemap = tilemap;
 
         _animationController.SetAnimation("Idle");
         _movementController.SetIdle();

@@ -1,6 +1,7 @@
 ﻿using Hearthvale.GameCode.Entities.Characters;
 using Hearthvale.GameCode.Entities.NPCs;
 using Hearthvale.GameCode.Managers;
+using Hearthvale.GameCode.Utils;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
@@ -41,6 +42,8 @@ namespace Hearthvale.GameCode.Entities.Players
             (int)Sprite.Width / 2,
             (int)Sprite.Height / 2
         );
+        private Tileset _wallTileset;
+        private Tileset _floorTileset;
 
         public Player(TextureAtlas atlas, Vector2 position, SoundEffect hitSound, SoundEffect defeatSound, SoundEffect playerAttackSound, float movementSpeed)
         {
@@ -131,8 +134,6 @@ namespace Hearthvale.GameCode.Entities.Players
           float spriteWidth,
           float spriteHeight,
           IEnumerable<NPC> npcs,
-          Tilemap tilemap,
-          int wallTileId,
           IEnumerable<Rectangle> obstacleRects)
         {
             if (_movementController.IsKnockedBack) return;
@@ -273,6 +274,26 @@ namespace Hearthvale.GameCode.Entities.Players
             {
                 if (candidateBounds.Intersects(obstacle))
                     return false;
+            }
+
+            // Check against tilemap walls
+            if (this.Tilemap != null && TilesetManager.Instance.WallTileset != null)
+            {
+                int leftTile = candidateBounds.Left / (int)this.Tilemap.TileWidth;
+                int rightTile = (candidateBounds.Right - 1) / (int)this.Tilemap.TileWidth;
+                int topTile = candidateBounds.Top / (int)this.Tilemap.TileHeight;
+                int bottomTile = (candidateBounds.Bottom - 1) / (int)this.Tilemap.TileHeight;
+
+                for (int col = leftTile; col <= rightTile; col++)
+                {
+                    for (int row = topTile; row <= bottomTile; row++)
+                    {
+                        if (this.Tilemap.GetTileset(col, row) == TilesetManager.Instance.WallTileset && AutotileMapper.IsWallTile(Tilemap.GetTileId(col, row)))
+                        {
+                            return false; // Collision with a wall
+                        }
+                    }
+                }
             }
 
             // If no collision, set the position

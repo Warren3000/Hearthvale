@@ -193,6 +193,9 @@
 #begin Levels/Level1.xml
 /copy:Levels/Level1.xml
 
+#begin Tilesets/DampDungeons/Tiles/Autotiles-Dungeon.xml
+/copy:Tilesets/DampDungeons/Tiles/Autotiles-Dungeon.xml
+
 #begin Tilesets/DampDungeons/Tiles/Autotiles.xml
 /copy:Tilesets/DampDungeons/Tiles/Autotiles.xml
 
@@ -219,6 +222,18 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Tilesets/DampDungeons/Tiles/Dungeon_WallsAndFloors.png;Tilesets/DampDungeons/Tiles/Dungeon_WallsAndFloors
+
+#begin Tilesets/DampDungeons/Tiles/dungeon-autotiles-walls.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Tilesets/DampDungeons/Tiles/dungeon-autotiles-walls.png;Tilesets/DampDungeons/Tiles/dungeon-autotiles-walls
 
 #begin Tilesets/DampDungeons/Tiles/Dungeon.tsx
 /importer:TiledMapTilesetImporter

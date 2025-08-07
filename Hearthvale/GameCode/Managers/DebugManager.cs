@@ -1,6 +1,8 @@
 ﻿using Hearthvale.GameCode.Entities.NPCs;
 using Hearthvale.GameCode.Entities.Players;
 using Hearthvale.GameCode.Input;
+using Hearthvale.GameCode.Managers;
+using Hearthvale.GameCode.Utils;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended;
@@ -18,12 +20,13 @@ public class DebugManager
     public static DebugManager Instance => _instance ?? throw new InvalidOperationException("DebugManager not initialized. Call Initialize first.");
 
     public bool DebugDrawEnabled { get; set; } = true;
-    public bool ShowCollisionBoxes { get; set; } = true;
+    public bool ShowCollisionBoxes { get; set; } = false;
     public bool ShowAttackAreas { get; set; } = true;
     public bool ShowUIOverlay { get; set; } = true;
     public bool ShowUIDebugGrid { get; set; } = false;
     public bool ShowDungeonElements { get; set; } = true;
     public bool ShowWallCollisions { get; set; } = true;
+    public bool ShowTilesetViewer { get; set; } = false;
 
     private readonly Texture2D _whitePixel;
 
@@ -123,38 +126,32 @@ public class DebugManager
         }
     }
 
-    public void Draw(SpriteBatch spriteBatch, Player player, IEnumerable<NPC> npcs, Tilemap tilemap, int wallTileId, IEnumerable<IDungeonElement> elements, Matrix viewMatrix)
+    public void Draw(SpriteBatch spriteBatch, Player player, IEnumerable<NPC> npcs, IEnumerable<IDungeonElement> elements, Matrix viewMatrix)
     {
         if (!DebugDrawEnabled) return;
 
-        if (ShowCollisionBoxes)
+        // Wall collision boxes
+        if (ShowWallCollisions)
         {
-            DrawRect(spriteBatch, player.Bounds, Color.LimeGreen * 0.5f);
-            foreach (var npc in npcs)
-                DrawRect(spriteBatch, npc.Bounds, Color.Red * 0.5f);
-
-            // Wall collision boxes
-            if (ShowWallCollisions)
+            var tileset = TilesetManager.Instance.WallTileset;
+            for (int row = 0; row < tileset.Rows; row++)
             {
-                for (int row = 0; row < tilemap.Rows; row++)
+                for (int col = 0; col < tileset.Columns; col++)
                 {
-                    for (int col = 0; col < tilemap.Columns; col++)
-                    {
-                        if (tilemap.GetTileId(col, row) == wallTileId)
-                        {
-                            var rect = new Rectangle(
-                                (int)(col * tilemap.TileWidth),
-                                (int)(row * tilemap.TileHeight),
-                                (int)tilemap.TileWidth,
-                                (int)tilemap.TileHeight
-                            );
-                            DrawRect(spriteBatch, rect, Color.Blue * 0.3f);
-                        }
-                    }
+                    int tileId = tileset.GetTileId(col, row);
+                    // Use AutotileMapper to check if it's a wall tile instead of just checking one ID
+                    
+                        var rect = new Rectangle(
+                            (int)(col * tileset.TileWidth),
+                            (int)(row * tileset.TileHeight),
+                            (int)tileset.TileWidth,
+                            (int)tileset.TileHeight
+                        );
+                        DrawRect(spriteBatch, rect, Color.Blue * 0.3f);
+                    
                 }
             }
         }
-
         if (ShowAttackAreas)
         {
             // Draw players' sword swing arcs

@@ -19,8 +19,8 @@ public class Enemy : NPC
         SoundEffect soundEffect,
         int maxHealth,
         Tilemap tilemap,
-        int wallTileId)
-        : base(name, animations, position, bounds, soundEffect, maxHealth, tilemap,wallTileId)
+        Tileset wallTileset)
+        : base(name, animations, position, bounds, soundEffect, maxHealth, tilemap, wallTileset)
     {
     }
 
