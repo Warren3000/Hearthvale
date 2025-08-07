@@ -52,6 +52,7 @@
     <Content Include="Content\Tilesets\DampDungeons\Tiles\Dungeon_WaterAnimation.png" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Aether.Physics2D" Version="2.2.0" />
     <PackageReference Include="Gum.MonoGame" Version="2025.8.3.1" />
     <PackageReference Include="MonoGame.Extended" Version="4.1.0" />
     <PackageReference Include="MonoGame.Extended.Content.Pipeline" Version="4.1.0" />

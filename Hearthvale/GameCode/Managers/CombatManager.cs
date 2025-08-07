@@ -5,23 +5,25 @@ using Hearthvale.GameCode.Data;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
+using MonoGame.Extended;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System;
+using MonoGameLibrary;
 
 namespace Hearthvale.GameCode.Managers;
 
 /// <summary>
-/// Manages all combat logic, including player/NPC attacks and projectile handling.
+/// Manages all combat logic, including player/NPC attacks and projectile handling with MonoGame.Extended collision detection.
 /// </summary>
 public class CombatManager
 {
     private static CombatManager _instance;
     public static CombatManager Instance => _instance ?? throw new InvalidOperationException("CombatManager not initialized. Call Initialize first.");
 
-    private const float ATTACK_COOLDOWN = 0.5f; // seconds between attacks
-    private const float PLAYER_DAMAGE_COOLDOWN = 1.0f; // seconds of immunity after being hit
+    private const float ATTACK_COOLDOWN = 0.5f;
+    private const float PLAYER_DAMAGE_COOLDOWN = 1.0f;
     private const float PROJECTILE_KNOCKBACK = 150f;
     private const float NPC_ATTACK_KNOCKBACK = 100f;
 
@@ -35,9 +37,14 @@ public class CombatManager
     private Rectangle _worldBounds;
     private readonly SpriteBatch _spriteBatch;
 
-    private float _attackCooldown = ATTACK_COOLDOWN; 
+    // Additional sound effects for projectile collisions
+    private SoundEffect _projectileHitSound;
+    private SoundEffect _projectileWallHitSound;
+    private SoundEffect _projectileBlockedSound;
+
+    private float _attackCooldown = ATTACK_COOLDOWN;
     private float _attackTimer = 0f;
-    private float _playerDamageCooldown = PLAYER_DAMAGE_COOLDOWN; 
+    private float _playerDamageCooldown = PLAYER_DAMAGE_COOLDOWN;
     private float _playerDamageTimer = 0f;
     private readonly Dictionary<Character, bool> _npcHitPlayerThisSwing = new();
 
@@ -62,7 +69,29 @@ public class CombatManager
         _hitSound = hitSound;
         _defeatSound = defeatSound;
         _worldBounds = worldBounds;
+
+        // Load additional sound effects for projectiles
+        LoadProjectileSounds();
     }
+
+    private void LoadProjectileSounds()
+    {
+        try
+        {
+            _projectileHitSound = Core.Content.Load<SoundEffect>("audio/projectile_hit");
+            _projectileWallHitSound = Core.Content.Load<SoundEffect>("audio/projectile_wall_hit");
+            _projectileBlockedSound = Core.Content.Load<SoundEffect>("audio/projectile_blocked");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to load projectile sounds: {ex.Message}");
+            // Use fallback sounds
+            _projectileHitSound = _hitSound;
+            _projectileWallHitSound = _hitSound;
+            _projectileBlockedSound = _hitSound;
+        }
+    }
+
     public static void Initialize(
         NpcManager npcManager,
         Character player,
@@ -73,7 +102,6 @@ public class CombatManager
         SoundEffect defeatSound,
         Rectangle worldBounds)
     {
-        
         _instance = new CombatManager(npcManager, player, scoreManager, spriteBatch, effectsManager, hitSound, defeatSound, worldBounds);
     }
 
@@ -81,6 +109,7 @@ public class CombatManager
     {
         if (_player == null)
             return;
+
         float elapsed = (float)gameTime.ElapsedGameTime.TotalSeconds;
         if (_attackTimer > 0)
         {
@@ -90,10 +119,12 @@ public class CombatManager
         if (_playerDamageTimer > 0)
             _playerDamageTimer -= elapsed;
 
+        // Update projectiles
+        UpdateProjectiles(gameTime);
+
         // --- NPC Melee Attack Hit Detection ---
         foreach (var npc in _npcManager.Npcs.Where(n => !n.IsDefeated))
         {
-            // Only process if NPC supports combat (has attack info)
             if (npc is ICombatNpc combatNpc && combatNpc.IsAttacking && combatNpc.EquippedWeapon?.IsSlashing == true)
             {
                 if (!_npcHitPlayerThisSwing.ContainsKey(npc) || _npcHitPlayerThisSwing[npc] == false)
@@ -103,6 +134,7 @@ public class CombatManager
                         combatNpc.GetAttackArea().Y,
                         combatNpc.GetAttackArea().Width,
                         combatNpc.GetAttackArea().Height);
+
                     if (npcAttackArea.Intersects(_player.Bounds))
                     {
                         TryDamagePlayer(combatNpc.AttackPower, npc.Position);
@@ -115,43 +147,413 @@ public class CombatManager
                 _npcHitPlayerThisSwing.Remove(npc);
             }
         }
+    }
 
-        // --- Projectile Hit Detection ---
-        // Only player projectiles are supported. If enemy projectiles are added, add ownership checks here.
+    private void UpdateProjectiles(GameTime gameTime)
+    {
         for (int i = _projectiles.Count - 1; i >= 0; i--)
         {
             var projectile = _projectiles[i];
             projectile.Update(gameTime);
 
+            // Check if projectile is out of bounds
             if (!projectile.IsActive || !_worldBounds.Contains(projectile.Position))
             {
+                HandleProjectileOutOfBounds(projectile);
+                _npcManager.UnregisterProjectile(projectile);
                 _projectiles.RemoveAt(i);
-                continue;
-            }
-
-            if (projectile.CanCollide)
-            {
-                foreach (var npc in _npcManager.Npcs.Where(n => !n.IsDefeated))
-                {
-                    if (projectile.BoundingBox.Intersects(npc.Bounds))
-                    {
-                        Vector2 direction = Vector2.Normalize(npc.Position - _player.Position);
-                        Vector2 knockback = direction * PROJECTILE_KNOCKBACK;
-
-                        HandleNpcHit(npc, projectile.Damage, knockback);
-                        
-                        projectile.IsActive = false;
-                        break; 
-                    }
-                }
             }
         }
     }
+
+    /// <summary>
+    /// Handles collision between a projectile and an NPC
+    /// </summary>
+    public void HandleProjectileNpcCollision(Projectile projectile, NPC npc)
+    {
+        if (projectile.OwnerId == "Player" && !npc.IsDefeated && projectile.CanCollide)
+        {
+            // Calculate hit direction and knockback
+            Vector2 hitDirection = Vector2.Normalize(npc.Position - projectile.Position);
+            if (hitDirection.LengthSquared() == 0)
+                hitDirection = Vector2.Normalize(projectile.Velocity);
+
+            Vector2 knockback = hitDirection * PROJECTILE_KNOCKBACK;
+
+            // Create collision response based on projectile type
+            var response = CreateProjectileCollisionResponse(projectile, npc.Position);
+
+            // Apply damage
+            bool wasDefeated = HandleNpcHit(npc, projectile.Damage, knockback);
+
+            // Show visual effects
+            ShowProjectileHitEffects(projectile, npc.Position, response);
+
+            // Play appropriate sound
+            PlayProjectileHitSound(projectile, response);
+
+            // Handle special projectile effects
+            HandleSpecialProjectileEffects(projectile, npc, response);
+
+            // Deactivate projectile (unless it penetrates)
+            if (!response.Penetrates)
+            {
+                projectile.IsActive = false;
+                _npcManager.UnregisterProjectile(projectile);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Handles collision between a projectile and the player
+    /// </summary>
+    public void HandleProjectilePlayerCollision(Projectile projectile, Character player)
+    {
+        if (projectile.OwnerId != "Player" && !player.IsDefeated)
+        {
+            // Calculate hit direction
+            Vector2 hitDirection = Vector2.Normalize(player.Position - projectile.Position);
+            if (hitDirection.LengthSquared() == 0)
+                hitDirection = Vector2.Normalize(projectile.Velocity);
+
+            // Create collision response
+            var response = CreateProjectileCollisionResponse(projectile, player.Position);
+
+            // Check for player blocking/dodging
+            if (CanPlayerBlockProjectile(projectile, player))
+            {
+                HandleProjectileBlocked(projectile, player);
+                return;
+            }
+
+            // Apply damage to player
+            TryDamagePlayer(projectile.Damage, projectile.Position);
+
+            // Show visual effects
+            ShowProjectileHitEffects(projectile, player.Position, response);
+
+            // Play sound
+            PlayProjectileHitSound(projectile, response);
+
+            // Deactivate projectile
+            projectile.IsActive = false;
+            _npcManager.UnregisterProjectile(projectile);
+        }
+    }
+
+    /// <summary>
+    /// Handles collision between a projectile and a wall
+    /// </summary>
+    private void HandleProjectileWallCollision(Projectile projectile)
+    {
+        // Create collision response
+        var response = CreateWallCollisionResponse(projectile);
+
+        // Show impact effects
+        ShowProjectileWallImpactEffects(projectile, response);
+
+        // Play wall hit sound
+        _projectileWallHitSound?.Play();
+
+        // Handle ricochet if applicable
+        if (response.Ricochets)
+        {
+            HandleProjectileRicochet(projectile);
+        }
+        else
+        {
+            // Standard wall collision - destroy projectile
+            projectile.IsActive = false;
+            _npcManager.UnregisterProjectile(projectile);
+        }
+    }
+
+    /// <summary>
+    /// Handles projectile going out of bounds
+    /// </summary>
+    private void HandleProjectileOutOfBounds(Projectile projectile)
+    {
+        // Create a simple fade-out effect for projectiles leaving the screen
+        _effectsManager.ShowCombatText(projectile.Position, "Miss", Color.Gray);
+
+        Debug.WriteLine($"Projectile {projectile.Type} went out of bounds at {projectile.Position}");
+    }
+
+    /// <summary>
+    /// Creates a collision response based on projectile and target
+    /// </summary>
+    private ProjectileCollisionResponse CreateProjectileCollisionResponse(Projectile projectile, Vector2 hitPosition)
+    {
+        return projectile.Type switch
+        {
+            ProjectileType.Arrow => new ProjectileCollisionResponse
+            {
+                Penetrates = false,
+                CreatesSparks = false,
+                HasExplosion = false,
+                EffectIntensity = 1.0f,
+                EffectColor = Color.Yellow
+            },
+            ProjectileType.Fireball => new ProjectileCollisionResponse
+            {
+                Penetrates = false,
+                CreatesSparks = true,
+                HasExplosion = true,
+                EffectIntensity = 2.0f,
+                EffectColor = Color.Orange,
+                ExplosionRadius = 32f
+            },
+            ProjectileType.Magic => new ProjectileCollisionResponse
+            {
+                Penetrates = true,
+                CreatesSparks = true,
+                HasExplosion = false,
+                EffectIntensity = 1.5f,
+                EffectColor = Color.Purple
+            },
+            ProjectileType.Bullet => new ProjectileCollisionResponse
+            {
+                Penetrates = false,
+                CreatesSparks = true,
+                HasExplosion = false,
+                EffectIntensity = 0.8f,
+                EffectColor = Color.White
+            },
+            _ => new ProjectileCollisionResponse
+            {
+                Penetrates = false,
+                CreatesSparks = false,
+                HasExplosion = false,
+                EffectIntensity = 1.0f,
+                EffectColor = Color.White
+            }
+        };
+    }
+
+    /// <summary>
+    /// Creates a wall collision response
+    /// </summary>
+    private WallCollisionResponse CreateWallCollisionResponse(Projectile projectile)
+    {
+        return projectile.Type switch
+        {
+            ProjectileType.Bullet => new WallCollisionResponse
+            {
+                Ricochets = true,
+                RicochetCount = 1,
+                VelocityRetention = 0.7f,
+                CreatesSparks = true,
+                EffectColor = Color.White
+            },
+            ProjectileType.Magic => new WallCollisionResponse
+            {
+                Ricochets = false,
+                CreatesSparks = true,
+                EffectColor = Color.Purple,
+                HasSpecialEffect = true
+            },
+            _ => new WallCollisionResponse
+            {
+                Ricochets = false,
+                CreatesSparks = false,
+                EffectColor = Color.Gray
+            }
+        };
+    }
+
+    /// <summary>
+    /// Shows visual effects for projectile hits
+    /// </summary>
+    private void ShowProjectileHitEffects(Projectile projectile, Vector2 hitPosition, ProjectileCollisionResponse response)
+    {
+        // Show damage number
+        _effectsManager.ShowCombatText(hitPosition, projectile.Damage.ToString(), response.EffectColor);
+
+        // Show explosion effect if applicable
+        if (response.HasExplosion)
+        {
+            // Create explosion visual effect
+            _effectsManager.ShowCombatText(hitPosition, "BOOM!", Color.Red);
+
+            // Handle area damage if explosion has radius
+            if (response.ExplosionRadius > 0)
+            {
+                HandleExplosionDamage(hitPosition, response.ExplosionRadius, projectile.Damage / 2);
+            }
+        }
+
+        // Show sparks if applicable
+        if (response.CreatesSparks)
+        {
+            // Create spark particle effects
+            for (int i = 0; i < 3; i++)
+            {
+                var sparkOffset = new Vector2(
+                    (float)(new Random().NextDouble() - 0.5) * 20,
+                    (float)(new Random().NextDouble() - 0.5) * 20
+                );
+                _effectsManager.ShowCombatText(hitPosition + sparkOffset, "*", response.EffectColor);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Shows visual effects for wall impacts
+    /// </summary>
+    private void ShowProjectileWallImpactEffects(Projectile projectile, WallCollisionResponse response)
+    {
+        if (response.CreatesSparks)
+        {
+            // Create wall impact sparks
+            for (int i = 0; i < 2; i++)
+            {
+                var sparkOffset = new Vector2(
+                    (float)(new Random().NextDouble() - 0.5) * 15,
+                    (float)(new Random().NextDouble() - 0.5) * 15
+                );
+                _effectsManager.ShowCombatText(projectile.Position + sparkOffset, "•", response.EffectColor);
+            }
+        }
+
+        // Show impact text
+        _effectsManager.ShowCombatText(projectile.Position, "CLANG", Color.Gray);
+    }
+
+    /// <summary>
+    /// Handles explosion damage to nearby entities
+    /// </summary>
+    private void HandleExplosionDamage(Vector2 explosionCenter, float radius, int damage)
+    {
+        // Damage NPCs in explosion radius
+        foreach (var npc in _npcManager.Npcs.Where(n => !n.IsDefeated))
+        {
+            float distance = Vector2.Distance(explosionCenter, npc.Position);
+            if (distance <= radius)
+            {
+                // Calculate damage falloff based on distance
+                float damageMultiplier = 1.0f - (distance / radius);
+                int explosionDamage = (int)(damage * damageMultiplier);
+
+                Vector2 knockbackDirection = Vector2.Normalize(npc.Position - explosionCenter);
+                Vector2 knockback = knockbackDirection * PROJECTILE_KNOCKBACK * damageMultiplier;
+
+                HandleNpcHit(npc, explosionDamage, knockback);
+            }
+        }
+
+        // Damage player if in radius
+        float playerDistance = Vector2.Distance(explosionCenter, _player.Position);
+        if (playerDistance <= radius)
+        {
+            float damageMultiplier = 1.0f - (playerDistance / radius);
+            int explosionDamage = (int)(damage * damageMultiplier);
+            TryDamagePlayer(explosionDamage, explosionCenter);
+        }
+    }
+
+    /// <summary>
+    /// Handles projectile ricochet off walls
+    /// </summary>
+    private void HandleProjectileRicochet(Projectile projectile)
+    {
+        // Simple ricochet - reverse X or Y velocity based on collision
+        // This is a simplified version - you might want more sophisticated collision normal detection
+
+        // For now, just reverse the velocity component that's largest
+        if (Math.Abs(projectile.Velocity.X) > Math.Abs(projectile.Velocity.Y))
+        {
+            projectile.Velocity = new Vector2(-projectile.Velocity.X * 0.7f, projectile.Velocity.Y * 0.7f);
+        }
+        else
+        {
+            projectile.Velocity = new Vector2(projectile.Velocity.X * 0.7f, -projectile.Velocity.Y * 0.7f);
+        }
+
+        // Show ricochet effect
+        _effectsManager.ShowCombatText(projectile.Position, "PING!", Color.Yellow);
+    }
+
+    /// <summary>
+    /// Handles special projectile effects based on type
+    /// </summary>
+    private void HandleSpecialProjectileEffects(Projectile projectile, NPC npc, ProjectileCollisionResponse response)
+    {
+        switch (projectile.Type)
+        {
+            case ProjectileType.Fireball:
+                // Fireball might apply burn effect
+                ApplyBurnEffect(npc);
+                break;
+            case ProjectileType.Magic:
+                // Magic projectile might have mana drain or special effects
+                ApplyMagicEffect(npc);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Checks if player can block incoming projectile
+    /// </summary>
+    private bool CanPlayerBlockProjectile(Projectile projectile, Character player)
+    {
+        // Simple blocking logic - you can expand this
+        // For now, assume player has a small chance to block based on equipped weapon
+        return false; // Implement blocking logic here
+    }
+
+    /// <summary>
+    /// Handles when a projectile is blocked by the player
+    /// </summary>
+    private void HandleProjectileBlocked(Projectile projectile, Character player)
+    {
+        _projectileBlockedSound?.Play();
+        _effectsManager.ShowCombatText(player.Position, "BLOCKED!", Color.Blue);
+
+        projectile.IsActive = false;
+        _npcManager.UnregisterProjectile(projectile);
+    }
+
+    /// <summary>
+    /// Plays appropriate sound for projectile hit
+    /// </summary>
+    private void PlayProjectileHitSound(Projectile projectile, ProjectileCollisionResponse response)
+    {
+        if (response.HasExplosion)
+        {
+            // Play explosion sound (if you have one)
+            _projectileHitSound?.Play();
+        }
+        else
+        {
+            _projectileHitSound?.Play();
+        }
+    }
+
+    /// <summary>
+    /// Applies burn effect to NPC (placeholder)
+    /// </summary>
+    private void ApplyBurnEffect(NPC npc)
+    {
+        // Implement burn damage over time here
+        Debug.WriteLine($"Applied burn effect to {npc.Name}");
+    }
+
+    /// <summary>
+    /// Applies magic effect to NPC (placeholder)
+    /// </summary>
+    private void ApplyMagicEffect(NPC npc)
+    {
+        // Implement magic effects here (slow, confusion, etc.)
+        Debug.WriteLine($"Applied magic effect to {npc.Name}");
+    }
+
     public bool CanAttack() => _attackTimer <= 0f;
+
     public void SetPlayer(Character player)
     {
         _player = player;
     }
+
     public void StartCooldown()
     {
         _attackTimer = _attackCooldown;
@@ -162,6 +564,7 @@ public class CombatManager
         if (projectile != null)
         {
             _projectiles.Add(projectile);
+            _npcManager.RegisterProjectile(projectile);
         }
     }
 
@@ -171,11 +574,11 @@ public class CombatManager
             return;
 
         Vector2 direction = Vector2.Normalize(_player.Position - attackerPosition);
-        if (direction.LengthSquared() == 0) // Handle case where positions are identical
+        if (direction.LengthSquared() == 0)
         {
-            direction = Vector2.UnitX; // Default knockback direction
+            direction = Vector2.UnitX;
         }
-        
+
         float knockbackStrength = NPC_ATTACK_KNOCKBACK;
         Vector2 knockback = direction * knockbackStrength;
         _player.TakeDamage(amount, knockback);
@@ -184,7 +587,8 @@ public class CombatManager
         _effectsManager.ShowCombatText(_player.Position, amount.ToString(), Color.Red);
         _hitSound?.Play();
     }
-    public void HandleNpcHit(Character npc, int damage, Vector2? knockback = null)
+
+    public bool HandleNpcHit(Character npc, int damage, Vector2? knockback = null)
     {
         Debug.WriteLine($"[CombatManager] HandleNpcHit called for '{npc.GetType().Name}' with {damage} damage.");
         bool justDefeated = npc.TakeDamage(damage, knockback);
@@ -204,7 +608,10 @@ public class CombatManager
                 _player.EquippedWeapon?.GainXP(stats.XpYield);
             }
         }
+
+        return justDefeated;
     }
+
     public void DrawProjectiles(SpriteBatch spriteBatch)
     {
         foreach (var projectile in _projectiles)
@@ -212,4 +619,30 @@ public class CombatManager
             projectile.Draw(spriteBatch);
         }
     }
+}
+
+/// <summary>
+/// Defines the response behavior when a projectile hits a target
+/// </summary>
+public class ProjectileCollisionResponse
+{
+    public bool Penetrates { get; set; } = false;
+    public bool CreatesSparks { get; set; } = false;
+    public bool HasExplosion { get; set; } = false;
+    public float EffectIntensity { get; set; } = 1.0f;
+    public Color EffectColor { get; set; } = Color.White;
+    public float ExplosionRadius { get; set; } = 0f;
+}
+
+/// <summary>
+/// Defines the response behavior when a projectile hits a wall
+/// </summary>
+public class WallCollisionResponse
+{
+    public bool Ricochets { get; set; } = false;
+    public int RicochetCount { get; set; } = 0;
+    public float VelocityRetention { get; set; } = 1.0f;
+    public bool CreatesSparks { get; set; } = false;
+    public Color EffectColor { get; set; } = Color.Gray;
+    public bool HasSpecialEffect { get; set; } = false;
 }

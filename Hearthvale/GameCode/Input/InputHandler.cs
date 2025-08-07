@@ -177,6 +177,13 @@ namespace Hearthvale.GameCode.Input
                 return false;
             }
 
+            // Toggle Tile Coordinates Overlay (F6 - new key that doesn't conflict with existing debug features)
+            if (keyboard.WasKeyJustPressed(Keys.F6))
+            {
+                GameUIManager.Instance.ToggleTileCoordinates();
+                return false;
+            }
+
             return false; // Input not consumed
         }
 

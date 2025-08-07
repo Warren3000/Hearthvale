@@ -46,11 +46,16 @@ namespace Hearthvale.GameCode.Managers
         private TextRuntime _equippedWeaponNameText;
         private TextRuntime _weaponXpText;
         private SpriteRuntime _equippedWeaponSprite;
+
+        // Add tile coordinates overlay toggle
+        private bool _showTileCoordinates = false;
+
         public bool IsDialogOpen => _isDialogOpen;
         public bool IsPausePanelVisible => _pausePanel?.IsVisible ?? false;
         public Texture2D WhitePixel => _whitePixel;
         public AnimatedButton ResumeButton => _resumeButton;
         public AnimatedButton QuitButton => _quitButton;
+        public bool ShowTileCoordinates => _showTileCoordinates;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="GameUIManager"/> class.
@@ -64,9 +69,67 @@ namespace Hearthvale.GameCode.Managers
             OnQuit = onQuit;
             InitializeUI();
         }
+
         public static void Initialize(TextureAtlas atlas, SpriteFont font, SpriteFont debugFont, Action resumeGameCallback, Action quitGameCallback)
         {
             _instance = new GameUIManager(atlas, font, debugFont, resumeGameCallback, quitGameCallback);
+        }
+
+        /// <summary>
+        /// Toggles the display of tile coordinates overlay
+        /// </summary>
+        public void ToggleTileCoordinates()
+        {
+            _showTileCoordinates = !_showTileCoordinates;
+            System.Diagnostics.Debug.WriteLine($"Tile coordinates overlay: {(_showTileCoordinates ? "ON" : "OFF")}");
+        }
+
+        /// <summary>
+        /// Draws tile coordinates overlay over the tilemap in world space
+        /// </summary>
+        /// <param name="spriteBatch">SpriteBatch for drawing</param>
+        /// <param name="tilemap">The tilemap to draw coordinates for</param>
+        public void DrawTileCoordinatesOverlay(SpriteBatch spriteBatch, Tilemap tilemap)
+        {
+            if (!_showTileCoordinates || tilemap == null || _debugFont == null)
+                return;
+
+            int rows = tilemap.Rows;
+            int cols = tilemap.Columns;
+            float tileWidth = tilemap.TileWidth;
+            float tileHeight = tilemap.TileHeight;
+
+            // Use a smaller text scale for better readability
+            float textScale = 0.35f;
+
+            for (int row = 0; row < rows; row++)
+            {
+                for (int col = 0; col < cols; col++)
+                {
+                    var region = tilemap.GetTile(col, row);
+                    if (region == null) continue;
+
+                    string coords = $"{col},{row}";
+                    Vector2 textSize = _debugFont.MeasureString(coords) * textScale;
+                    Vector2 tilePos = new Vector2(col * tileWidth, row * tileHeight);
+                    Vector2 textPos = tilePos + new Vector2((tileWidth - textSize.X) / 2, (tileHeight - textSize.Y) / 2);
+
+                    // Draw semi-transparent background for better readability
+                    var bgRect = new Rectangle(
+                        (int)(textPos.X - 2), 
+                        (int)(textPos.Y - 1), 
+                        (int)(textSize.X + 4), 
+                        (int)(textSize.Y + 2)
+                    );
+                    spriteBatch.Draw(_whitePixel, bgRect, null, Color.Black * 0.6f, 0f, Vector2.Zero, SpriteEffects.None, 0.94f);
+
+                    // Draw text shadow for better visibility
+                    spriteBatch.DrawString(_debugFont, coords, textPos + Vector2.One, Color.Black * 0.8f, 0f, Vector2.Zero, textScale, SpriteEffects.None, 0.95f);
+                    
+                    // Draw main text in bright cyan for visibility
+                    spriteBatch.DrawString(_debugFont, coords, textPos, Color.Cyan, 0f, Vector2.Zero, textScale, SpriteEffects.None, 0.96f);
+                }
+            }
         }
 
         public void InitializeUI()
@@ -78,6 +141,7 @@ namespace Hearthvale.GameCode.Managers
             _whitePixel = new Texture2D(Core.GraphicsDevice, 1, 1);
             _whitePixel.SetData(new[] { Color.White });
         }
+
         public void PauseGame()
         {
             ShowPausePanel();
@@ -94,6 +158,7 @@ namespace Hearthvale.GameCode.Managers
             Core.Audio.PlaySoundEffect(uiSoundEffect);
             changeSceneCallback?.Invoke();
         }
+
         public void DrawPlayerHealthBar(SpriteBatch spriteBatch, Player player, Vector2 position, Vector2 size)
         {
             int health = player.CurrentHealth;
@@ -135,6 +200,7 @@ namespace Hearthvale.GameCode.Managers
             spriteBatch.DrawString(_font, healthText, shadowPos, Color.Black * 0.5f, 0f, Vector2.Zero, healthFontScale, SpriteEffects.None, 0.9f);
             spriteBatch.DrawString(_font, healthText, textPos, Color.White, 0f, Vector2.Zero, healthFontScale, SpriteEffects.None, 1.0f);
         }
+
         // Helper for rounded rectangles (simple approximation)
         private void DrawRoundedRect(SpriteBatch spriteBatch, Vector2 pos, Vector2 size, Color color, int radius, bool outline = false, float layerDepth = 0.1f)
         {
@@ -156,6 +222,7 @@ namespace Hearthvale.GameCode.Managers
                 DrawRect(spriteBatch, new Rectangle((int)pos.X, (int)pos.Y, (int)size.X, (int)size.Y), _whitePixel, outlineColor, 0.3f);
             }
         }
+
         public void DrawNpcHealthBar(SpriteBatch spriteBatch, NPC npc, Vector2 offset, Vector2 size)
         {
             if (npc.IsDefeated) return; // Don't draw for defeated NPCs
@@ -227,6 +294,7 @@ namespace Hearthvale.GameCode.Managers
             _quitButton.Click += (s, e) => OnQuit?.Invoke();
             _pausePanel.AddChild(_quitButton);
         }
+
         private void CreateModernWeaponUIPanel()
         {
             var panel = new Gum.Forms.Controls.Panel();
@@ -326,6 +394,7 @@ namespace Hearthvale.GameCode.Managers
             _weaponPanel = panel;
             _equippedWeaponStatusPanel = panel;
         }
+
         public void UpdateWeaponUI(Weapon equippedWeapon)
         {
             if (equippedWeapon != null)
@@ -375,6 +444,7 @@ namespace Hearthvale.GameCode.Managers
                 }
             }
         }
+
         private void CreateDialogPanel()
         {
             _dialogPanel = new Gum.Forms.Controls.Panel();
@@ -500,6 +570,7 @@ namespace Hearthvale.GameCode.Managers
                 }
             }
         }
+
         public void DrawDungeonElementCollisionBoxes(SpriteBatch spriteBatch, IEnumerable<IDungeonElement> elements, Matrix viewMatrix)
         {
             // Only draw if debug manager allows it

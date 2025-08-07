@@ -79,15 +79,13 @@ public class NpcMovementController
             _knockbackTimer -= elapsed;
             Vector2 nextPosition = Position + _velocity * elapsed;
 
-            // During knockback, only stop if colliding. Don't zero out velocity yet.
-            if (!collisionCheck(nextPosition))
-            {
-                Position = Vector2.Clamp(
-                    nextPosition,
-                    new Vector2(Bounds.Left, Bounds.Top),
-                    new Vector2(Bounds.Right, Bounds.Bottom)
-                );
-            }
+            // During knockback, use wall sliding for smoother movement
+            Vector2 finalPosition = TryMoveWithWallSliding(Position, nextPosition, elapsed);
+            Position = Vector2.Clamp(
+                finalPosition,
+                new Vector2(Bounds.Left, Bounds.Top),
+                new Vector2(Bounds.Right, Bounds.Bottom)
+            );
 
             if (_knockbackTimer <= 0f)
             {
@@ -124,20 +122,57 @@ public class NpcMovementController
         else
         {
             Vector2 nextPosition = Position + _velocity * elapsed;
-            if (collisionCheck(nextPosition) || IsWall(nextPosition))
+            
+            // Use wall sliding for smoother AI movement
+            Vector2 finalPosition = TryMoveWithWallSliding(Position, nextPosition, elapsed);
+            
+            if (collisionCheck(finalPosition))
             {
                 SetIdle();
                 return;
             }
+            
             Position = Vector2.Clamp(
-                nextPosition,
+                finalPosition,
                 new Vector2(Bounds.Left, Bounds.Top),
                 new Vector2(Bounds.Right, Bounds.Bottom)
             );
+            
             _directionChangeTimer -= elapsed;
             if (_directionChangeTimer <= 0 && !_chaseTarget.HasValue)
                 SetIdle();
         }
+    }
+
+    /// <summary>
+    /// Attempts to move with wall sliding support
+    /// </summary>
+    private Vector2 TryMoveWithWallSliding(Vector2 currentPos, Vector2 targetPos, float elapsed)
+    {
+        Vector2 movement = targetPos - currentPos;
+        
+        // If no movement, return current position
+        if (movement.LengthSquared() < 0.001f)
+            return currentPos;
+
+        // Try full movement first
+        if (!IsWall(targetPos))
+            return targetPos;
+
+        // If full movement blocked, try sliding along walls
+        
+        // Try horizontal movement only
+        Vector2 horizontalTarget = new Vector2(targetPos.X, currentPos.Y);
+        if (!IsWall(horizontalTarget))
+            return horizontalTarget;
+
+        // Try vertical movement only
+        Vector2 verticalTarget = new Vector2(currentPos.X, targetPos.Y);
+        if (!IsWall(verticalTarget))
+            return verticalTarget;
+
+        // If both individual axes are blocked, stay at current position
+        return currentPos;
     }
 
     // Helper to check for wall collision
@@ -161,11 +196,14 @@ public class NpcMovementController
         {
             for (int row = topTile; row <= bottomTile; row++)
             {
-                var tileTileset = _tilemap.GetTileset(col, row);
-                var tileId = _tilemap.GetTileId(col, row);
-                // Check if the tile at this position belongs to the wall tileset.
-                if (tileTileset == wallTileset && AutotileMapper.IsWallTile(tileId))
-                    return true;
+                if (col >= 0 && col < _tilemap.Columns && row >= 0 && row < _tilemap.Rows)
+                {
+                    var tileTileset = _tilemap.GetTileset(col, row);
+                    var tileId = _tilemap.GetTileId(col, row);
+                    // Check if the tile at this position belongs to the wall tileset.
+                    if (tileTileset == wallTileset && AutotileMapper.IsWallTile(tileId))
+                        return true;
+                }
             }
         }
         return false;

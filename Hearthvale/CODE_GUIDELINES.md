@@ -14,6 +14,7 @@
 ## Platforms & Frameworks
 - This project uses MonoGame (.NET 8) for game development.
 - Tiled is used for map and level design.
+- Aether.Physics2D is used for physics simulation. https://github.com/tainicom/Aether.Physics2D/releases/tag/v1.0
 - Other major tools/libraries: Gum UI, SharpDX, etc.
 - Note any platform-specific requirements or coding patterns.
 

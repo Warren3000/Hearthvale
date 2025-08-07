@@ -212,6 +212,7 @@ namespace Hearthvale.Scenes
                 ("F3", "Debug"),
                 ("F4", "Tileset Viewer"),
                 ("F5", "Coords"),
+                ("F6", "Tile Coords"), // Add the new F6 key for tile coordinates
                 // Add more as needed
             };
             _debugKeysBar = new DebugKeysBar(_font, GameUIManager.Instance.WhitePixel, debugKeys);
@@ -302,7 +303,8 @@ namespace Hearthvale.Scenes
 
             // Draw debug overlays that should follow the camera
             GameUIManager.Instance.DrawDungeonElementCollisionBoxes(Core.SpriteBatch, DungeonManager.Instance.GetAllElements(), CameraManager.Instance.GetViewMatrix());
-            TilesetDebugManager.DrawTileCoordinatesOverlay(Core.SpriteBatch, _tilemap);
+            // Use GameUIManager for tile coordinates overlay instead of TilesetDebugManager
+            GameUIManager.Instance.DrawTileCoordinatesOverlay(Core.SpriteBatch, _tilemap);
             DebugManager.Instance.Draw(Core.SpriteBatch, _player, _npcManager.Npcs, DungeonManager.Instance.GetAllElements(), CameraManager.Instance.GetViewMatrix());
         }
 

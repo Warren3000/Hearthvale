@@ -23,7 +23,7 @@ namespace Hearthvale.GameCode.Entities.Players
         public float MovementSpeed { get; }
         public bool IsAttacking { get; set; }
         private float _attackTimer = 0f;
-        private const float AttackDuration = 0.3f;  
+        private const float AttackDuration = 0.3f;
         private float _weaponOrbitRadius = 3f;
         public float WeaponOrbitRadius => _weaponOrbitRadius;
 
@@ -103,7 +103,7 @@ namespace Hearthvale.GameCode.Entities.Players
             }
 
             UpdateKnockback(gameTime); // Handles knockback and wall bounce
-            
+
             // Check after knockback update
             if (float.IsNaN(_position.X) || float.IsNaN(_position.Y))
             {
@@ -119,7 +119,7 @@ namespace Hearthvale.GameCode.Entities.Players
 
             _sprite.Position = _position;
             _sprite.Effects = _facingRight ? SpriteEffects.None : SpriteEffects.FlipHorizontally;
-            
+
             // Final validation
             if (float.IsNaN(_position.X) || float.IsNaN(_position.Y))
             {
@@ -172,10 +172,10 @@ namespace Hearthvale.GameCode.Entities.Players
                     allObstacles.Add(npc.Bounds);
             }
 
-            // Prevent movement into any obstacle
-            if (!TrySetPosition(candidate, allObstacles))
-                return;
+            // Use wall sliding for movement
+            TrySetPositionWithWallSliding(candidate, allObstacles);
         }
+
         // Add this method to your Player class
         public bool IsNearTile(int column, int row, float tileWidth, float tileHeight)
         {
@@ -232,13 +232,13 @@ namespace Hearthvale.GameCode.Entities.Players
         protected override IEnumerable<Rectangle> GetObstacleRectangles()
         {
             var obstacles = new List<Rectangle>();
-            
+
             // Add static obstacles
             if (_currentObstacles != null)
             {
                 obstacles.AddRange(_currentObstacles);
             }
-            
+
             // Add NPC bounds (except defeated ones)
             if (_currentNpcs != null)
             {
@@ -250,22 +250,67 @@ namespace Hearthvale.GameCode.Entities.Players
                     }
                 }
             }
-            
+
             return obstacles;
         }
-        private bool TrySetPosition(Vector2 candidate, IEnumerable<Rectangle> obstacles)
+
+        /// <summary>
+        /// Enhanced position setting with wall sliding support
+        /// </summary>
+        private bool TrySetPositionWithWallSliding(Vector2 candidate, IEnumerable<Rectangle> obstacles)
         {
             // Add NaN check at the start
             if (float.IsNaN(candidate.X) || float.IsNaN(candidate.Y))
             {
-                System.Diagnostics.Debug.WriteLine($"❌ CRITICAL: TrySetPosition called with NaN candidate: {candidate}");
+                System.Diagnostics.Debug.WriteLine($"❌ CRITICAL: TrySetPositionWithWallSliding called with NaN candidate: {candidate}");
                 return false;
             }
 
+            Vector2 currentPos = Position;
+            Vector2 movement = candidate - currentPos;
+
+            // If no movement, return true (no collision)
+            if (movement.LengthSquared() < 0.001f)
+                return true;
+
+            // Try full movement first
+            if (!IsPositionBlocked(candidate, obstacles))
+            {
+                _position = candidate;
+                return true;
+            }
+
+            // If full movement is blocked, try sliding along walls
+
+            // Try horizontal movement only (slide along vertical walls)
+            Vector2 horizontalTarget = new Vector2(candidate.X, currentPos.Y);
+            if (!IsPositionBlocked(horizontalTarget, obstacles))
+            {
+                _position = horizontalTarget;
+                return true;
+            }
+
+            // Try vertical movement only (slide along horizontal walls)
+            Vector2 verticalTarget = new Vector2(currentPos.X, candidate.Y);
+            if (!IsPositionBlocked(verticalTarget, obstacles))
+            {
+                _position = verticalTarget;
+                return true;
+            }
+
+            // If both individual axes are blocked, stay at current position
+            return false;
+        }
+
+        /// <summary>
+        /// Check if a position would cause collision with walls or obstacles
+        /// </summary>
+        private bool IsPositionBlocked(Vector2 position, IEnumerable<Rectangle> obstacles)
+        {
             // Check if candidate position would collide with any obstacle
             Rectangle candidateBounds = new Rectangle(
-                (int)candidate.X + 8,
-                (int)candidate.Y + 16,
+                (int)position.X + 8,
+                (int)position.Y + 16,
                 (int)Sprite.Width / 2,
                 (int)Sprite.Height / 2
             );
@@ -273,7 +318,7 @@ namespace Hearthvale.GameCode.Entities.Players
             foreach (var obstacle in obstacles)
             {
                 if (candidateBounds.Intersects(obstacle))
-                    return false;
+                    return true;
             }
 
             // Check against tilemap walls
@@ -288,24 +333,18 @@ namespace Hearthvale.GameCode.Entities.Players
                 {
                     for (int row = topTile; row <= bottomTile; row++)
                     {
-                        if (this.Tilemap.GetTileset(col, row) == TilesetManager.Instance.WallTileset && AutotileMapper.IsWallTile(Tilemap.GetTileId(col, row)))
+                        if (col >= 0 && col < this.Tilemap.Columns && row >= 0 && row < this.Tilemap.Rows)
                         {
-                            return false; // Collision with a wall
+                            if (this.Tilemap.GetTileset(col, row) == TilesetManager.Instance.WallTileset && AutotileMapper.IsWallTile(Tilemap.GetTileId(col, row)))
+                            {
+                                return true; // Collision with a wall
+                            }
                         }
                     }
                 }
             }
 
-            // If no collision, set the position
-            _position = candidate;
-            
-            // Add debug check after setting position
-            if (float.IsNaN(_position.X) || float.IsNaN(_position.Y))
-            {
-                System.Diagnostics.Debug.WriteLine($"❌ CRITICAL: _position became NaN after setting to {candidate}!");
-            }
-            
-            return true;
+            return false;
         }
     }
-    }
+}
