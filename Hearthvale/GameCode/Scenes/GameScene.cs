@@ -25,6 +25,10 @@ namespace Hearthvale.Scenes
 {
     public class GameScene : Scene, ICameraProvider
     {
+        private readonly CombatEffectsManager _combatEffectsManager;
+        private readonly CameraManager _cameraManager;
+        private readonly InputHandler _inputHandler;
+
         private bool _f5WasDown = false;
         private DebugKeysBar _debugKeysBar;
         private Vector2 _playerStart;
@@ -46,7 +50,6 @@ namespace Hearthvale.Scenes
         private TextureAtlas _arrowAtlas;
 
         private Viewport _viewport;
-        // Remove _camera field - we'll use CameraManager instead
 
         private DungeonManager _dungeonManager;
         private MonoGameLibrary.Graphics.Tilemap _tilemap;
@@ -63,14 +66,21 @@ namespace Hearthvale.Scenes
         public Player Player => _player;
 
         private List<Rectangle> allObstacles = new List<Rectangle>();
-
-
+        public GameScene(
+            CombatEffectsManager combatEffectsManager,
+            CameraManager cameraManager,
+            InputHandler inputHandler
+        )
+        {
+            _combatEffectsManager = combatEffectsManager ?? throw new ArgumentNullException(nameof(combatEffectsManager));
+            _cameraManager = cameraManager ?? throw new ArgumentNullException(nameof(cameraManager));
+            _inputHandler = inputHandler ?? throw new ArgumentNullException(nameof(inputHandler));
+        }
         public override void Initialize()
         {
             base.Initialize();
             Core.ExitOnEscape = false;
         }
-
         public override void LoadContent()
         {
             _atlas = TextureAtlas.FromFile(Core.Content, "images/atlas-definition.xml");
@@ -84,10 +94,6 @@ namespace Hearthvale.Scenes
             _playerAttackSoundEffect = Content.Load<SoundEffect>("audio/player_attack");
             _font = Core.Content.Load<SpriteFont>("fonts/04B_30");
             _debugFont = Content.Load<SpriteFont>("fonts/DebugFont");
-
-            // Initialize camera and CameraManager
-            var camera = new Camera2D(Core.GraphicsDevice.Viewport) { Zoom = 3.0f };
-            CameraManager.Initialize(camera);
 
             // Create the procedural dungeon manager and initialize it as the singleton
             _dungeonManager = new ProceduralDungeonManager();
@@ -115,8 +121,25 @@ namespace Hearthvale.Scenes
                 Content,
                 dungeonColumns, dungeonRows,
                 wallTileset, wallAutotileXml,
-                floorTileset, floorAutotileXml
-            );
+                floorTileset, floorAutotileXml);
+
+            // Debug tilemap information
+            System.Diagnostics.Debug.WriteLine($"✅ Tilemap created: {_tilemap.Columns}x{_tilemap.Rows}");
+            System.Diagnostics.Debug.WriteLine($"✅ Tile size: {_tilemap.TileWidth}x{_tilemap.TileHeight}");
+            
+            // Check if tilemap has any tiles
+            int nonEmptyTiles = 0;
+            for (int x = 0; x < _tilemap.Columns; x++)
+            {
+                for (int y = 0; y < _tilemap.Rows; y++)
+                {
+                    if (_tilemap.GetTileId(x, y) > 0)
+                        nonEmptyTiles++;
+                }
+            }
+            System.Diagnostics.Debug.WriteLine($"✅ Non-empty tiles: {nonEmptyTiles}");
+
+            TilesetManager.Instance.SetTilemap(_tilemap); // Set the tilemap in TilesetManager
             _playerStart = ((ProceduralDungeonManager)_dungeonManager).GetPlayerStart(_tilemap);
 
             // Validate player start position
@@ -153,7 +176,7 @@ namespace Hearthvale.Scenes
                 _heroAtlas, _playerStart, _bounceSoundEffect, _collectSoundEffect, _playerAttackSoundEffect, MOVEMENT_SPEED
             );
             // Pass tilemap and wall info to the player for collision
-            _player.Tilemap = _tilemap;
+            _player.SetTilemap(_tilemap);
 
             // Initialize managers that depend on the player or other systems
             _weaponManager = new WeaponManager(_heroAtlas, _weaponAtlas, dungeonBounds, new List<NPC>());
@@ -168,30 +191,25 @@ namespace Hearthvale.Scenes
 
             // Initialize singletons ONCE with the now-initialized camera and player
             SingletonManager.InitializeForGameScene(
-                _atlas, _font, _debugFont, _uiSoundEffect, camera, MOVEMENT_SPEED,
-                (movement) => _player.Move(movement, dungeonBounds, _player.Sprite.Width, _player.Sprite.Height, _npcManager.Npcs, allObstacles ?? new List<Rectangle>()),
-                () => {
-                    // NPC spawn logic
-                    float swingRadius = _player.EquippedWeapon?.Length ?? 32f;
-                    float minDistance = swingRadius + 16f;
-                    var random = new Random();
-                    double angle = random.NextDouble() * Math.PI * 2;
-                    Vector2 direction = new Vector2((float)Math.Cos(angle), (float)Math.Sin(angle));
-                    Vector2 spawnPos = _player.Position + direction * minDistance;
-                    spawnPos.X = MathHelper.Clamp(spawnPos.X, dungeonBounds.Left, dungeonBounds.Right - _player.Sprite.Width);
-                    spawnPos.Y = MathHelper.Clamp(spawnPos.Y, dungeonBounds.Top, dungeonBounds.Bottom - _player.Sprite.Height);
-                    _npcManager.SpawnNPC("DefaultNPCType", spawnPos);
-                },
-                () => _player.CombatController.StartProjectileAttack(),
-                () => _player.CombatController.StartMeleeAttack(),
-                RotatePlayerWeaponLeft,
-                RotatePlayerWeaponRight,
-                HandleInteraction
+                MOVEMENT_SPEED, // Movement speed
+                (movement) => _player.Move(movement, dungeonBounds, _player.Sprite.Width, _player.Sprite.Height, _npcManager.Npcs, allObstacles ?? new List<Rectangle>()), // Move player callback
+                () => _npcManager.SpawnRandomNpcAroundPlayer(_player), // Spawn NPC callback
+                () => _player.CombatController.StartProjectileAttack(), // Projectile attack callback
+                () => _player.CombatController.StartMeleeAttack(), // Melee attack callback
+                RotatePlayerWeaponLeft, // Rotate weapon left callback
+                RotatePlayerWeaponRight, // Rotate weapon right callback
+                HandleInteraction // Interaction callback
             );
 
             CombatManager.Initialize(
-                _npcManager, _player, ScoreManager.Instance, Core.SpriteBatch, CombatEffectsManager.Instance,
-                _bounceSoundEffect, _collectSoundEffect, dungeonBounds
+                _npcManager,
+                _player,
+                ScoreManager.Instance,
+                Core.SpriteBatch,
+                _combatEffectsManager, // Use the injected instance
+                _bounceSoundEffect,
+                _collectSoundEffect,
+                dungeonBounds
             );
 
             _playerWeapons = new List<Weapon>
@@ -216,6 +234,49 @@ namespace Hearthvale.Scenes
                 // Add more as needed
             };
             _debugKeysBar = new DebugKeysBar(_font, GameUIManager.Instance.WhitePixel, debugKeys);
+
+            // After all game objects are created and initialized, reinitialize InputHandler with proper callbacks
+            InputHandler.Initialize(
+                movementSpeed: MOVEMENT_SPEED,
+                movePlayerCallback: movement => _player.Move(
+                    movement,
+                    new Rectangle(0, 0, _tilemap.Columns * (int)_tilemap.TileWidth, _tilemap.Rows * (int)_tilemap.TileHeight),
+                    _player.Sprite.Width,
+                    _player.Sprite.Height,
+                    _npcManager.Npcs,
+                    allObstacles ?? new List<Rectangle>()
+                ),
+                spawnNpcCallback: () => _npcManager.SpawnRandomNpcAroundPlayer(_player),
+                projectileAttackCallback: () => _player.CombatController.StartProjectileAttack(),
+                meleeAttackCallback: () => _player.CombatController.StartMeleeAttack(),
+                rotateWeaponLeftCallback: RotatePlayerWeaponLeft,
+                rotateWeaponRightCallback: RotatePlayerWeaponRight,
+                interactionCallback: HandleInteraction,
+                toggleDebugModeCallback: () => DebugManager.Instance.ToggleDebugMode(),
+                toggleDebugGridCallback: () => DebugManager.Instance.ShowUIDebugGrid = !DebugManager.Instance.ShowUIDebugGrid,
+                pauseGameCallback: () => GameUIManager.Instance.PauseGame(),
+                resumeGameCallback: () => GameUIManager.Instance.ResumeGame(null),
+                isPausedCallback: () => GameUIManager.Instance.IsPausePanelVisible,
+                closeDialogCallback: () => GameUIManager.Instance.HideDialog(),
+                isDialogOpenCallback: () => GameUIManager.Instance.IsDialogOpen
+            );
+
+
+
+            if (CameraManager.Instance?.Camera2D != null)
+            {
+                CameraManager.Instance.Position = _playerStart;
+                System.Diagnostics.Debug.WriteLine($"✅ Camera repositioned to: {CameraManager.Instance.Position}");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("❌ CameraManager not initialized in LoadContent!");
+            }
+
+            // Add debug output
+            System.Diagnostics.Debug.WriteLine($"✅ Camera initialized with position: {CameraManager.Instance.Position}");
+            System.Diagnostics.Debug.WriteLine($"✅ Player start position: {_playerStart}");
+            System.Diagnostics.Debug.WriteLine($"✅ Camera zoom: {CameraManager.Instance.Zoom}");
         }
 
         public override void Update(GameTime gameTime)
@@ -233,47 +294,36 @@ namespace Hearthvale.Scenes
             // InputHandler now handles all input including UI/Debug
             InputHandler.Instance.Update(gameTime);
 
-            // Add debug output to see what's happening
-            if (gameTime.TotalGameTime.TotalSeconds % 1.0 < 0.016) // Every second roughly
-            {
-                System.Diagnostics.Debug.WriteLine($"DEBUG: Player Position: {_player?.Position ?? Vector2.Zero}");
-                System.Diagnostics.Debug.WriteLine($"DEBUG: Camera Position: {CameraManager.Instance.Position}");
-                System.Diagnostics.Debug.WriteLine($"DEBUG: Player Start was: {_playerStart}");
-            }
-
             // Update game systems
             _player.Update(gameTime, _npcManager.Npcs);
             _npcManager.Update(gameTime, _player, allObstacles);
             CombatManager.Instance.Update(gameTime);
-            CombatEffectsManager.Instance.Update(gameTime);
+            _combatEffectsManager.Update(gameTime);
             _dialogManager.Update();
             _player.ClampToBounds(new Rectangle(0, 0, _tilemap.Columns * (int)_tilemap.TileWidth, _tilemap.Rows * (int)_tilemap.TileHeight));
             GameUIManager.Instance.UpdateWeaponUI(_player.EquippedWeapon);
 
             UpdateViewport(Core.GraphicsDevice.Viewport);
-
-            // Update camera using CameraManager
-            Rectangle margin = new Rectangle(
-                (int)(100 / CameraManager.Instance.Zoom), (int)(80 / CameraManager.Instance.Zoom),
-                (int)(_viewport.Width / CameraManager.Instance.Zoom) - (int)(200 / CameraManager.Instance.Zoom),
-                (int)(_viewport.Height / CameraManager.Instance.Zoom) - (int)(160 / CameraManager.Instance.Zoom)
-            );
             
-            CameraManager.Instance.UpdateCamera(
-                _player.Position, 
-                new Point((int)_player.Sprite.Width, (int)_player.Sprite.Height),
-                margin, 
-                _mapManager, 
-                CombatEffectsManager.Instance, 
-                gameTime
-            );
+            // Camera handling
+            Vector2 playerCenter = _player.Position + new Vector2(_player.Sprite.Width / 2f, _player.Sprite.Height / 2f);
+            CameraManager.Instance.Camera2D.FollowSmooth(playerCenter, 0.1f);
+            
+            // Clamp camera to map bounds
+            CameraManager.Instance.Camera2D.ClampToMap(
+                _tilemap.Columns * (int)_tilemap.TileWidth, 
+                _tilemap.Rows * (int)_tilemap.TileHeight, 
+                (int)_tilemap.TileWidth);
+            
+            // Update camera with game time for shake effects
+            CameraManager.Instance.Camera2D.Update(gameTime);
 
-            // Update player movement
-            _player.Move(
-                InputHandler.Instance.GetMovement(), 
-                new Rectangle(0, 0, _tilemap.Columns * (int)_tilemap.TileWidth, _tilemap.Rows * (int)_tilemap.TileHeight), 
-                _player.Sprite.Width, _player.Sprite.Height,
-                _npcManager.Npcs, allObstacles ?? new List<Rectangle>());
+            // REMOVE THIS REDUNDANT CALL - It's causing the problem!
+            // _player.Move(
+            //    InputHandler.Instance.GetMovement(), 
+            //    new Rectangle(0, 0, _tilemap.Columns * (int)_tilemap.TileWidth, _tilemap.Rows * (int)_tilemap.TileHeight), 
+            //    _player.Sprite.Width, _player.Sprite.Height,
+            //    _npcManager.Npcs, allObstacles ?? new List<Rectangle>());
 
             // Update NPCs
             foreach (var npc in _npcManager.Npcs)
@@ -293,6 +343,15 @@ namespace Hearthvale.Scenes
 
         public override void DrawWorld(GameTime gameTime)
         {
+            // Test drawing - draw a simple rectangle at world origin to verify camera is working
+            #if DEBUG
+            Core.SpriteBatch.Draw(GameUIManager.Instance.WhitePixel, 
+                new Rectangle(0, 0, 100, 100), Color.Red);
+            
+            Core.SpriteBatch.Draw(GameUIManager.Instance.WhitePixel, 
+                new Rectangle((int)_player.Position.X, (int)_player.Position.Y, 50, 50), Color.Green);
+            #endif
+
             // Draw procedural tilemap
             _tilemap.Draw(Core.SpriteBatch);
 
@@ -303,7 +362,6 @@ namespace Hearthvale.Scenes
 
             // Draw debug overlays that should follow the camera
             GameUIManager.Instance.DrawDungeonElementCollisionBoxes(Core.SpriteBatch, DungeonManager.Instance.GetAllElements(), CameraManager.Instance.GetViewMatrix());
-            // Use GameUIManager for tile coordinates overlay instead of TilesetDebugManager
             GameUIManager.Instance.DrawTileCoordinatesOverlay(Core.SpriteBatch, _tilemap);
             DebugManager.Instance.Draw(Core.SpriteBatch, _player, _npcManager.Npcs, DungeonManager.Instance.GetAllElements(), CameraManager.Instance.GetViewMatrix());
         }
@@ -373,7 +431,31 @@ namespace Hearthvale.Scenes
 
         public Matrix GetViewMatrix()
         {
-            return CameraManager.Instance.GetViewMatrix();
+            try
+            {
+                // Ensure CameraManager is initialized
+                if (CameraManager.Instance?.Camera2D == null)
+                {
+                    System.Diagnostics.Debug.WriteLine("⚠️ CameraManager not initialized, returning identity matrix");
+                    return Matrix.Identity;
+                }
+
+                var matrix = CameraManager.Instance.GetViewMatrix();
+                
+                // Validate the matrix isn't completely broken
+                if (float.IsNaN(matrix.M41) || float.IsNaN(matrix.M42))
+                {
+                    System.Diagnostics.Debug.WriteLine("⚠️ Camera matrix contains NaN values, returning identity matrix");
+                    return Matrix.Identity;
+                }
+
+                return matrix;
+            }
+            catch (System.InvalidOperationException ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"⚠️ CameraManager not initialized: {ex.Message}");
+                return Matrix.Identity;
+            }
         }
 
         /// <summary>
@@ -399,6 +481,38 @@ namespace Hearthvale.Scenes
             }
 
             base.Dispose(disposing);
+        }
+
+        private void HandleStartClicked(object sender, EventArgs e)
+        {
+            // Play UI sound effect
+            Core.Audio.PlaySoundEffect(_uiSoundEffect);
+
+            // Initialize the CameraManager with a new Camera2D instance
+            var camera = new Camera2D(Core.GraphicsDevice.Viewport) { Zoom = 3.0f };
+            CameraManager.Initialize(camera);
+
+            // Initialize CombatEffectsManager
+            var combatEffectsManager = new CombatEffectsManager();
+
+            // Initialize InputHandler
+            InputHandler.Initialize(
+                movementSpeed: 2.0f, // Example movement speed
+                movePlayerCallback: movement => { /* Define player movement logic */ },
+                spawnNpcCallback: () => { /* Define NPC spawn logic */ },
+                projectileAttackCallback: () => { /* Define projectile attack logic */ },
+                meleeAttackCallback: () => { /* Define melee attack logic */ },
+                rotateWeaponLeftCallback: () => { /* Define weapon rotation left logic */ },
+                rotateWeaponRightCallback: () => { /* Define weapon rotation right logic */ },
+                interactionCallback: () => { /* Define interaction logic */ }
+            );
+
+            // Transition to the main game scene
+            Core.ChangeScene(new GameScene(
+                combatEffectsManager,
+                CameraManager.Instance,
+                InputHandler.Instance
+            ));
         }
     }
 

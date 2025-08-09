@@ -120,7 +120,11 @@ namespace Hearthvale.GameCode.UI
             }
         }
 
-        public Vector2 Position => _position;
+        public Vector2 Position
+        {
+            get => _position;
+            set => _position = value;
+        }
 
         public float Zoom
         {

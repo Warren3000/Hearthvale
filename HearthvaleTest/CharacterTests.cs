@@ -1,9 +1,10 @@
-using Hearthvale.GameCode.Entities.Characters;
+using Hearthvale.GameCode.Entities;
 using Microsoft.Xna.Framework;
 using Xunit;
 using MonoGameLibrary.Graphics; // Add this using directive for AnimatedSprite
 using System.Collections.Generic; // Add this using directive for List<T>
-using Microsoft.Xna.Framework.Graphics; // Add this using directive for TextureRegion
+using Microsoft.Xna.Framework.Graphics;
+ // Add this using directive for TextureRegion
 
 namespace HearthvaleTest
 {
@@ -43,7 +44,7 @@ namespace HearthvaleTest
             // Arrange
             var dummyTextureRegion = new TextureRegion(); // Use parameterless constructor for dummy
             var dummyAnim = new Animation(new List<TextureRegion> { dummyTextureRegion }, System.TimeSpan.FromSeconds(0.1));
-            var dummySprite = new MonoGameLibrary.Graphics.AnimatedSprite(dummyAnim); // Attach animation to sprite
+            var dummySprite = new AnimatedSprite(dummyAnim); // Attach animation to sprite
             var character = new TestCharacter(dummySprite, new Vector2(0, 0), 100);
 
             // Act
@@ -61,12 +62,10 @@ namespace HearthvaleTest
     // Minimal test double for Character (abstract)
     public class TestCharacter : Character
     {
-        public TestCharacter(MonoGameLibrary.Graphics.AnimatedSprite sprite, Vector2 pos, int maxHealth)
+        public TestCharacter(AnimatedSprite sprite, Vector2 pos, int maxHealth)
         {
-            _sprite = sprite;
-            _position = pos;
-            _maxHealth = maxHealth;
-            _currentHealth = maxHealth;
+            this.AnimationComponent.SetSprite(sprite);
+            this.MovementComponent.SetPosition(pos);
         }
         public override void Flash() { }
     }

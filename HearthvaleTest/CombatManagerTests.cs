@@ -193,7 +193,7 @@ namespace HearthvaleTest
             var origin = Vector2.Zero;
             ScoreManager.Initialize(dummyFont, position, origin);
             var camera = new Camera2D(graphicsDevice.Viewport);
-            CombatEffectsManager.Initialize(camera);
+            CombatEffectsManager.Initialize();
 
             // Create dummy sound effects for testing
             var hitSound = CreateDummySoundEffect(graphicsDevice);

@@ -165,14 +165,28 @@ public class Core : Game
     {
         GraphicsDevice.Clear(Color.CornflowerBlue);
 
-        // Use GetViewMatrix() from ICameraProvider
-        Matrix cameraMatrix = (CurrentScene as ICameraProvider)?.GetViewMatrix() ?? Matrix.Identity;
+        Matrix cameraMatrix = Matrix.Identity;
+        
+        if (CurrentScene is ICameraProvider cameraProvider)
+        {
+            cameraMatrix = cameraProvider.GetViewMatrix();
+            #if DEBUG
+            System.Diagnostics.Debug.WriteLine($"🎥 Using camera matrix from scene: Translation=({cameraMatrix.M41}, {cameraMatrix.M42}), Scale=({cameraMatrix.M11}, {cameraMatrix.M22})");
+            #endif
+        }
+        else
+        {
+            #if DEBUG
+            System.Diagnostics.Debug.WriteLine($"⚠️ Scene {CurrentScene?.GetType().Name} is not ICameraProvider, using identity matrix");
+            #endif
+        }
 
+        // World space drawing with camera transform
         SpriteBatch.Begin(transformMatrix: cameraMatrix, samplerState: SamplerState.PointClamp);
         s_activeScene?.DrawWorld(gameTime);
         SpriteBatch.End();
 
-        // Draw UI (screen space, no transform)
+        // Screen space UI drawing (no transform)
         SpriteBatch.Begin(SpriteSortMode.FrontToBack, BlendState.AlphaBlend, samplerState: SamplerState.PointClamp);
         s_activeScene?.DrawUI(gameTime);
         SpriteBatch.End();

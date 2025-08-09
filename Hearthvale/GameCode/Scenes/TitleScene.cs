@@ -1,4 +1,5 @@
 ﻿using Gum.Managers;
+using Hearthvale.GameCode.Entities.Players;
 using Hearthvale.GameCode.Input;
 using Hearthvale.GameCode.Managers;
 using Hearthvale.GameCode.UI;
@@ -11,6 +12,7 @@ using MonoGameGum.Forms.Controls;
 using MonoGameGum.GueDeriving;
 using MonoGameLibrary;
 using MonoGameLibrary.Graphics;
+using MonoGameLibrary.Input;
 using MonoGameLibrary.Scenes;
 using System;
 using System.Collections.Generic;
@@ -149,8 +151,12 @@ public class TitleScene : Scene
 
     public override void Update(GameTime gameTime)
     {
+        // Get keyboard state once
+        KeyboardInfo keyboard = Core.Input.Keyboard;
+        
         // Only handle Enter key if the title screen buttons panel is visible
-        if (_titleScreenButtonsPanel.IsVisible && Core.Input.Keyboard.WasKeyJustPressed(Keys.Enter))
+        if (_titleScreenButtonsPanel.IsVisible && 
+            InputHandler.Instance.ProcessKeyPress(Keys.Enter, keyboard))
         {
             if (_startButton.IsFocused)
             {
@@ -161,25 +167,20 @@ public class TitleScene : Scene
                 HandleOptionsClicked(_optionsButton, EventArgs.Empty);
             }
         }
-        // If options panel is visible, let Gum handle Enter for focused control (sliders/back button)
-        // GumService.Default.Update will route Enter to the focused control
 
-        if (InputHandler.Instance.WasPausePressed())
+        // Replace WasPausePressed with direct ProcessKeyPress
+        if (InputHandler.Instance.ProcessKeyPress(Keys.Escape, keyboard))
         {
             // Pause/unpause logic
         }
 
-        if (InputHandler.Instance.WasDebugGridTogglePressed())
+        // Replace WasDebugGridTogglePressed with direct ProcessKeyPress
+        if (InputHandler.Instance.ProcessKeyPress(Keys.F9, keyboard))
         {
-            DebugManager.Instance.ShowUIDebugGrid = DebugManager.Instance.ShowUIDebugGrid;
+            DebugManager.Instance.ShowUIDebugGrid = !DebugManager.Instance.ShowUIDebugGrid;
         }
 
-        //if (GameUIManager.Instance.IsDialogOpen && InputHandler.Instance.WasDialogAdvancePressed())
-        //{
-        //    GameUIManager.Instance.HideDialog();
-        //    return;
-        //}
-
+        // Update Gum UI
         GumService.Default.Update(gameTime);
     }
 
@@ -390,11 +391,10 @@ public class TitleScene : Scene
 
     private void HandleStartClicked(object sender, EventArgs e)
     {
-        // Play UI sound effect
         Core.Audio.PlaySoundEffect(_uiSoundEffect);
 
-        // Transition to the main game scene
-        Core.ChangeScene(new GameScene());
+        // Use the factory to create a properly initialized GameScene
+        SceneManager.ChangeScene(GameSceneFactory.CreateGameScene());
     }
 
     private void HandleOptionsClicked(object sender, EventArgs e)

@@ -22,9 +22,6 @@ public class NpcMovementController
     private float _knockbackTimer = 0f;
     private const float KnockbackDuration = 0.2f; // seconds
 
-    private Tilemap _tilemap;
-    private Tileset _wallTileset;
-    private Tileset _floorTileset;
     private int _spriteWidth;
     private int _spriteHeight;
 
@@ -32,12 +29,11 @@ public class NpcMovementController
     private Vector2? _chaseTarget = null;
     private float _chaseSpeed = 40f;
 
-    public NpcMovementController(Vector2 startPosition, float speed, Rectangle bounds, Tilemap tilemap, int spriteWidth, int spriteHeight)
+    public NpcMovementController(Vector2 startPosition, float speed, Rectangle bounds, int spriteWidth, int spriteHeight)
     {
         Position = startPosition;
         _speed = speed;
         Bounds = bounds;
-        _tilemap = tilemap;
         _spriteWidth = spriteWidth;
         _spriteHeight = spriteHeight;
     }
@@ -178,6 +174,7 @@ public class NpcMovementController
     // Helper to check for wall collision
     private bool IsWall(Vector2 pos)
     {
+        Tilemap _tilemap = TilesetManager.Instance.Tilemap;
         Rectangle candidateBounds = new Rectangle(
             (int)pos.X + 8,
             (int)pos.Y + 16,

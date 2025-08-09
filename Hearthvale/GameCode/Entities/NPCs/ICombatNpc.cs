@@ -11,5 +11,6 @@ namespace Hearthvale.GameCode.Entities.NPCs
         int AttackPower { get; }
         Weapon EquippedWeapon { get; }
         Microsoft.Xna.Framework.Rectangle GetAttackArea();
+        bool CheckPlayerHit(Character player);
     }
 }

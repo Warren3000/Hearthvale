@@ -20,7 +20,7 @@ public class Enemy : NPC
         int maxHealth,
         Tilemap tilemap,
         Tileset wallTileset)
-        : base(name, animations, position, bounds, soundEffect, maxHealth, tilemap, wallTileset)
+        : base(name, animations, position, bounds, soundEffect, maxHealth)
     {
     }
 

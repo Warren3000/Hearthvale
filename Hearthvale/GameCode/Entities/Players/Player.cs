@@ -1,4 +1,4 @@
-﻿using Hearthvale.GameCode.Entities.Characters;
+﻿using Hearthvale.GameCode.Entities;
 using Hearthvale.GameCode.Entities.NPCs;
 using Hearthvale.GameCode.Managers;
 using Hearthvale.GameCode.Utils;
@@ -6,6 +6,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.Animations;
 using MonoGameLibrary.Graphics;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,42 +21,29 @@ namespace Hearthvale.GameCode.Entities.Players
         private CombatEffectsManager _effectsManager;
         private readonly PlayerAnimationController _animationController;
 
-        public float MovementSpeed { get; }
         public bool IsAttacking { get; set; }
-        private float _attackTimer = 0f;
-        private const float AttackDuration = 0.3f;
+
         private float _weaponOrbitRadius = 3f;
         public float WeaponOrbitRadius => _weaponOrbitRadius;
 
-        private Vector2 _lastMovementDirection = Vector2.UnitX;
-        private readonly float _movementSpeed;
-        public Vector2 LastMovementDirection => _lastMovementDirection;
         public PlayerCombatController CombatController => _combatController;
-        public override int Health => _currentHealth;
-        public int CurrentHealth => _currentHealth;
-
-        public override AnimatedSprite Sprite => _sprite;
-        public override Vector2 Position => _position;
-        public override Rectangle Bounds => new Rectangle(
-            (int)Position.X + 8,
-            (int)Position.Y + 16,
-            (int)Sprite.Width / 2,
-            (int)Sprite.Height / 2
-        );
-        private Tileset _wallTileset;
-        private Tileset _floorTileset;
 
         public Player(TextureAtlas atlas, Vector2 position, SoundEffect hitSound, SoundEffect defeatSound, SoundEffect playerAttackSound, float movementSpeed)
         {
-            _atlas = atlas;
-            _sprite = new AnimatedSprite(atlas.GetAnimation("Mage_Idle"));
-            _position = position; // Make sure this is set
-            _movementSpeed = movementSpeed;
-            _facingRight = true;
-            _lastMovementDirection = Vector2.UnitX;
+            // Initialize components
+            InitializeComponents();
 
-            // Add debug output to confirm position is set
-            System.Diagnostics.Debug.WriteLine($"Player created at position: {_position}");
+            _atlas = atlas;
+            this.AnimationComponent.SetSprite(new AnimatedSprite(atlas.GetAnimation("Mage_Idle")));
+            this.MovementComponent.SetPosition(position);
+            this.MovementComponent.SetMovementSpeed(movementSpeed);
+            this.MovementComponent.FacingRight = true;
+            
+
+            // Initialize health with max health of 100
+            InitializeHealth(100);
+
+            System.Diagnostics.Debug.WriteLine($"Player created at position: {this.Position}");
 
             _movementController = new PlayerMovementController(this);
             _combatController = new PlayerCombatController(this, hitSound, defeatSound, playerAttackSound);
@@ -65,14 +53,10 @@ namespace Hearthvale.GameCode.Entities.Players
                 { "Mage_Idle", atlas.GetAnimation("Mage_Idle") },
                 { "Mage_Walk", atlas.GetAnimation("Mage_Walk") }
             };
-            _animationController = new PlayerAnimationController(this, _sprite, animations);
-
-            // Initialize health
-            _maxHealth = 100;
-            _currentHealth = _maxHealth;
+            _animationController = new PlayerAnimationController(this, this.AnimationComponent.Sprite, animations);
 
             // Set sprite position immediately
-            _sprite.Position = _position;
+            this.SetPosition(position);
         }
 
         public override bool TakeDamage(int amount, Vector2? knockback = null)
@@ -88,6 +72,7 @@ namespace Hearthvale.GameCode.Entities.Players
         {
             _animationController.Flash();
         }
+
         public void StartAttack()
         {
             IsAttacking = true;
@@ -96,85 +81,90 @@ namespace Hearthvale.GameCode.Entities.Players
         public void Update(GameTime gameTime, IEnumerable<NPC> npcs)
         {
             // Add position validation at the start
-            if (float.IsNaN(_position.X) || float.IsNaN(_position.Y))
+            if (float.IsNaN(this.Position.X) || float.IsNaN(this.Position.Y))
             {
                 System.Diagnostics.Debug.WriteLine($"❌ CRITICAL: Player position is NaN at start of Update! Resetting to spawn position.");
-                _position = new Vector2(896, 80); // Use the known good spawn position
+                this.SetPosition(new Vector2(896, 80)); // Use the known good spawn position
             }
 
             UpdateKnockback(gameTime); // Handles knockback and wall bounce
 
             // Check after knockback update
-            if (float.IsNaN(_position.X) || float.IsNaN(_position.Y))
+            if (float.IsNaN(Position.X) || float.IsNaN(Position.Y))
             {
                 System.Diagnostics.Debug.WriteLine($"❌ CRITICAL: Player position became NaN after UpdateKnockback!");
-                _position = new Vector2(896, 80); // Reset again
-                _knockbackVelocity = Vector2.Zero;
-                _knockbackTimer = 0;
+                this.SetPosition(new Vector2(896, 80)); // Reset again
+                _collisionComponent.SetKnockback(Vector2.Zero);
             }
 
             _animationController.UpdateFlash((float)gameTime.ElapsedGameTime.TotalSeconds);
             _combatController.Update(gameTime, npcs);
             _animationController.UpdateAnimation(_movementController.IsMoving());
-
-            _sprite.Position = _position;
-            _sprite.Effects = _facingRight ? SpriteEffects.None : SpriteEffects.FlipHorizontally;
+            AnimationComponent.Sprite.Position = this.Position;
+            AnimationComponent.Sprite.Effects = FacingRight ? SpriteEffects.None : SpriteEffects.FlipHorizontally;
 
             // Final validation
-            if (float.IsNaN(_position.X) || float.IsNaN(_position.Y))
+            if (float.IsNaN(this.Position.X) || float.IsNaN(this.Position.Y))
             {
                 System.Diagnostics.Debug.WriteLine($"❌ CRITICAL: Player position is NaN at end of Update!");
-                _position = new Vector2(896, 80); // Final reset
+                this.SetPosition(new Vector2(896, 80)); // Final reset
             }
         }
 
         public void Move(
-          Vector2 movement,
-          Rectangle roomBounds,
-          float spriteWidth,
-          float spriteHeight,
-          IEnumerable<NPC> npcs,
-          IEnumerable<Rectangle> obstacleRects)
-        {
-            if (_movementController.IsKnockedBack) return;
+    Vector2 movement,
+    Rectangle roomBounds,
+    float spriteWidth,
+    float spriteHeight,
+    IEnumerable<NPC> npcs,
+    IEnumerable<Rectangle> obstacleRects)
+{
+    if (_collisionComponent.IsKnockedBack) return;
 
-            if (movement != Vector2.Zero)
-            {
-                _lastMovementDirection = Vector2.Normalize(movement);
-                _facingRight = _lastMovementDirection.X >= 0;
-            }
+    // Convert continuous movement vector to cardinal direction and back
+    if (movement != Vector2.Zero)
+    {
+        // Convert to cardinal direction
+        CardinalDirection direction = movement.ToCardinalDirection();
+        
+        // Update the MovementComponent with the cardinal direction
+        MovementComponent.FacingDirection = direction;
+        MovementComponent.LastMovementVector = direction.ToVector();
+    }
 
-            Vector2 newPosition = Position + movement;
+    // Create movement vector using cardinal direction's unit vector
+    Vector2 directedMovement = movement.Length() * MovementComponent.LastMovementVector;
+    Vector2 newPosition = Position + directedMovement;
 
-            // Add NaN check and prevention
-            if (float.IsNaN(newPosition.X) || float.IsNaN(newPosition.Y))
-            {
-                System.Diagnostics.Debug.WriteLine($"❌ CRITICAL: newPosition is NaN! Position={Position}, movement={movement}");
-                return; // Don't move if calculation results in NaN
-            }
+    // Add NaN check and prevention
+    if (float.IsNaN(newPosition.X) || float.IsNaN(newPosition.Y))
+    {
+        System.Diagnostics.Debug.WriteLine($"❌ CRITICAL: newPosition is NaN! Position={Position}, movement={movement}");
+        return;
+    }
 
-            float clampedX = MathHelper.Clamp(newPosition.X, roomBounds.Left, roomBounds.Right - spriteWidth);
-            float clampedY = MathHelper.Clamp(newPosition.Y, roomBounds.Top, roomBounds.Bottom - spriteHeight);
-            Vector2 candidate = new Vector2(clampedX, clampedY);
+    float clampedX = MathHelper.Clamp(newPosition.X, roomBounds.Left, roomBounds.Right - spriteWidth);
+    float clampedY = MathHelper.Clamp(newPosition.Y, roomBounds.Top, roomBounds.Bottom - spriteHeight);
+    Vector2 candidate = new Vector2(clampedX, clampedY);
 
-            // Add another NaN check after clamping
-            if (float.IsNaN(candidate.X) || float.IsNaN(candidate.Y))
-            {
-                System.Diagnostics.Debug.WriteLine($"❌ CRITICAL: candidate position is NaN after clamping! roomBounds={roomBounds}, spriteWidth={spriteWidth}, spriteHeight={spriteHeight}");
-                return; // Don't move if clamping results in NaN
-            }
+    // Add another NaN check after clamping
+    if (float.IsNaN(candidate.X) || float.IsNaN(candidate.Y))
+    {
+        System.Diagnostics.Debug.WriteLine($"❌ CRITICAL: candidate position is NaN after clamping!");
+        return;
+    }
 
-            // Defensive: ensure obstacleRects is never null
-            var allObstacles = (obstacleRects ?? Enumerable.Empty<Rectangle>()).ToList();
-            foreach (var npc in npcs)
-            {
-                if (!npc.IsDefeated)
-                    allObstacles.Add(npc.Bounds);
-            }
+    // Defensive: ensure obstacleRects is never null
+    var allObstacles = (obstacleRects ?? Enumerable.Empty<Rectangle>()).ToList();
+    foreach (var npc in npcs)
+    {
+        if (!npc.IsDefeated)
+            allObstacles.Add(npc.Bounds);
+    }
 
-            // Use wall sliding for movement
-            TrySetPositionWithWallSliding(candidate, allObstacles);
-        }
+    // Use wall sliding for movement
+    TrySetPositionWithWallSliding(candidate, allObstacles);
+}
 
         // Add this method to your Player class
         public bool IsNearTile(int column, int row, float tileWidth, float tileHeight)
@@ -194,26 +184,19 @@ namespace Hearthvale.GameCode.Entities.Players
             // Check if the distance between the player and the tile is within the interaction radius.
             return Vector2.Distance(playerCenter, tileCenter) <= interactionRadius;
         }
-        public void SetLastMovementDirection(Vector2 dir)
-        {
-            _lastMovementDirection = dir;
-        }
 
         public void SetFacingRight(bool facingRight)
         {
-            _facingRight = facingRight;
+            MovementComponent.FacingRight = facingRight;
         }
-
 
         protected override Vector2 GetAttackDirection()
         {
-            return LastMovementDirection;
+            // Use the MovementComponent's FacingDirection property
+            return MovementComponent.FacingDirection.ToVector();
         }
 
-        protected override bool ShouldDrawWeaponBehind()
-        {
-            return LastMovementDirection.Y < 0;
-        }
+        
 
         // Add these fields to store obstacle information
         private IEnumerable<Rectangle> _currentObstacles;
@@ -229,7 +212,7 @@ namespace Hearthvale.GameCode.Entities.Players
             _currentNpcs = npcs;
         }
 
-        protected override IEnumerable<Rectangle> GetObstacleRectangles()
+        public override IEnumerable<Rectangle> GetObstacleRectangles()
         {
             var obstacles = new List<Rectangle>();
 
@@ -276,7 +259,7 @@ namespace Hearthvale.GameCode.Entities.Players
             // Try full movement first
             if (!IsPositionBlocked(candidate, obstacles))
             {
-                _position = candidate;
+                this.SetPosition(candidate);
                 return true;
             }
 
@@ -286,7 +269,7 @@ namespace Hearthvale.GameCode.Entities.Players
             Vector2 horizontalTarget = new Vector2(candidate.X, currentPos.Y);
             if (!IsPositionBlocked(horizontalTarget, obstacles))
             {
-                _position = horizontalTarget;
+                this.SetPosition(horizontalTarget);
                 return true;
             }
 
@@ -294,7 +277,7 @@ namespace Hearthvale.GameCode.Entities.Players
             Vector2 verticalTarget = new Vector2(currentPos.X, candidate.Y);
             if (!IsPositionBlocked(verticalTarget, obstacles))
             {
-                _position = verticalTarget;
+                this.SetPosition(verticalTarget);
                 return true;
             }
 
@@ -322,20 +305,22 @@ namespace Hearthvale.GameCode.Entities.Players
             }
 
             // Check against tilemap walls
-            if (this.Tilemap != null && TilesetManager.Instance.WallTileset != null)
+            if (_collisionComponent.Tilemap != null && TilesetManager.Instance.WallTileset != null)
             {
-                int leftTile = candidateBounds.Left / (int)this.Tilemap.TileWidth;
-                int rightTile = (candidateBounds.Right - 1) / (int)this.Tilemap.TileWidth;
-                int topTile = candidateBounds.Top / (int)this.Tilemap.TileHeight;
-                int bottomTile = (candidateBounds.Bottom - 1) / (int)this.Tilemap.TileHeight;
+                var tilemap = _collisionComponent.Tilemap;
+                int leftTile = candidateBounds.Left / (int)tilemap.TileWidth;
+                int rightTile = (candidateBounds.Right - 1) / (int)tilemap.TileWidth;
+                int topTile = candidateBounds.Top / (int)tilemap.TileHeight;
+                int bottomTile = (candidateBounds.Bottom - 1) / (int)tilemap.TileHeight;
 
                 for (int col = leftTile; col <= rightTile; col++)
                 {
                     for (int row = topTile; row <= bottomTile; row++)
                     {
-                        if (col >= 0 && col < this.Tilemap.Columns && row >= 0 && row < this.Tilemap.Rows)
+                        if (col >= 0 && col < tilemap.Columns && row >= 0 && row < tilemap.Rows)
                         {
-                            if (this.Tilemap.GetTileset(col, row) == TilesetManager.Instance.WallTileset && AutotileMapper.IsWallTile(Tilemap.GetTileId(col, row)))
+                            if (tilemap.GetTileset(col, row) == TilesetManager.Instance.WallTileset &&
+                                AutotileMapper.IsWallTile(tilemap.GetTileId(col, row)))
                             {
                                 return true; // Collision with a wall
                             }

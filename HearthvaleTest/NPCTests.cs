@@ -69,7 +69,7 @@ namespace HearthvaleTest
             var tileset = new Tileset(dummyTextureRegion, 1, 1);
             var tilemap = new Tilemap(tileset, 1, 1);
 
-            return new NPC("test", animations, new Vector2(0, 0), new Rectangle(0, 0, 100, 100), dummySound, maxHealth, tilemap, tileset);
+            return new NPC("test", animations, new Vector2(0, 0), new Rectangle(0, 0, 100, 100), dummySound, maxHealth);
         }
     }
 }

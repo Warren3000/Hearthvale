@@ -1,10 +1,12 @@
-﻿using System.Collections.Generic;
-using Hearthvale.GameCode.Entities.Characters;
+﻿using Hearthvale.GameCode.Entities;
 using Hearthvale.GameCode.Entities.Interfaces;
 using Hearthvale.GameCode.Entities.NPCs;
 using Hearthvale.GameCode.Input;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
+using MonoGameLibrary;
+using MonoGameLibrary.Input;
+using System.Collections.Generic;
 
 namespace Hearthvale.GameCode.Managers;
 
@@ -45,9 +47,13 @@ public class DialogManager
     /// </summary>
     public void Update()
     {
+        // Get keyboard state once at the start of the method
+        KeyboardInfo keyboard = Core.Input.Keyboard;
+        
         if (_uiManager.IsDialogOpen)
         {
-            if (_currentSpeaker == null || _currentSpeaker.IsDefeated || InputHandler.IsKeyPressed(Keys.Enter))
+            if (_currentSpeaker == null || _currentSpeaker.IsDefeated || 
+                InputHandler.Instance.ProcessKeyPress(Keys.Enter, keyboard))
             {
                 _uiManager.HideDialog();
                 _currentSpeaker = null;
@@ -58,9 +64,10 @@ public class DialogManager
         // Player initiates dialog with NPCs
         foreach (var npc in _npcs)
         {
-            if (!npc.IsDefeated && npc is IDialog dialogCharacter && Vector2.Distance(_player.Position, npc.Position) < _dialogDistance)
+            if (!npc.IsDefeated && npc is IDialog dialogCharacter && 
+                Vector2.Distance(_player.Position, npc.Position) < _dialogDistance)
             {
-                if (InputHandler.IsKeyPressed(Keys.E) && _currentSpeaker != npc)
+                if (InputHandler.Instance.ProcessKeyPress(Keys.E, keyboard) && _currentSpeaker != npc)
                 {
                     _uiManager.ShowDialog(dialogCharacter.DialogText);
                     _currentSpeaker = npc;

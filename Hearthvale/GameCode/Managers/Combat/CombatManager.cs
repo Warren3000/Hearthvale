@@ -1,5 +1,4 @@
 using Hearthvale.GameCode.Entities;
-using Hearthvale.GameCode.Entities.Characters;
 using Hearthvale.GameCode.Entities.NPCs;
 using Hearthvale.GameCode.Data;
 using Microsoft.Xna.Framework;
@@ -11,6 +10,7 @@ using System.Diagnostics;
 using System.Linq;
 using System;
 using MonoGameLibrary;
+using Hearthvale.GameCode.Entities.NPCs.Components;
 
 namespace Hearthvale.GameCode.Managers;
 
@@ -125,26 +125,11 @@ public class CombatManager
         // --- NPC Melee Attack Hit Detection ---
         foreach (var npc in _npcManager.Npcs.Where(n => !n.IsDefeated))
         {
-            if (npc is ICombatNpc combatNpc && combatNpc.IsAttacking && combatNpc.EquippedWeapon?.IsSlashing == true)
+            // Let the NPC component check for hits
+            if (npc is ICombatNpc combatNpc && combatNpc.CheckPlayerHit(_player))
             {
-                if (!_npcHitPlayerThisSwing.ContainsKey(npc) || _npcHitPlayerThisSwing[npc] == false)
-                {
-                    Rectangle npcAttackArea = new Rectangle(
-                        combatNpc.GetAttackArea().X,
-                        combatNpc.GetAttackArea().Y,
-                        combatNpc.GetAttackArea().Width,
-                        combatNpc.GetAttackArea().Height);
-
-                    if (npcAttackArea.Intersects(_player.Bounds))
-                    {
-                        TryDamagePlayer(combatNpc.AttackPower, npc.Position);
-                        _npcHitPlayerThisSwing[npc] = true;
-                    }
-                }
-            }
-            else if (!(npc is ICombatNpc combatNpc2 && combatNpc2.IsAttacking) && _npcHitPlayerThisSwing.ContainsKey(npc))
-            {
-                _npcHitPlayerThisSwing.Remove(npc);
+                // Only handle player damage here
+                TryDamagePlayer(combatNpc.AttackPower, npc.Position);
             }
         }
     }
@@ -183,17 +168,17 @@ public class CombatManager
             // Create collision response based on projectile type
             var response = CreateProjectileCollisionResponse(projectile, npc.Position);
 
-            // Apply damage
-            bool wasDefeated = HandleNpcHit(npc, projectile.Damage, knockback);
+            // Delegate damage handling to NPC component
+            bool wasDefeated = npc.HandleProjectileHit(projectile.Damage, knockback);
 
             // Show visual effects
             ShowProjectileHitEffects(projectile, npc.Position, response);
-
-            // Play appropriate sound
-            PlayProjectileHitSound(projectile, response);
-
-            // Handle special projectile effects
-            HandleSpecialProjectileEffects(projectile, npc, response);
+            
+            // Apply status effects
+            if (projectile.Type == ProjectileType.Fireball)
+                npc.ApplyStatusEffect("Burn");
+            else if (projectile.Type == ProjectileType.Magic)
+                npc.ApplyStatusEffect("Magic");
 
             // Deactivate projectile (unless it penetrates)
             if (!response.Penetrates)

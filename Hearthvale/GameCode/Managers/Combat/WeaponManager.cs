@@ -1,5 +1,5 @@
 using Hearthvale.GameCode.Entities;
-using Hearthvale.GameCode.Entities.Characters;
+
 using Hearthvale.GameCode.Entities.NPCs;
 using Hearthvale.GameCode.Entities.Players;
 using Microsoft.Xna.Framework;

@@ -47,13 +47,13 @@ namespace Hearthvale.GameCode.Entities.Players
             {
                 if (!IsAttacking)
                 {
-                    // The base rotation should simply match the direction.
-                    // The visual offset is handled in the Weapon's Draw method.
-                    _player.EquippedWeapon.Rotation = (float)Math.Atan2(_player.LastMovementDirection.Y, _player.LastMovementDirection.X);
+                    // Get the cardinal direction and convert to rotation angle
+                    CardinalDirection facing = _player.MovementComponent.FacingDirection;
+                    _player.EquippedWeapon.Rotation = facing.ToRotation();
                 }
 
                 Vector2 playerCenter = _player.Position + new Vector2(_player.Sprite.Width / 2f, _player.Sprite.Height / 2f);
-                Vector2 orbitOffset = _player.LastMovementDirection * _player.WeaponOrbitRadius;
+                Vector2 orbitOffset = _player.MovementComponent.LastMovementVector * _player.WeaponOrbitRadius;
                 _player.EquippedWeapon.Offset = orbitOffset + _player.EquippedWeapon.ManualOffset;
                 _player.EquippedWeapon.Position = playerCenter + _player.EquippedWeapon.Offset;
             }
@@ -100,8 +100,37 @@ namespace Hearthvale.GameCode.Entities.Players
 
             if (_player.EquippedWeapon != null)
             {
-                _player.EquippedWeapon.StartSwing(_player.FacingRight);
+                // Always set the rotation first based on cardinal direction
+                CardinalDirection facing = _player.MovementComponent.FacingDirection;
+                _player.EquippedWeapon.Rotation = facing.ToRotation();
+                
+                // Always use the correct swing direction based on facing
+                bool swingClockwise;
+                
+                // Determine swing direction based on cardinal direction
+                // This ensures the swing always looks good from that direction
+                switch (facing)
+                {
+                    case CardinalDirection.North:
+                        swingClockwise = true;
+                        break;
+                    case CardinalDirection.East:
+                        swingClockwise = true;
+                        break;
+                    case CardinalDirection.South:
+                        swingClockwise = false;
+                        break;
+                    case CardinalDirection.West:
+                        swingClockwise = false;
+                        break;
+                    default:
+                        swingClockwise = true;
+                        break;
+                }
+                
+                _player.EquippedWeapon.StartSwing(swingClockwise);
             }
+            
             _player.StartAttack();
             IsAttacking = true;
             _player.IsAttacking = true;
@@ -116,7 +145,7 @@ namespace Hearthvale.GameCode.Entities.Players
             if (!CombatManager.Instance.CanAttack() || _player.EquippedWeapon == null) return;
 
             Vector2 spawnPosition = _player.Position + new Vector2(_player.Sprite.Width / 2, _player.Sprite.Height / 2);
-            var projectile = _player.EquippedWeapon.Fire(_player.LastMovementDirection, spawnPosition);
+            var projectile = _player.EquippedWeapon.Fire(_player.MovementComponent.LastMovementVector, spawnPosition);
 
             if (projectile != null)
             {

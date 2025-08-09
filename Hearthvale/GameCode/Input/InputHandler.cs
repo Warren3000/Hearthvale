@@ -1,11 +1,13 @@
 ﻿using Hearthvale.GameCode.Entities.Players;
 using Hearthvale.GameCode.Managers;
 using Hearthvale.GameCode.UI;
+using Hearthvale.GameCode.Utils;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using MonoGameLibrary;
 using MonoGameLibrary.Input;
 using System;
+using System.Collections.Generic;
 
 namespace Hearthvale.GameCode.Input
 {
@@ -14,7 +16,6 @@ namespace Hearthvale.GameCode.Input
         private static InputHandler _instance;
         public static InputHandler Instance => _instance ?? throw new InvalidOperationException("InputHandler not initialized. Call Initialize first.");
 
-        private Camera2D _camera;
         private readonly Action<Vector2> _movePlayerCallback;
         private readonly float _movementSpeed;
         private readonly Action _spawnNPCCallback;
@@ -36,8 +37,13 @@ namespace Hearthvale.GameCode.Input
         // Add this field to store the movement vector
         private Vector2 _currentMovementVector = Vector2.Zero;
 
+        // Add this field to track which keys were processed already
+        private HashSet<Keys> _processedKeys = new HashSet<Keys>();
+
+        // Add a similar method for gamepad buttons
+        private HashSet<Buttons> _processedButtons = new HashSet<Buttons>();
+
         public InputHandler(
-            Camera2D camera,
             float movementSpeed,
             Action<Vector2> movePlayerCallback,
             Action spawnNpcCallback,
@@ -54,7 +60,6 @@ namespace Hearthvale.GameCode.Input
             Action closeDialogCallback,
             Func<bool> isDialogOpenCallback)
         {
-            _camera = camera;
             _movementSpeed = movementSpeed;
             _movePlayerCallback = movePlayerCallback;
             _spawnNPCCallback = spawnNpcCallback;
@@ -73,7 +78,6 @@ namespace Hearthvale.GameCode.Input
         }
 
         public static void Initialize(
-            Camera2D camera,
             float movementSpeed,
             Action<Vector2> movePlayerCallback,
             Action spawnNpcCallback,
@@ -91,7 +95,7 @@ namespace Hearthvale.GameCode.Input
             Func<bool> isDialogOpenCallback = null)
         {
             _instance = new InputHandler(
-                camera, movementSpeed, movePlayerCallback, spawnNpcCallback,
+                movementSpeed, movePlayerCallback, spawnNpcCallback,
                 projectileAttackCallback, meleeAttackCallback,
                 rotateWeaponLeftCallback, rotateWeaponRightCallback, interactionCallback,
                 toggleDebugModeCallback, toggleDebugGridCallback, pauseGameCallback,
@@ -111,11 +115,37 @@ namespace Hearthvale.GameCode.Input
             return _currentMovementVector;
         }
 
+        // New method for one-shot key detection
+        public bool ProcessKeyPress(Keys key, KeyboardInfo keyboard)
+        {
+            if (keyboard.IsKeyDown(key) && !_processedKeys.Contains(key))
+            {
+                _processedKeys.Add(key);
+                return true;
+            }
+            return false;
+        }
+
+        // New method for one-shot button detection
+        public bool ProcessButtonPress(Buttons button, GamePadInfo gamepad)
+        {
+            if (gamepad.IsButtonDown(button) && !_processedButtons.Contains(button))
+            {
+                _processedButtons.Add(button);
+                return true;
+            }
+            return false;
+        }
+
         public void Update(GameTime gameTime)
         {
             KeyboardInfo keyboard = Core.Input.Keyboard;
             GamePadInfo gamePadOne = Core.Input.GamePads[(int)PlayerIndex.One];
 
+            // Reset processed inputs at start of each frame
+            _processedKeys.Clear();
+            _processedButtons.Clear();
+            
             // Handle UI/Debug input first (highest priority)
             if (HandleUIAndDebugInput(keyboard))
                 return; // Early return if UI consumed the input
@@ -133,9 +163,8 @@ namespace Hearthvale.GameCode.Input
         /// </summary>
         private bool HandleUIAndDebugInput(KeyboardInfo keyboard)
         {
-
             // Debug grid toggle (Escape when not paused, or custom key)
-            if (keyboard.WasKeyJustPressed(Keys.Escape))
+            if (ProcessKeyPress(Keys.Escape, keyboard))
             {
                 if (_isPausedCallback?.Invoke() == true)
                 {
@@ -149,21 +178,21 @@ namespace Hearthvale.GameCode.Input
             }
 
             // Dialog handling
-            if (_isDialogOpenCallback?.Invoke() == true && keyboard.WasKeyJustPressed(Keys.Enter))
+            if (_isDialogOpenCallback?.Invoke() == true && ProcessKeyPress(Keys.Enter, keyboard))
             {
                 _closeDialogCallback?.Invoke();
                 return true; // Consume input, don't process further
             }
 
             // Toggle UIDebugGrid
-            if (keyboard.WasKeyJustPressed(Keys.F2))
+            if (ProcessKeyPress(Keys.F2, keyboard))
             {
                 DebugManager.Instance.ShowUIDebugGrid = !DebugManager.Instance.ShowUIDebugGrid;
                 return false;
             }
 
             // Toggle Collision Boxes
-            if (keyboard.WasKeyJustPressed(Keys.F3))
+            if (ProcessKeyPress(Keys.F3, keyboard))
             {
                 DebugManager.Instance.ShowCollisionBoxes = !DebugManager.Instance.ShowCollisionBoxes;
                 _toggleDebugModeCallback?.Invoke();
@@ -171,14 +200,14 @@ namespace Hearthvale.GameCode.Input
             }
 
             // Toggle Tileset Viewer
-            if (keyboard.WasKeyJustPressed(Keys.F4))
+            if (ProcessKeyPress(Keys.F4, keyboard))
             {
                 DebugManager.Instance.ShowTilesetViewer = !DebugManager.Instance.ShowTilesetViewer;
                 return false;
             }
 
-            // Toggle Tile Coordinates Overlay (F6 - new key that doesn't conflict with existing debug features)
-            if (keyboard.WasKeyJustPressed(Keys.F6))
+            // Toggle Tile Coordinates Overlay
+            if (ProcessKeyPress(Keys.F6, keyboard))
             {
                 GameUIManager.Instance.ToggleTileCoordinates();
                 return false;
@@ -194,73 +223,81 @@ namespace Hearthvale.GameCode.Input
 
         private void HandleKeyboard(KeyboardInfo keyboard)
         {
-            // Player Movement
-            Vector2 moveDirection = Vector2.Zero;
-            if (keyboard.IsKeyDown(Keys.W)) moveDirection.Y = -1;
-            if (keyboard.IsKeyDown(Keys.S)) moveDirection.Y = 1;
-            if (keyboard.IsKeyDown(Keys.A)) moveDirection.X = -1;
-            if (keyboard.IsKeyDown(Keys.D)) moveDirection.X = 1;
+            
+            // Player Movement - Cardinal directions only
+            CardinalDirection? moveDirection = null;
+            
+            // Priority order: Last key pressed wins
+            if (keyboard.IsKeyDown(Keys.W)) moveDirection = CardinalDirection.North;
+            if (keyboard.IsKeyDown(Keys.S)) moveDirection = CardinalDirection.South;
+            if (keyboard.IsKeyDown(Keys.A)) moveDirection = CardinalDirection.West;
+            if (keyboard.IsKeyDown(Keys.D)) moveDirection = CardinalDirection.East;
 
-            // Update the movement vector field
-            _currentMovementVector = moveDirection != Vector2.Zero ? Vector2.Normalize(moveDirection) * _movementSpeed : Vector2.Zero;
+            // Update the movement vector field based on cardinal direction
+            _currentMovementVector = moveDirection.HasValue 
+                ? moveDirection.Value.ToVector() * _movementSpeed 
+                : Vector2.Zero;
 
-            if (moveDirection != Vector2.Zero)
+            if (moveDirection.HasValue)
             {
                 _movePlayerCallback?.Invoke(_currentMovementVector);
             }
-
+            
             // Camera shake (K)
-            if (keyboard.WasKeyJustPressed(Keys.K))
+            if (ProcessKeyPress(Keys.K, keyboard))
             {
-                _camera?.Shake(0.5f, 8f);
+                CameraManager.Instance.Camera2D?.Shake(0.5f, 8f);
             }
 
-            // Combat actions
-            if (keyboard.WasKeyJustPressed(Keys.Space))
+            // Combat actions - use the new method
+            if (ProcessKeyPress(Keys.Space, keyboard))
             {
+                System.Diagnostics.Debug.WriteLine("SPACE KEY PROCESSED - MELEE ATTACK");
                 _meleeAttackCallback?.Invoke();
             }
-
-            if (keyboard.WasKeyJustPressed(Keys.F))
+            
+            if (ProcessKeyPress(Keys.F, keyboard))
             {
+                System.Diagnostics.Debug.WriteLine("F KEY PROCESSED - PROJECTILE ATTACK");
                 _projectileAttackCallback?.Invoke();
             }
 
             // Audio controls
-            if (keyboard.WasKeyJustPressed(Keys.M))
+            if (ProcessKeyPress(Keys.M, keyboard))
             {
                 Core.Audio.ToggleMute();
             }
 
-            if (keyboard.WasKeyJustPressed(Keys.OemPlus))
+            if (ProcessKeyPress(Keys.OemPlus, keyboard))
             {
                 Core.Audio.SongVolume += 0.1f;
                 Core.Audio.SoundEffectVolume += 0.1f;
             }
 
-            if (keyboard.WasKeyJustPressed(Keys.OemMinus))
+            if (ProcessKeyPress(Keys.OemMinus, keyboard))
             {
                 Core.Audio.SongVolume -= 0.1f;
                 Core.Audio.SoundEffectVolume -= 0.1f;
             }
 
             // Spawning and weapons
-            if (keyboard.WasKeyJustPressed(Keys.N))
+            if (ProcessKeyPress(Keys.N, keyboard))
             {
                 _spawnNPCCallback?.Invoke();
             }
 
-            if (keyboard.WasKeyJustPressed(Keys.Q))
+            if (ProcessKeyPress(Keys.Q, keyboard))
             {
                 _rotateWeaponLeftCallback?.Invoke();
             }
-            if (keyboard.WasKeyJustPressed(Keys.E))
+            
+            if (ProcessKeyPress(Keys.E, keyboard))
             {
                 _rotateWeaponRightCallback?.Invoke();
             }
 
             // Interaction
-            if (keyboard.WasKeyJustPressed(Keys.I))
+            if (ProcessKeyPress(Keys.I, keyboard))
             {
                 _interactionCallback?.Invoke();
             }
@@ -268,31 +305,38 @@ namespace Hearthvale.GameCode.Input
 
         private void HandleGamePad(GamePadInfo gamePadOne)
         {
-            // Player Movement
-            Vector2 moveDirection = gamePadOne.LeftThumbStick;
-
-            // Update the movement vector field
-            _currentMovementVector = moveDirection != Vector2.Zero ? moveDirection * _movementSpeed : Vector2.Zero;
-
-            if (moveDirection != Vector2.Zero)
+            // Player Movement - Convert analog to cardinal directions
+            Vector2 stickInput = gamePadOne.LeftThumbStick;
+            
+            // Only process if the stick is being moved significantly
+            if (stickInput.LengthSquared() > 0.2f)
             {
+                // Convert to cardinal direction
+                CardinalDirection cardinalDirection = stickInput.ToCardinalDirection();
+                
+                // Use the unit vector for that direction
+                _currentMovementVector = cardinalDirection.ToVector() * _movementSpeed;
                 _movePlayerCallback?.Invoke(_currentMovementVector);
             }
-
+            else
+            {
+                _currentMovementVector = Vector2.Zero;
+            }
+            
             // Combat actions
-            if (gamePadOne.WasButtonJustPressed(Buttons.RightShoulder))
+            if (ProcessButtonPress(Buttons.RightShoulder, gamePadOne))
                 _projectileAttackCallback?.Invoke();
-            if (gamePadOne.WasButtonJustPressed(Buttons.X))
+            if (ProcessButtonPress(Buttons.X, gamePadOne))
                 _meleeAttackCallback?.Invoke();
 
             // Weapon rotation
-            if (gamePadOne.WasButtonJustPressed(Buttons.LeftShoulder))
+            if (ProcessButtonPress(Buttons.LeftShoulder, gamePadOne))
                 _rotateWeaponLeftCallback?.Invoke();
-            if (gamePadOne.WasButtonJustPressed(Buttons.RightTrigger))
+            if (ProcessButtonPress(Buttons.RightTrigger, gamePadOne))
                 _rotateWeaponRightCallback?.Invoke();
 
             // Interaction
-            if (gamePadOne.WasButtonJustPressed(Buttons.Y))
+            if (ProcessButtonPress(Buttons.Y, gamePadOne))
                 _interactionCallback?.Invoke();
 
             // Pause
@@ -309,19 +353,19 @@ namespace Hearthvale.GameCode.Input
         public bool WasPausePressed()
         {
             var keyboard = Core.Input.Keyboard;
-            return keyboard.WasKeyJustPressed(Keys.Escape);
+            return ProcessKeyPress(Keys.Escape, keyboard);
         }
 
         public bool WasDebugGridTogglePressed()
         {
             var keyboard = Core.Input.Keyboard;
-            return keyboard.WasKeyJustPressed(Keys.F9);
+            return ProcessKeyPress(Keys.F9, keyboard);
         }
 
         public bool WasDialogAdvancePressed()
         {
             var keyboard = Core.Input.Keyboard;
-            return keyboard.WasKeyJustPressed(Keys.Enter);
+            return ProcessKeyPress(Keys.Enter, keyboard);
         }
     }
 }

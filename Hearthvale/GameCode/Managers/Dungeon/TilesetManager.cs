@@ -27,6 +27,7 @@ namespace Hearthvale.GameCode.Managers
 
         private Tileset _wallTileset;
         private Tileset _floorTileset;
+        private Tilemap _tilemap;
 
         /// <summary>
         /// The current wall tileset.
@@ -37,6 +38,7 @@ namespace Hearthvale.GameCode.Managers
         /// The current floor tileset.
         /// </summary>
         public Tileset FloorTileset => _floorTileset;
+        public Tilemap Tilemap => _tilemap;
 
         /// <summary>
         /// Set the wall and floor tilesets for global access.
@@ -45,6 +47,10 @@ namespace Hearthvale.GameCode.Managers
         {
             _wallTileset = wallTileset;
             _floorTileset = floorTileset;
+        }
+        public void SetTilemap(Tilemap tilemap)
+        {
+            _tilemap = tilemap;
         }
 
         /// <summary>

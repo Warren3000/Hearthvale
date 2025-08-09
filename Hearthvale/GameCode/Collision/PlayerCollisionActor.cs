@@ -1,7 +1,8 @@
 ﻿using MonoGame.Extended;
 using Microsoft.Xna.Framework;
-using Hearthvale.GameCode.Entities.Characters;
 using Hearthvale.GameCode.Managers;
+using Hearthvale.GameCode.Entities;
+
 
 namespace Hearthvale.GameCode.Collision
 {

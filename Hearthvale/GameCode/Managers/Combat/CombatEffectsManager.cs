@@ -1,6 +1,7 @@
 using Hearthvale.GameCode.UI;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using nkast.Aether.Physics2D.Collision;
 using System;
 using System.Collections.Generic;
 
@@ -14,19 +15,13 @@ public class CombatEffectsManager
     private readonly Camera2D _camera;
     private readonly List<CombatTextEffect> _combatTexts = new();
 
-    private CombatEffectsManager(Camera2D camera)
+    public CombatEffectsManager()
     {
-        _camera = camera;
     }
-
-    /// <summary>
-    /// Initializes the singleton instance. Call this once at startup.
-    /// </summary>
-    public static void Initialize(Camera2D camera)
+    public static void Initialize()
     {
-        _instance = new CombatEffectsManager(camera);
+        _instance = new CombatEffectsManager();
     }
-
     public void PlayHitEffects(Vector2 position, int damage)
     {
         // Screen shake
@@ -69,7 +64,7 @@ public class CombatEffectsManager
     {
         foreach (var effect in _combatTexts)
             effect.Draw(spriteBatch, font);
-    }   
+    }
 
     public class CombatTextEffect
     {
@@ -92,11 +87,6 @@ public class CombatEffectsManager
             StartAlpha = startAlpha;
             EndAlpha = endAlpha;
             Elapsed = 0f;
-        }
-
-        public CombatTextEffect(Vector2 position, int damage)
-            : this(position, position - new Vector2(0, 32), 0.7f, damage.ToString(), Color.Red)
-        {
         }
 
         public bool IsFinished => Elapsed >= Duration;

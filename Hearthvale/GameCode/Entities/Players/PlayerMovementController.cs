@@ -8,12 +8,14 @@ namespace Hearthvale.GameCode.Entities.Players
     {
         private readonly Player _player;
 
-        public bool IsMoving() => _player._knockbackVelocity != Vector2.Zero;
+        public bool IsMoving() => _player.GetKnockbackVelocity() != Vector2.Zero;
         public bool IsKnockedBack => _player.IsKnockedBack;
+
 
         public PlayerMovementController(Player player)
         {
             _player = player;
+            DefaultMovementSpeed();
         }
 
         public void Update(GameTime gameTime, IEnumerable<NPC> npcs)
@@ -24,6 +26,14 @@ namespace Hearthvale.GameCode.Entities.Players
         public void SetVelocity(Vector2 velocity)
         {
             _player.SetKnockback(velocity);
+        }
+        public float GetMovementSpeed()
+        {
+            return _player.MovementSpeed;
+        }
+        public float DefaultMovementSpeed()
+        {
+            return _player.MovementSpeed;
         }
     }
 }

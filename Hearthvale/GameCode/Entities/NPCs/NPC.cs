@@ -1,6 +1,7 @@
-﻿using Hearthvale.GameCode.Entities.Characters;
-using Hearthvale.GameCode.Entities.Interfaces;
+﻿using Hearthvale.GameCode.Entities.Interfaces;
+using Hearthvale.GameCode.Entities.NPCs.Components;
 using Hearthvale.GameCode.Entities.Players;
+using Hearthvale.GameCode.Utils;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
@@ -22,20 +23,18 @@ public enum NpcAiType
 public class NPC : Character, ICombatNpc, IDialog
 {
     private readonly NpcAnimationController _animationController;
-    private readonly NpcMovementController _movementController;
+    private readonly NpcMovementComponent _npcMovement;
     private readonly NpcHealthController _healthController;
+    private readonly NpcCombatComponent _combatComponent;
+
     public int AttackPower { get; set; } = 1;
     private float _attackCooldown = 1.5f;
-    // private float _attackTimer = 0f; // REMOVED: This is now managed by the health controller's stun timer
+    private Vector2 _lastMovementDirection = Vector2.Zero;
 
-    public bool CanAttack => !_healthController.IsOnCooldown; // Use the health controller's state
-    public void ResetAttackTimer() => _healthController.StartAttackCooldown(_attackCooldown);
+    public bool CanAttack => _combatComponent.CanAttack;
+    public void ResetAttackTimer() => _combatComponent.StartAttackCooldown(_attackCooldown);
     public bool IsReadyToRemove => _healthController.IsReadyToRemove;
-    public override bool IsDefeated => _healthController.IsDefeated;
-    public override int Health => _healthController.Health;
-    public override int MaxHealth => _healthController.MaxHealth; // Make sure MaxHealth uses the health controller
-    public override AnimatedSprite Sprite => _animationController.Sprite;
-    public override Vector2 Position => _movementController.Position;
+
     public override Rectangle Bounds => new Rectangle(
         (int)Position.X + 8,
         (int)Position.Y + 16,
@@ -48,27 +47,28 @@ public class NPC : Character, ICombatNpc, IDialog
     private const float AttackAnimDuration = 0.25f; // WindUp (0.15) + Slash (0.1)
 
     public string Name { get; private set; }
-
     private NpcAiType _aiType;
 
-    public NPC(string name, Dictionary<string, Animation> animations, Vector2 position, Rectangle bounds, SoundEffect defeatSound, int maxHealth, Tilemap tilemap, Tileset wallTileset)
+    public NPC(string name, Dictionary<string, Animation> animations, Vector2 position, Rectangle bounds, SoundEffect defeatSound, int maxHealth)
     {
-        Name = name; // Assign the name
+        Name = name;
         var sprite = new AnimatedSprite(animations["Idle"]);
+
+        // Initialize base class components first
+        InitializeComponents();
+
+        // Create specialized NPC components
         _animationController = new NpcAnimationController(sprite, animations);
-        _movementController = new NpcMovementController(position, 60.0f, bounds, tilemap, (int)sprite.Width, (int)sprite.Height);
+        _npcMovement = new NpcMovementComponent(this, position, 60.0f, bounds, (int)sprite.Width, (int)sprite.Height);
         _healthController = new NpcHealthController(maxHealth, defeatSound);
+        _combatComponent = new NpcCombatComponent(this, AttackPower);
 
-        _sprite = sprite;
-        _position = position;
-        _maxHealth = maxHealth;
-        _currentHealth = maxHealth;
+        // Initialize health component
+        HealthComponent.SetMaxHealth(maxHealth);
 
-        // Set properties for the base Character class
-        this.Tilemap = tilemap;
-
-        _animationController.SetAnimation("Idle");
-        _movementController.SetIdle();
+        // Initialize animation and movement components
+        AnimationComponent.SetSprite(sprite);
+        MovementComponent.SetPosition(position);
 
         // Set AI type based on name
         _aiType = name.ToLower() switch
@@ -80,19 +80,15 @@ public class NPC : Character, ICombatNpc, IDialog
         };
     }
 
-    public override void EquipWeapon(Weapon weapon)
-    {
-        base.EquipWeapon(weapon);
-    }
-
     public override bool TakeDamage(int amount, Vector2? knockback = null)
     {
         if (_healthController.CanTakeDamage)
         {
             bool justDefeated = _healthController.TakeDamage(amount);
-            _currentHealth = _healthController.Health;
+
             if (knockback.HasValue)
-                _movementController.SetVelocity(knockback.Value);
+                _npcMovement.SetVelocity(knockback.Value);
+
             Flash();
             return justDefeated;
         }
@@ -106,22 +102,33 @@ public class NPC : Character, ICombatNpc, IDialog
     public override void Heal(int amount)
     {
         _healthController.Heal(amount);
-        _currentHealth = _healthController.Health;
     }
 
     public void Update(GameTime gameTime, IEnumerable<NPC> allNpcs, Character player, IEnumerable<Rectangle> rectangles)
     {
         float elapsed = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
+        // Update combat component
+        _combatComponent.Update(elapsed);
+
+        // Check for player hits - returns true if hit occurred
+        if (_combatComponent.CheckPlayerHit(player))
+        {
+            // Notify combat manager about the hit - this will be called from CombatManager
+        }
+
         UpdateHealthAndAnimation(elapsed);
+
         if (IsDefeated)
             return;
+
         if (_healthController.IsStunned)
         {
             UpdateKnockback(gameTime);
-            _sprite.Position = Position;
+            SetPosition(Position);
             return;
         }
+
         if (IsAttacking)
         {
             _attackAnimTimer -= elapsed;
@@ -135,14 +142,14 @@ public class NPC : Character, ICombatNpc, IDialog
         switch (_aiType)
         {
             case NpcAiType.Wander:
-                _movementController.SetChaseTarget(null); // Wander randomly
+                _npcMovement.SetChaseTarget(null); // Wander randomly
                 break;
             case NpcAiType.ChasePlayer:
-                _movementController.SetChaseTarget(player.Position); // Chase player
+                _npcMovement.SetChaseTarget(player.Position); // Chase player
                 break;
         }
 
-        _movementController.Update(elapsed, candidatePos =>
+        _npcMovement.Update(elapsed, candidatePos =>
         {
             var allObstacles = rectangles.ToList();
             if (!player.IsDefeated)
@@ -169,14 +176,15 @@ public class NPC : Character, ICombatNpc, IDialog
             StartAttack();
         }
 
-        _sprite.Position = Position;
+        // Update the base movement component with the NPC's specialized movement
+        MovementComponent.SetPosition(_npcMovement.Position);
     }
 
     public void StartAttack()
     {
         IsAttacking = true;
         _attackAnimTimer = AttackAnimDuration;
-        EquippedWeapon?.StartSwing(_facingRight);
+        EquippedWeapon?.StartSwing(FacingRight);
         ResetAttackTimer(); // Start global attack cooldown
     }
 
@@ -187,25 +195,18 @@ public class NPC : Character, ICombatNpc, IDialog
             Vector2 directionToPlayer = player.Position - Position;
             if (directionToPlayer != Vector2.Zero)
             {
-                directionToPlayer.Normalize();
+                // Convert to cardinal direction
+                CardinalDirection cardinalDirection = directionToPlayer.ToCardinalDirection();
+                
+                // Update facing based on cardinal direction
+                FacingRight = (cardinalDirection == CardinalDirection.East);
+                
+                // Set the weapon rotation based on cardinal direction
+                EquippedWeapon.Rotation = cardinalDirection.ToRotation();
+                
+                EquippedWeapon.Position = Position + new Vector2(Sprite.Width / 2, Sprite.Height / 2);
+                EquippedWeapon.Update(gameTime);
             }
-            else
-            {
-                directionToPlayer = Vector2.UnitX;
-            }
-
-            // Set facing direction based on player's position
-            if (Math.Abs(directionToPlayer.X) > Math.Abs(directionToPlayer.Y))
-            {
-                _facingRight = directionToPlayer.X > 0;
-            }
-
-            // The base rotation should simply match the direction.
-            // The visual offset is handled in the Weapon's Draw method.
-            EquippedWeapon.Rotation = (float)Math.Atan2(directionToPlayer.Y, directionToPlayer.X);
-
-            EquippedWeapon.Position = Position + new Vector2(Sprite.Width / 2, Sprite.Height / 2);
-            EquippedWeapon.Update(gameTime);
         }
     }
 
@@ -230,7 +231,7 @@ public class NPC : Character, ICombatNpc, IDialog
             // This could be a specific "Attack" animation if you have one
             desiredAnimation = "Walk"; // Or whatever looks best
         }
-        else if (!_movementController.IsIdle)
+        else if (!_npcMovement.IsIdle)
         {
             desiredAnimation = "Walk";
         }
@@ -238,6 +239,7 @@ public class NPC : Character, ICombatNpc, IDialog
         _animationController.SetAnimation(desiredAnimation);
         Sprite.Update(new GameTime(new TimeSpan(), TimeSpan.FromSeconds(elapsed)));
     }
+
     public override void Flash()
     {
         _animationController.Flash();
@@ -245,7 +247,22 @@ public class NPC : Character, ICombatNpc, IDialog
 
     public Vector2 GetVelocity()
     {
-        return _movementController.GetVelocity();
+        return _npcMovement.GetVelocity();
+    }
+
+    public bool HandleProjectileHit(int damage, Vector2 knockback)
+    {
+        return _combatComponent.HandleProjectileHit(damage, knockback);
+    }
+
+    public bool CheckPlayerHit(Character player)
+    {
+        return _combatComponent.CheckPlayerHit(player);
+    }
+
+    public void ApplyStatusEffect(string effectType)
+    {
+        _combatComponent.ApplyStatusEffect(effectType);
     }
 
     protected override Vector2 GetAttackDirection()
@@ -254,32 +271,6 @@ public class NPC : Character, ICombatNpc, IDialog
         return new Vector2((float)Math.Cos(angle), (float)Math.Sin(angle));
     }
 
-    protected override bool ShouldDrawWeaponBehind()
-    {
-        return GetVelocity().Y < 0;
-    }
-
-    public override void Draw(SpriteBatch spriteBatch)
-    {
-        // Calculate the true center of the NPC for weapon drawing
-        Vector2 npcCenter = Position + new Vector2(Sprite.Width / 2f, Sprite.Height / 2f);
-
-        // Draw weapon behind if needed
-        if (EquippedWeapon != null && ShouldDrawWeaponBehind())
-            EquippedWeapon.Draw(spriteBatch, npcCenter);
-
-        // Draw NPC sprite at its top-left position
-        Sprite.Draw(spriteBatch, Position);
-
-        // Draw weapon in front if needed
-        if (EquippedWeapon != null && !ShouldDrawWeaponBehind())
-            EquippedWeapon.Draw(spriteBatch, npcCenter);
-    }
-
-    public override Rectangle GetAttackArea()
-    {
-        return base.GetAttackArea();
-    }
 
     // Add these fields to store obstacle information
     private IEnumerable<Rectangle> _currentObstacles;
@@ -296,16 +287,16 @@ public class NPC : Character, ICombatNpc, IDialog
         _player = player;
     }
 
-    protected override IEnumerable<Rectangle> GetObstacleRectangles()
+    public override IEnumerable<Rectangle> GetObstacleRectangles()
     {
         var obstacles = new List<Rectangle>();
-        
+
         // Add static obstacles
         if (_currentObstacles != null)
         {
             obstacles.AddRange(_currentObstacles);
         }
-        
+
         // Add other NPC bounds (not self, not defeated)
         if (_currentNpcs != null)
         {
@@ -317,13 +308,13 @@ public class NPC : Character, ICombatNpc, IDialog
                 }
             }
         }
-        
+
         // Add player bounds
         if (_player != null && !_player.IsDefeated)
         {
             obstacles.Add(_player.Bounds);
         }
-        
+
         return obstacles;
     }
 }

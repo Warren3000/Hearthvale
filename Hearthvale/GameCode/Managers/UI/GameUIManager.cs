@@ -161,7 +161,7 @@ namespace Hearthvale.GameCode.Managers
 
         public void DrawPlayerHealthBar(SpriteBatch spriteBatch, Player player, Vector2 position, Vector2 size)
         {
-            int health = player.CurrentHealth;
+            int health = player.Health;
             int maxHealth = player.MaxHealth;
             
             // Add safety check
