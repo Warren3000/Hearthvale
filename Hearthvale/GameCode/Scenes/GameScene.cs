@@ -1,8 +1,8 @@
 ﻿using Hearthvale.GameCode.Data;
-using Hearthvale.GameCode.Entities;
 using Hearthvale.GameCode.Entities.Interfaces;
 using Hearthvale.GameCode.Entities.NPCs;
 using Hearthvale.GameCode.Entities.Players;
+using Hearthvale.GameCode.Entities;
 using Hearthvale.GameCode.Input;
 using Hearthvale.GameCode.Managers;
 using Hearthvale.GameCode.UI;
@@ -85,7 +85,7 @@ namespace Hearthvale.Scenes
         {
             _atlas = TextureAtlas.FromFile(Core.Content, "images/atlas-definition.xml");
             _heroAtlas = TextureAtlas.FromFile(Core.Content, "images/npc-atlas.xml");
-            _weaponAtlas = TextureAtlas.FromFile(Core.Content, "images/weapon-atlas.xml");
+            _weaponAtlas = TextureAtlas.FromFile(Core.Content, "images/RPG Icons/weapon-atlas.xml");
             _arrowAtlas = TextureAtlas.FromFile(Core.Content, "images/arrow-atlas.xml");
 
             _bounceSoundEffect = Content.Load<SoundEffect>("audio/bounce");
@@ -186,19 +186,44 @@ namespace Hearthvale.Scenes
             _npcManager.SpawnAllNpcTypesTest(_player);
             _weaponManager.UpdateNpcList(_npcManager.Npcs);
 
-            System.Diagnostics.Debug.WriteLine($"Camera initialized to player position: {CameraManager.Instance.Position}");
-            System.Diagnostics.Debug.WriteLine($"Player position after creation: {_player.Position}");
+            Debug.WriteLine($"Camera initialized to player position: {CameraManager.Instance.Position}");
+            Debug.WriteLine($"Player position after creation: {_player.Position}");
 
             // Initialize singletons ONCE with the now-initialized camera and player
-            SingletonManager.InitializeForGameScene(
-                MOVEMENT_SPEED, // Movement speed
-                (movement) => _player.Move(movement, dungeonBounds, _player.Sprite.Width, _player.Sprite.Height, _npcManager.Npcs, allObstacles ?? new List<Rectangle>()), // Move player callback
-                () => _npcManager.SpawnRandomNpcAroundPlayer(_player), // Spawn NPC callback
-                () => _player.CombatController.StartProjectileAttack(), // Projectile attack callback
-                () => _player.CombatController.StartMeleeAttack(), // Melee attack callback
-                RotatePlayerWeaponLeft, // Rotate weapon left callback
-                RotatePlayerWeaponRight, // Rotate weapon right callback
-                HandleInteraction // Interaction callback
+            //SingletonManager.InitializeForGameScene(
+            //    MOVEMENT_SPEED, // Movement speed
+            //    (movement) => _player.Move(movement, 
+            //        new Rectangle(0, 0, _tilemap.Columns * (int)_tilemap.TileWidth, _tilemap.Rows * (int)_tilemap.TileHeight), 
+            //        _player.Sprite.Width, 
+            //        _player.Sprite.Height, 
+            //        _npcManager.Npcs, 
+            //        allObstacles ?? new List<Rectangle>()
+            //    ), // Move player callback
+            //    () => _npcManager.SpawnRandomNpcAroundPlayer(_player), // Spawn NPC callback
+            //    () => _player.CombatController.StartProjectileAttack(), // Projectile attack callback
+            //    () => _player.CombatController.StartMeleeAttack(), // Melee attack callback
+            //    RotatePlayerWeaponLeft, // Rotate weapon left callback
+            //    RotatePlayerWeaponRight, // Rotate weapon right callback
+            //    HandleInteraction // Interaction callback
+            //);
+
+            InputManagerInitializer.InitializeForGameScene(
+                CameraManager.Instance.Camera2D,
+                MOVEMENT_SPEED,
+                movement => _player.Move(
+                    movement,
+                    new Rectangle(0, 0, _tilemap.Columns * (int)_tilemap.TileWidth, _tilemap.Rows * (int)_tilemap.TileHeight),
+                    _player.Sprite.Width,
+                    _player.Sprite.Height,
+                    _npcManager.Npcs,
+                    allObstacles ?? new List<Rectangle>()
+                ),
+                () => _npcManager.SpawnRandomNpcAroundPlayer(_player),
+                () => _player.CombatController.StartProjectileAttack(),
+                () => _player.CombatController.StartMeleeAttack(),
+                RotatePlayerWeaponLeft,
+                RotatePlayerWeaponRight,
+                HandleInteraction
             );
 
             CombatManager.Initialize(
@@ -214,11 +239,39 @@ namespace Hearthvale.Scenes
 
             _playerWeapons = new List<Weapon>
             {
-                new Weapon("Dagger", DataManager.Instance.GetWeaponStats("Dagger"), _weaponAtlas, _arrowAtlas),
                 new Weapon("Dagger-Copper", DataManager.Instance.GetWeaponStats("Dagger-Copper"), _weaponAtlas, _arrowAtlas),
-                new Weapon("Dagger-Cold", DataManager.Instance.GetWeaponStats("Dagger-Cold"), _weaponAtlas, _arrowAtlas)
+                new Weapon("Dagger-Gold", DataManager.Instance.GetWeaponStats("Dagger-Gold"), _weaponAtlas, _arrowAtlas),
+                new Weapon("Dagger-Fire", DataManager.Instance.GetWeaponStats("Dagger-Fire"), _weaponAtlas, _arrowAtlas)
             };
             _weaponManager.EquipWeapon(_player, _playerWeapons[_currentPlayerWeaponIndex]);
+
+#if DEBUG
+            // 1) Verify atlas texture
+            System.Diagnostics.Debug.WriteLine($"[WeaponAtlas] Texture loaded: {(_weaponAtlas?.Texture != null)} size={_weaponAtlas?.Texture?.Width}x{_weaponAtlas?.Texture?.Height}");
+
+            // 2) Verify regions by name
+            void CheckRegion(string key)
+            {
+                try
+                {
+                    var r = _weaponAtlas.GetRegion(key);
+                    System.Diagnostics.Debug.WriteLine($"[WeaponAtlas] Region '{key}': {(r != null ? $"OK {r.Width}x{r.Height}" : "NULL")}");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[WeaponAtlas] Region '{key}' threw: {ex.Message}");
+                }
+            }
+            CheckRegion("Dagger-Copper");
+            CheckRegion("Dagger-Gold");
+            CheckRegion("Dagger-Fire");
+
+            // 3) Verify constructed weapon sprites
+            foreach (var w in _playerWeapons)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Weapon] '{w?.Name}' Sprite={w?.Sprite != null} Region={(w?.Sprite?.Region != null)} Scale={w?.Sprite?.Scale} Length={w?.Length}");
+            }
+#endif
 
             _dialogManager = new DialogManager(GameUIManager.Instance, _player, _npcManager.Characters, dialogDistance);
 
@@ -234,33 +287,6 @@ namespace Hearthvale.Scenes
                 // Add more as needed
             };
             _debugKeysBar = new DebugKeysBar(_font, GameUIManager.Instance.WhitePixel, debugKeys);
-
-            // After all game objects are created and initialized, reinitialize InputHandler with proper callbacks
-            InputHandler.Initialize(
-                movementSpeed: MOVEMENT_SPEED,
-                movePlayerCallback: movement => _player.Move(
-                    movement,
-                    new Rectangle(0, 0, _tilemap.Columns * (int)_tilemap.TileWidth, _tilemap.Rows * (int)_tilemap.TileHeight),
-                    _player.Sprite.Width,
-                    _player.Sprite.Height,
-                    _npcManager.Npcs,
-                    allObstacles ?? new List<Rectangle>()
-                ),
-                spawnNpcCallback: () => _npcManager.SpawnRandomNpcAroundPlayer(_player),
-                projectileAttackCallback: () => _player.CombatController.StartProjectileAttack(),
-                meleeAttackCallback: () => _player.CombatController.StartMeleeAttack(),
-                rotateWeaponLeftCallback: RotatePlayerWeaponLeft,
-                rotateWeaponRightCallback: RotatePlayerWeaponRight,
-                interactionCallback: HandleInteraction,
-                toggleDebugModeCallback: () => DebugManager.Instance.ToggleDebugMode(),
-                toggleDebugGridCallback: () => DebugManager.Instance.ShowUIDebugGrid = !DebugManager.Instance.ShowUIDebugGrid,
-                pauseGameCallback: () => GameUIManager.Instance.PauseGame(),
-                resumeGameCallback: () => GameUIManager.Instance.ResumeGame(null),
-                isPausedCallback: () => GameUIManager.Instance.IsPausePanelVisible,
-                closeDialogCallback: () => GameUIManager.Instance.HideDialog(),
-                isDialogOpenCallback: () => GameUIManager.Instance.IsDialogOpen
-            );
-
 
 
             if (CameraManager.Instance?.Camera2D != null)
@@ -348,8 +374,8 @@ namespace Hearthvale.Scenes
             Core.SpriteBatch.Draw(GameUIManager.Instance.WhitePixel, 
                 new Rectangle(0, 0, 100, 100), Color.Red);
             
-            Core.SpriteBatch.Draw(GameUIManager.Instance.WhitePixel, 
-                new Rectangle((int)_player.Position.X, (int)_player.Position.Y, 50, 50), Color.Green);
+            //Core.SpriteBatch.Draw(GameUIManager.Instance.WhitePixel, 
+            //    new Rectangle((int)_player.Position.X, (int)_player.Position.Y, 50, 50), Color.Green);
             #endif
 
             // Draw procedural tilemap
@@ -360,11 +386,66 @@ namespace Hearthvale.Scenes
             foreach (var npc in _npcManager.Npcs)
                 npc.Draw(Core.SpriteBatch);
 
-            // Draw debug overlays that should follow the camera
-            GameUIManager.Instance.DrawDungeonElementCollisionBoxes(Core.SpriteBatch, DungeonManager.Instance.GetAllElements(), CameraManager.Instance.GetViewMatrix());
-            GameUIManager.Instance.DrawTileCoordinatesOverlay(Core.SpriteBatch, _tilemap);
-            DebugManager.Instance.Draw(Core.SpriteBatch, _player, _npcManager.Npcs, DungeonManager.Instance.GetAllElements(), CameraManager.Instance.GetViewMatrix());
-        }
+#if DEBUG
+    DebugDrawWeaponProbe();
+#endif
+
+    // Draw debug overlays that should follow the camera
+    GameUIManager.Instance.DrawDungeonElementCollisionBoxes(Core.SpriteBatch, DungeonManager.Instance.GetAllElements(), CameraManager.Instance.GetViewMatrix());
+    GameUIManager.Instance.DrawTileCoordinatesOverlay(Core.SpriteBatch, _tilemap);
+    DebugManager.Instance.Draw(Core.SpriteBatch, _player, _npcManager.Npcs, DungeonManager.Instance.GetAllElements(), CameraManager.Instance.GetViewMatrix());
+}
+
+#if DEBUG
+private void DebugDrawWeaponProbe()
+{
+    if ((Log.EnabledAreas & LogArea.Probe) == 0) return;
+    var white = GameUIManager.Instance.WhitePixel;
+
+    var weapon = _player?.EquippedWeapon;
+    if (weapon == null) { System.Diagnostics.Debug.WriteLine("[Probe] No equipped weapon."); return; }
+
+    // The "center" supplied to Weapon.Draw
+    Vector2 characterCenter = _player.Position + new Vector2(_player.Sprite.Width / 2f, _player.Sprite.Height / 1.4f);
+
+    // 1) Mark the characterCenter with a small cross
+    Core.SpriteBatch.Draw(white, new Rectangle((int)characterCenter.X - 2, (int)characterCenter.Y - 2, 5, 1), Color.Magenta);
+    Core.SpriteBatch.Draw(white, new Rectangle((int)characterCenter.X - 2, (int)characterCenter.Y + 2, 5, 1), Color.Magenta);
+    Core.SpriteBatch.Draw(white, new Rectangle((int)characterCenter.X - 2, (int)characterCenter.Y - 2, 1, 5), Color.Magenta);
+    Core.SpriteBatch.Draw(white, new Rectangle((int)characterCenter.X + 2, (int)characterCenter.Y - 2, 1, 5), Color.Magenta);
+
+    // 2) After _player.Draw, Weapon.Draw has run, so Position is set
+    var weaponPos = weapon.Sprite?.Position ?? weapon.Position;
+
+    // Mark the weapon draw position
+    Core.SpriteBatch.Draw(white, new Rectangle((int)weaponPos.X - 1, (int)weaponPos.Y - 1, 3, 3), Color.Yellow);
+
+    // 3) Draw a line from characterCenter to weaponPos (to visualize offset/origin)
+    var dir = weaponPos - characterCenter;
+    var len = dir.Length();
+    if (len > 0.1f)
+    {
+        float angle = (float)Math.Atan2(dir.Y, dir.X);
+        Core.SpriteBatch.Draw(white, weaponPos, null, Color.Yellow * 0.7f, angle + MathF.PI, Vector2.Zero, new Vector2(len, 1f), SpriteEffects.None, 0);
+    }
+
+    // 4) Draw the raw atlas region at the weapon position (bypass AnimatedSprite)
+    var region = weapon.Sprite?.Region;
+    if (region != null && _weaponAtlas?.Texture != null)
+    {
+        var src = region.SourceRectangle;
+        // Slight offset so we see both the raw region and the AnimatedSprite if both render
+        var rawPos = weaponPos + new Vector2(18, -18);
+        Core.SpriteBatch.Draw(_weaponAtlas.Texture, rawPos, src, Color.White, 0f, new Vector2(src.Width / 2f, src.Height), 1f, SpriteEffects.None, 0f);
+
+        System.Diagnostics.Debug.WriteLine($"[Probe] Draw raw region at {rawPos} src={src} weapon.Rotation={weapon.Rotation}");
+    }
+    else
+    {
+        System.Diagnostics.Debug.WriteLine("[Probe] Weapon region or atlas texture is null.");
+    }
+}
+#endif
 
         public override void DrawUI(GameTime gameTime)
         {

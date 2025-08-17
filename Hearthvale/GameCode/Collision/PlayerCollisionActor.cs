@@ -11,13 +11,28 @@ namespace Hearthvale.GameCode.Collision
     /// </summary>
     public class PlayerCollisionActor : ICollisionActor
     {
-        public IShapeF Bounds { get; set; }
+        // Make bounds property dynamically return orientation-aware bounds
+        public IShapeF Bounds 
+        { 
+            get 
+            {
+                // Always return current orientation-aware bounds
+                Rectangle orientedBounds = Player.GetOrientationAwareBounds();
+                return new RectangleF(orientedBounds.X, orientedBounds.Y, 
+                                     orientedBounds.Width, orientedBounds.Height);
+            }
+            set 
+            {
+                // Setter required by interface, but we ignore it since we use dynamic bounds
+            } 
+        }
+        
         public Character Player { get; }
 
-        public PlayerCollisionActor(Character player, RectangleF bounds)
+        public PlayerCollisionActor(Character player)
         {
             Player = player;
-            Bounds = bounds;
+            // No need to store initial bounds - we'll get them dynamically
         }
 
         public void OnCollision(CollisionEventArgs collisionInfo)

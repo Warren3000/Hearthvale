@@ -1,0 +1,32 @@
+﻿<TextureAtlas>
+  <Texture>images/RPG Icons/weapons</Texture>
+  <Regions>
+    <!--Dagger-->
+    <Region name="Dagger-Copper" x="0" y="0" width="16" height="16" />
+    <Region name="Dagger-Bronze" x="16" y="0" width="16" height="16" />
+    <Region name="Dagger-Steel" x="32" y="0" width="16" height="16" />
+    <Region name="Dagger-Cold_Steel" x="48" y="0" width="16" height="16" />
+    <Region name="Dagger-Fire" x="64" y="0" width="16" height="16" />
+    <Region name="Dagger-Gold" x="80" y="0" width="16" height="16" />
+    <Region name="Dagger-Water" x="96" y="0" width="16" height="16" />
+    <Region name="Dagger-Nature" x="128" y="0" width="16" height="16" />
+  </Regions>
+  <Animations>
+    <Animation name="Dagger-Copper_Attack" delay="120">
+    </Animation>
+    <Animation name="Dagger-Bronze_Attack" delay="120">
+    </Animation>
+    <Animation name="Dagger-Steel_Attack" delay="120">
+    </Animation>
+    <Animation name="Dagger-Cold_Steel_Attack" delay="120">
+    </Animation>
+    <Animation name="Dagger-Fire_Attack" delay="120">
+    </Animation>
+    <Animation name="Dagger-Gold_Attack" delay="120">
+    </Animation>
+    <Animation name="Dagger-Water_Attack" delay="120">
+    </Animation>
+    <Animation name="Dagger-Nature_Attack" delay="120">
+    </Animation>
+  </Animations>
+</TextureAtlas>

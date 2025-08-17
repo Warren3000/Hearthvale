@@ -2,11 +2,13 @@ using Hearthvale.GameCode.Entities;
 
 using Hearthvale.GameCode.Entities.NPCs;
 using Hearthvale.GameCode.Entities.Players;
+using Hearthvale.GameCode.Entities;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using MonoGame.Extended.Tiled;
 using MonoGameLibrary;
 using MonoGameLibrary.Graphics;
+using System;
 using System.Collections.Generic;
 
 namespace Hearthvale.GameCode.Managers
@@ -61,10 +63,17 @@ namespace Hearthvale.GameCode.Managers
             if (character == null || weapon == null) return;
             character.EquipWeapon(weapon);
 
-            // Force weapon to reset its animation and region
+            // Force visible size for 16x16 icons on spawn
+            weapon.Scale = Math.Max(1f, weapon.Scale);
+
+            // Place at character center immediately
             weapon.SetAnimation("Idle");
-            weapon.Sprite.Position = character.Position + new Vector2(character.Sprite.Width / 2, character.Sprite.Height / 2);
+            weapon.Sprite.Position = character.Position + new Vector2(character.Sprite.Width / 2f, character.Sprite.Height / 2f);
             weapon.Sprite.Rotation = weapon.Rotation;
+
+            // If your pipeline sorts by LayerDepth, nudge slightly above the character on spawn
+            if (character.Sprite != null && weapon.Sprite != null)
+                weapon.Sprite.LayerDepth = Math.Clamp(character.Sprite.LayerDepth + 0.0001f, 0f, 1f);
         }
 
         /// <summary>

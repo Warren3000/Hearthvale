@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿using Hearthvale.GameCode.Utils;
+using Microsoft.Xna.Framework;
 using MonoGameLibrary;
 using MonoGameLibrary.Scenes;
 
@@ -11,7 +12,7 @@ namespace Hearthvale.GameCode.Managers
     {
         public static void ChangeScene(Scene newScene)
         {
-            System.Diagnostics.Debug.WriteLine($"🔄 Changing scene to: {newScene.GetType().Name}");
+            Log.Info(LogArea.Scene, $"🔄 Changing scene to: {newScene.GetType().Name}");
             Core.ChangeScene(newScene);
         }
 

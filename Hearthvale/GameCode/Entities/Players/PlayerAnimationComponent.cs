@@ -6,11 +6,11 @@ using System.Collections.Generic;
 
 namespace Hearthvale.GameCode.Entities.Players
 {
-    internal class PlayerAnimationController : NpcAnimationController
+    internal class PlayerAnimationComponent : NpcAnimationController
     {
         private readonly Player _player;
 
-        public PlayerAnimationController(Player player, AnimatedSprite sprite, Dictionary<string, Animation> animations)
+        public PlayerAnimationComponent(Player player, AnimatedSprite sprite, Dictionary<string, Animation> animations)
             : base(sprite, animations)
         {
             _player = player;

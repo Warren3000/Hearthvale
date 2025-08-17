@@ -53,7 +53,7 @@ namespace Hearthvale.GameCode.Managers
                 var npc = new NPC(npcType, animations, spawnPos, bounds, defeatSound, config.Health);
 
                 // Equip weapon to the NPC
-                var weapon = new Weapon("Dagger", DataManager.Instance.GetWeaponStats("Dagger"), _weaponAtlas, _arrowAtlas);
+                var weapon = new Weapon("Dagger-Copper", DataManager.Instance.GetWeaponStats("Dagger-Copper"), _weaponAtlas, _arrowAtlas);
                 _weaponManager.EquipWeapon(npc, weapon);
 
                 return npc;

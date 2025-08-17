@@ -8,10 +8,11 @@ using Microsoft.Xna.Framework.Audio;
 using System.Linq;
 using System.Diagnostics;
 using Hearthvale.GameCode.Utils;
+using Hearthvale.GameCode.Entities.Players;
 
 namespace Hearthvale.GameCode.Entities.Players
 {
-    public class PlayerCombatController
+    public class PlayerCombatComponent
     {
         private readonly Player _player;
         private float _attackTimer = 0f;
@@ -23,7 +24,7 @@ namespace Hearthvale.GameCode.Entities.Players
         public bool IsAttacking { get; private set; }
         private readonly List<NPC> _hitNpcsThisSwing = new();
 
-        public PlayerCombatController(Player player, SoundEffect hitSound, SoundEffect defeatSound, SoundEffect playerAttackSound)
+        public PlayerCombatComponent(Player player, SoundEffect hitSound, SoundEffect defeatSound, SoundEffect playerAttackSound)
         {
             _player = player;
             _hitSound = hitSound;
@@ -47,12 +48,13 @@ namespace Hearthvale.GameCode.Entities.Players
             {
                 if (!IsAttacking)
                 {
-                    // Get the cardinal direction and convert to rotation angle
+                    // Keep weapon rotation synced to player facing when idle
                     CardinalDirection facing = _player.MovementComponent.FacingDirection;
                     _player.EquippedWeapon.Rotation = facing.ToRotation();
                 }
 
-                Vector2 playerCenter = _player.Position + new Vector2(_player.Sprite.Width / 2f, _player.Sprite.Height / 2f);
+                // Use visual center instead of geometric width/height center
+                Vector2 playerCenter = _player.GetVisualCenter();
                 Vector2 orbitOffset = _player.MovementComponent.LastMovementVector * _player.WeaponOrbitRadius;
                 _player.EquippedWeapon.Offset = orbitOffset + _player.EquippedWeapon.ManualOffset;
                 _player.EquippedWeapon.Position = playerCenter + _player.EquippedWeapon.Offset;
@@ -62,14 +64,13 @@ namespace Hearthvale.GameCode.Entities.Players
 
             if (_player.EquippedWeapon?.IsSlashing == true)
             {
-                Vector2 playerCenter = _player.Position + new Vector2(_player.Sprite.Width / 2f, _player.Sprite.Height / 2f);
+                Vector2 playerCenter = _player.GetVisualCenter();
                 var hittableNpcs = npcs.Where(n => !n.IsDefeated && !_hitNpcsThisSwing.Contains(n));
 
                 var hitPoly = _player.EquippedWeapon.GetTransformedHitPolygon(playerCenter);
                 foreach (var npc in hittableNpcs.ToList())
                 {
                     var npcRect = npc.Bounds;
-                    // Check if any corner of the NPC's bounds is inside the hit polygon
                     var corners = new[]
                     {
                         new Vector2(npcRect.Left, npcRect.Top),
@@ -79,13 +80,11 @@ namespace Hearthvale.GameCode.Entities.Players
                     };
                     if (corners.Any(corner => GeometryUtils.PointInPolygon(corner, hitPoly)))
                     {
-                        // --- Apply Knockback ---
                         Vector2 direction = Vector2.Normalize(npc.Position - _player.Position);
-                        float knockbackStrength = 150f; // Adjust as needed
+                        float knockbackStrength = 150f;
                         Vector2 knockback = direction * knockbackStrength;
-                        
+
                         CombatManager.Instance.HandleNpcHit(npc, _player.EquippedWeapon.Damage, knockback);
-                        
                         _hitNpcsThisSwing.Add(npc);
                     }
                 }
@@ -95,42 +94,26 @@ namespace Hearthvale.GameCode.Entities.Players
         public void StartMeleeAttack()
         {
             if (!CombatManager.Instance.CanAttack()) return;
-            
+
             _hitNpcsThisSwing.Clear();
 
             if (_player.EquippedWeapon != null)
             {
-                // Always set the rotation first based on cardinal direction
                 CardinalDirection facing = _player.MovementComponent.FacingDirection;
                 _player.EquippedWeapon.Rotation = facing.ToRotation();
-                
-                // Always use the correct swing direction based on facing
-                bool swingClockwise;
-                
-                // Determine swing direction based on cardinal direction
-                // This ensures the swing always looks good from that direction
-                switch (facing)
+
+                bool swingClockwise = facing switch
                 {
-                    case CardinalDirection.North:
-                        swingClockwise = true;
-                        break;
-                    case CardinalDirection.East:
-                        swingClockwise = true;
-                        break;
-                    case CardinalDirection.South:
-                        swingClockwise = false;
-                        break;
-                    case CardinalDirection.West:
-                        swingClockwise = false;
-                        break;
-                    default:
-                        swingClockwise = true;
-                        break;
-                }
-                
+                    CardinalDirection.North => true,
+                    CardinalDirection.East => true,
+                    CardinalDirection.South => false,
+                    CardinalDirection.West => false,
+                    _ => true
+                };
+
                 _player.EquippedWeapon.StartSwing(swingClockwise);
             }
-            
+
             _player.StartAttack();
             IsAttacking = true;
             _player.IsAttacking = true;
@@ -144,7 +127,8 @@ namespace Hearthvale.GameCode.Entities.Players
         {
             if (!CombatManager.Instance.CanAttack() || _player.EquippedWeapon == null) return;
 
-            Vector2 spawnPosition = _player.Position + new Vector2(_player.Sprite.Width / 2, _player.Sprite.Height / 2);
+            // Spawn projectile from the visual center to match art (not from padded top-left center)
+            Vector2 spawnPosition = _player.GetVisualCenter();
             var projectile = _player.EquippedWeapon.Fire(_player.MovementComponent.LastMovementVector, spawnPosition);
 
             if (projectile != null)
@@ -155,14 +139,7 @@ namespace Hearthvale.GameCode.Entities.Players
             }
         }
 
-        public void TakeDamage(int amount)
-        {
-            _player.TakeDamage(amount);
-        }
-
-        public void Heal(int amount)
-        {
-            _player.Heal(amount);
-        }
+        public void TakeDamage(int amount) => _player.TakeDamage(amount);
+        public void Heal(int amount) => _player.Heal(amount);
     }
 }

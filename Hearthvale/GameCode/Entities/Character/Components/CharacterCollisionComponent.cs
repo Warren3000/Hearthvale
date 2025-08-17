@@ -145,8 +145,9 @@ namespace Hearthvale.GameCode.Entities.Components
         private bool FindSafePosition(Vector2 currentPos, Vector2 targetPos)
         {
             Vector2 direction = targetPos - currentPos;
-
-            for (float step = 0.1f; step <= 1.0f; step += 0.1f)
+            
+            // Try more granular steps for finer movement
+            for (float step = 0.05f; step <= 1.0f; step += 0.05f)
             {
                 Vector2 testPos = currentPos + direction * (1.0f - step);
                 Rectangle testBounds = GetBoundsAtPosition(testPos);
@@ -157,17 +158,51 @@ namespace Hearthvale.GameCode.Entities.Components
                     return true;
                 }
             }
+            
+            // If normal steps fail, try micro-nudges in cardinal directions
+            float nudgeDistance = 1.0f;
+            Vector2[] nudgeDirections = new Vector2[] 
+            {
+                new Vector2(nudgeDistance, 0),       // Right
+                new Vector2(-nudgeDistance, 0),      // Left
+                new Vector2(0, nudgeDistance),       // Down
+                new Vector2(0, -nudgeDistance),      // Up
+                new Vector2(nudgeDistance, nudgeDistance),    // Down-Right
+                new Vector2(-nudgeDistance, nudgeDistance),   // Down-Left
+                new Vector2(nudgeDistance, -nudgeDistance),   // Up-Right
+                new Vector2(-nudgeDistance, -nudgeDistance)   // Up-Left
+            };
+            
+            foreach (var nudge in nudgeDirections)
+            {
+                Vector2 nudgedPos = currentPos + nudge;
+                Rectangle nudgedBounds = GetBoundsAtPosition(nudgedPos);
+                
+                if (!IsPositionBlocked(nudgedBounds))
+                {
+                    _character.SetPosition(nudgedPos);
+                    return true;
+                }
+            }
 
             return false;
         }
 
         private Rectangle GetBoundsAtPosition(Vector2 position)
         {
+            // Get orientation-aware bounds using sprite analyzer
+            Rectangle orientationAwareBounds = _character.GetOrientationAwareBounds();
+
+            // Calculate the offset between logical position and content bounds
+            int offsetX = orientationAwareBounds.Left - (int)_character.Position.X;
+            int offsetY = orientationAwareBounds.Top - (int)_character.Position.Y;
+
+            // Apply those same offsets to the new position
             return new Rectangle(
-                (int)position.X + 8,
-                (int)position.Y + 16,
-                (int)_character.Sprite.Width / 2,
-                (int)_character.Sprite.Height / 2
+                (int)position.X + offsetX,
+                (int)position.Y + offsetY,
+                orientationAwareBounds.Width,
+                orientationAwareBounds.Height
             );
         }
 

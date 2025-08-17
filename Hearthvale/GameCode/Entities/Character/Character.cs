@@ -5,7 +5,9 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGameLibrary.Graphics;
 using System.Collections.Generic;
+using System.Linq;
 using Hearthvale.GameCode.Utils;
+using System;
 
 namespace Hearthvale.GameCode.Entities;
 
@@ -109,6 +111,7 @@ public abstract class Character : IDamageable, IMovable, IAnimatable, IDialog
     public void UpdateKnockback(GameTime gameTime) => _collisionComponent.UpdateKnockback(gameTime);
     public virtual void SetKnockback(Vector2 velocity) => _collisionComponent.SetKnockback(velocity);
     public virtual Vector2 GetKnockbackVelocity() => _collisionComponent.GetKnockbackVelocity();
+    public virtual Rectangle Bounds => this.GetTightSpriteBounds();
 
     // Abstract and virtual methods
     public abstract void Flash();
@@ -136,7 +139,113 @@ public abstract class Character : IDamageable, IMovable, IAnimatable, IDialog
         return MovementComponent.FacingDirection == CardinalDirection.North ;
     }
 
-    public virtual Rectangle Bounds => _movementComponent?.CalculateBounds() ?? Rectangle.Empty;
+    /// <summary>
+    /// Gets the tight polygon bounds for this character based on sprite outline
+    /// </summary>
+    public virtual List<Vector2> GetPolygonBounds()
+    {
+        if (Sprite?.Region?.Texture == null)
+            return GetFallbackPolygonBounds();
+
+        // Get the orientation-aware content bounds
+        Rectangle contentBounds = this.GetOrientationAwareBounds();
+
+        // Create a polygon from the analyzed bounds
+        var polygon = new List<Vector2>
+    {
+        new Vector2(contentBounds.Left, contentBounds.Top),
+        new Vector2(contentBounds.Right, contentBounds.Top),
+        new Vector2(contentBounds.Right, contentBounds.Bottom),
+        new Vector2(contentBounds.Left, contentBounds.Bottom)
+    };
+
+        // Apply rotation if the sprite is rotated
+        if (Sprite.Rotation != 0)
+        {
+            Vector2 center = new Vector2(
+                contentBounds.Left + contentBounds.Width / 2,
+                contentBounds.Top + contentBounds.Height / 2
+            );
+            polygon = RotatePolygon(polygon, Sprite.Rotation, center);
+        }
+
+        return polygon;
+    }
+
+    /// <summary>
+    /// Determines the character type for polygon generation
+    /// </summary>
+    protected virtual CharacterType GetCharacterType()
+    {
+        return this.GetType().Name.Contains("Player") ? CharacterType.Player : CharacterType.NPC;
+    }
+
+    /// <summary>
+    /// Rotates a polygon around a center point
+    /// </summary>
+    private List<Vector2> RotatePolygon(List<Vector2> polygon, float rotation, Vector2 center)
+    {
+        var rotatedPolygon = new List<Vector2>();
+        var cos = MathF.Cos(rotation);
+        var sin = MathF.Sin(rotation);
+        
+        foreach (var vertex in polygon)
+        {
+            // Translate to origin
+            var translated = vertex - center;
+            
+            // Rotate
+            var rotated = new Vector2(
+                translated.X * cos - translated.Y * sin,
+                translated.X * sin + translated.Y * cos
+            );
+            
+            // Translate back
+            rotatedPolygon.Add(rotated + center);
+        }
+        
+        return rotatedPolygon;
+    }
+
+    /// <summary>
+    /// Gets fallback polygon bounds when sprite data is not available
+    /// </summary>
+    private List<Vector2> GetFallbackPolygonBounds()
+    {
+        var bounds = Bounds;
+        return new List<Vector2>
+        {
+            new Vector2(bounds.Left, bounds.Top),
+            new Vector2(bounds.Right, bounds.Top),
+            new Vector2(bounds.Right, bounds.Bottom),
+            new Vector2(bounds.Left, bounds.Bottom)
+        };
+    }
+
+    /// <summary>
+    /// Checks if this character's polygon bounds intersect with another polygon
+    /// </summary>
+    public virtual bool IntersectsWith(List<Vector2> otherPolygon)
+    {
+        var myPolygon = GetPolygonBounds();
+        return PolygonIntersection.DoPolygonsIntersect(myPolygon, otherPolygon);
+    }
+
+    /// <summary>
+    /// Checks if this character's polygon bounds intersect with a rectangle
+    /// </summary>
+    public virtual bool IntersectsWith(Rectangle rectangle)
+    {
+        var rectPolygon = new List<Vector2>
+        {
+            new Vector2(rectangle.Left, rectangle.Top),
+            new Vector2(rectangle.Right, rectangle.Top),
+            new Vector2(rectangle.Right, rectangle.Bottom),
+            new Vector2(rectangle.Left, rectangle.Bottom)
+        };
+        
+        return IntersectsWith(rectPolygon);
+    }
 
     // Drawing - delegated to render component
     public virtual void Draw(SpriteBatch spriteBatch)
@@ -176,4 +285,45 @@ public abstract class Character : IDamageable, IMovable, IAnimatable, IDialog
     {
         _animationComponent?.SetSprite(sprite);
     }
+
+    /// <summary>
+    /// Gets the proper hitbox rectangle accounting for sprite orientation
+    /// </summary>
+    public Rectangle GetOrientationAwareBounds()
+    {
+        // Get the current sprite
+        var sprite = this.Sprite;
+        if (sprite == null)
+            return new Rectangle((int)Position.X, (int)Position.Y, 32, 32); // Default fallback
+
+        // Get analyzed content bounds
+        Rectangle contentBounds = this.GetTightSpriteBounds();
+
+        // For right-facing sprites, use the bounds directly
+        if (FacingRight)
+            return contentBounds;
+
+        // For left-facing sprites, we need to mirror the bounds around the sprite's center
+        // Calculate sprite center X position
+        float centerX = Position.X + (sprite.Width / 2f);
+
+        // Calculate new rectangle by flipping around center
+        int newLeft = (int)(2 * centerX - contentBounds.Right);
+
+        return new Rectangle(
+            newLeft,
+            contentBounds.Y,
+            contentBounds.Width,
+            contentBounds.Height
+        );
+    }
+}
+
+/// <summary>
+/// Enumeration for different character types to help with polygon generation
+/// </summary>
+public enum CharacterType
+{
+    Player,
+    NPC
 }

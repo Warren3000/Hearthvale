@@ -17,9 +17,7 @@ public class Enemy : NPC
         Vector2 position,
         Rectangle bounds,
         SoundEffect soundEffect,
-        int maxHealth,
-        Tilemap tilemap,
-        Tileset wallTileset)
+        int maxHealth)
         : base(name, animations, position, bounds, soundEffect, maxHealth)
     {
     }

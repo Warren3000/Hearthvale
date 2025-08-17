@@ -23,19 +23,32 @@ namespace Hearthvale.GameCode.Collision
             // Walls don't react to collisions, but they block movement
         }
     }
-
     /// <summary>
     /// Collision actor for NPCs
     /// </summary>
     public class NpcCollisionActor : ICollisionActor
     {
-        public IShapeF Bounds { get; set; }
+        // Make bounds property dynamically return orientation-aware bounds
+        public IShapeF Bounds
+        {
+            get
+            {
+                // Always return current orientation-aware bounds
+                Rectangle orientedBounds = Npc.GetOrientationAwareBounds();
+                return new RectangleF(orientedBounds.X, orientedBounds.Y,
+                                     orientedBounds.Width, orientedBounds.Height);
+            }
+            set
+            {
+                // Setter required by interface, but we ignore it since we use dynamic bounds
+            }
+        }
+
         public NPC Npc { get; }
 
-        public NpcCollisionActor(NPC npc, RectangleF bounds)
+        public NpcCollisionActor(NPC npc)
         {
             Npc = npc;
-            Bounds = bounds;
         }
 
         public void OnCollision(CollisionEventArgs collisionInfo)

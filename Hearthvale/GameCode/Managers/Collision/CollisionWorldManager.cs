@@ -41,7 +41,7 @@ namespace Hearthvale.GameCode.Collision
             if (player == null) return;
 
             var playerBounds = CreateEntityBounds(player.Position);
-            var playerCollider = new PlayerCollisionActor(player, playerBounds);
+            var playerCollider = new PlayerCollisionActor(player);
             _collisionWorld.AddActor(playerCollider);
         }
 
@@ -62,8 +62,8 @@ namespace Hearthvale.GameCode.Collision
         {
             if (npc == null) return;
 
-            var npcBounds = CreateEntityBounds(npc.Position);
-            var npcCollider = new NpcCollisionActor(npc, npcBounds);
+            // Create the NPC collision actor without passing initial bounds
+            var npcCollider = new NpcCollisionActor(npc);
             _collisionWorld.AddActor(npcCollider);
         }
 

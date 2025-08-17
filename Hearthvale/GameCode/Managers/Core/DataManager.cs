@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System;
+using System.Xml;
+using System.Linq;
+using Hearthvale.GameCode.Data.Models;
 
 namespace Hearthvale.GameCode.Managers
 {
@@ -14,6 +17,7 @@ namespace Hearthvale.GameCode.Managers
         private Dictionary<string, CharacterStats> _characterStats;
         private Dictionary<string, WeaponStats> _weaponStats;
         private Dictionary<string, Item> _items;
+        private Dictionary<string, EnemyData> _enemies;
 
         private DataManager()
         {
@@ -38,6 +42,33 @@ namespace Hearthvale.GameCode.Managers
 
             var itemsJson = File.ReadAllText("Content/Data/Items.json");
             _items = JsonSerializer.Deserialize<Dictionary<string, Item>>(itemsJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            // Load enemy data
+            var enemiesXml = File.ReadAllText("Content/Data/enemies.xml");
+            _enemies = LoadEnemiesFromXml(enemiesXml);
+        }
+
+        private Dictionary<string, EnemyData> LoadEnemiesFromXml(string xmlContent)
+        {
+            var enemies = new Dictionary<string, EnemyData>();
+            var doc = new XmlDocument();
+            doc.LoadXml(xmlContent);
+
+            foreach (XmlNode enemyNode in doc.SelectNodes("//Enemy"))
+            {
+                var enemy = new EnemyData
+                {
+                    Id = enemyNode.Attributes["id"].Value,
+                    Name = enemyNode.SelectSingleNode("Name").InnerText,
+                    Description = enemyNode.SelectSingleNode("Description").InnerText,
+                    Type = Enum.Parse<EnemyType>(enemyNode.SelectSingleNode("Type").InnerText),
+                    // ... populate other fields from XML
+                };
+
+                enemies.Add(enemy.Id, enemy);
+            }
+
+            return enemies;
         }
 
         public CharacterStats GetCharacterStats(string name)
@@ -56,6 +87,22 @@ namespace Hearthvale.GameCode.Managers
         {
             _items.TryGetValue(id, out var item);
             return item;
+        }
+
+        public EnemyData GetEnemyData(string id)
+        {
+            _enemies.TryGetValue(id, out var enemy);
+            return enemy;
+        }
+
+        public IEnumerable<EnemyData> GetEnemiesByFaction(string faction)
+        {
+            return _enemies.Values.Where(e => e.Faction == faction);
+        }
+
+        public IEnumerable<EnemyData> GetEnemiesByLevel(int minLevel, int maxLevel)
+        {
+            return _enemies.Values.Where(e => e.Level >= minLevel && e.Level <= maxLevel);
         }
     }
 }

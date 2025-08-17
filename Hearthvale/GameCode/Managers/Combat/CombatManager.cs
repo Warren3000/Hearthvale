@@ -123,13 +123,17 @@ public class CombatManager
         UpdateProjectiles(gameTime);
 
         // --- NPC Melee Attack Hit Detection ---
+        // Use the Character base class attack area system instead of the removed interface method
         foreach (var npc in _npcManager.Npcs.Where(n => !n.IsDefeated))
         {
-            // Let the NPC component check for hits
-            if (npc is ICombatNpc combatNpc && combatNpc.CheckPlayerHit(_player))
+            if (npc.IsAttacking)
             {
-                // Only handle player damage here
-                TryDamagePlayer(combatNpc.AttackPower, npc.Position);
+                // Use Character base class GetAttackArea() method
+                var attackArea = npc.WeaponComponent?.GetAttackArea() ?? Rectangle.Empty;
+                if (attackArea != Rectangle.Empty && attackArea.Intersects(_player.Bounds))
+                {
+                    TryDamagePlayer(npc.AttackPower, npc.Position);
+                }
             }
         }
     }

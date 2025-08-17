@@ -20,30 +20,18 @@ namespace Hearthvale.GameCode.Entities.Components
         {
             if (_character.Sprite == null) return;
 
-            // Store original color to restore after drawing
             Color originalColor = _character.Sprite.Color;
-            
-            // Apply visual effects
             ApplyVisualEffects();
 
-            // Use the public accessor method instead of the protected method
-            bool drawWeaponBehind = _character.GetShouldDrawWeaponBehind();
             Vector2 characterCenter = _character.Position + new Vector2(_character.Sprite.Width / 2f, _character.Sprite.Height / 1.4f);
+            bool drawWeaponBehind = _character.GetShouldDrawWeaponBehind();
 
-            // Draw according to the right order
             if (drawWeaponBehind)
-            {
                 DrawWeaponBehind(spriteBatch, characterCenter);
-                DrawCharacter(spriteBatch);
-                DrawWeaponInFront(spriteBatch, characterCenter);
-            }
             else
-            {
-                DrawCharacter(spriteBatch);
                 DrawWeaponInFront(spriteBatch, characterCenter);
-            }
 
-            // Restore original color
+            DrawCharacter(spriteBatch);
             _character.Sprite.Color = originalColor;
         }
 

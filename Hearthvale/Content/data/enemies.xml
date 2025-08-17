@@ -1,0 +1,89 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Enemies>
+  <!-- Undead -->
+  <Enemy id="skeleton_warrior">
+    <Name>Skeleton Warrior</Name>
+    <Description>An animated skeleton wielding rusty weapons, common in dungeons.</Description>
+    <Type>Normal</Type>
+    <Sprite>skeleton_warrior</Sprite>
+    <Size>Medium</Size>
+    <Faction>Undead</Faction>
+    <Level>1</Level>
+    <ExpValue>25</ExpValue>
+
+    <Stats>
+      <MaxHealth>30</MaxHealth>
+      <AttackPower>8</AttackPower>
+      <Defense>5</Defense>
+      <MovementSpeed>1.5</MovementSpeed>
+      <DetectionRange>8</DetectionRange>
+      <AttackRange>1.5</AttackRange>
+    </Stats>
+
+    <Combat>
+      <AttackPattern>Melee</AttackPattern>
+      <Behavior>Aggressive</Behavior>
+
+      <Resistances>
+        <Resistance>
+          <Type>Poison</Type>
+          <Value>1.0</Value>
+        </Resistance>
+        <Resistance>
+          <Type>Bleed</Type>
+          <Value>1.0</Value>
+        </Resistance>
+      </Resistances>
+
+      <Abilities>
+        <Ability id="bone_throw">
+          <Name>Bone Throw</Name>
+          <Description>Throws a bone fragment at the target.</Description>
+          <Type>Damage</Type>
+          <Cooldown>8.0</Cooldown>
+          <Chance>0.3</Chance>
+          <Effects>
+            <Damage>12</Damage>
+            <Range>5</Range>
+          </Effects>
+        </Ability>
+      </Abilities>
+    </Combat>
+
+    <Loot>
+      <Gold>
+        <Min>5</Min>
+        <Max>15</Max>
+      </Gold>
+      <Drops>
+        <Drop>
+          <ItemId>bone_fragment</ItemId>
+          <Chance>0.4</Chance>
+          <MinQuantity>1</MinQuantity>
+          <MaxQuantity>3</MaxQuantity>
+        </Drop>
+        <Drop>
+          <ItemId>rusty_sword</ItemId>
+          <Chance>0.1</Chance>
+          <MinQuantity>1</MinQuantity>
+          <MaxQuantity>1</MaxQuantity>
+        </Drop>
+      </Drops>
+    </Loot>
+
+    <Environment>
+      <PreferredBiomes>
+        <Biome>Dungeon</Biome>
+        <Biome>Crypt</Biome>
+        <Biome>Ruins</Biome>
+      </PreferredBiomes>
+      <SpawnConditions>
+        <RequiresDarkness>true</RequiresDarkness>
+        <MinDepth>1</MinDepth>
+        <MinDistanceFromPlayer>10</MinDistanceFromPlayer>
+      </SpawnConditions>
+    </Environment>
+  </Enemy>
+
+  <!-- Add more enemies following the same pattern -->
+</Enemies>

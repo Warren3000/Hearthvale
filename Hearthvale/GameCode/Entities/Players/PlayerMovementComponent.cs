@@ -4,7 +4,7 @@ using Hearthvale.GameCode.Entities.NPCs;
 
 namespace Hearthvale.GameCode.Entities.Players
 {
-    public class PlayerMovementController
+    public class PlayerMovementComponent
     {
         private readonly Player _player;
 
@@ -12,7 +12,7 @@ namespace Hearthvale.GameCode.Entities.Players
         public bool IsKnockedBack => _player.IsKnockedBack;
 
 
-        public PlayerMovementController(Player player)
+        public PlayerMovementComponent(Player player)
         {
             _player = player;
             DefaultMovementSpeed();

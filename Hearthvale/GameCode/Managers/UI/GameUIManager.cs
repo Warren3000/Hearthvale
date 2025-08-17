@@ -1,7 +1,6 @@
 ﻿using Gum.DataTypes;
 using Gum.Managers;
 using Gum.Wireframe;
-using Hearthvale.GameCode.Entities;
 using Hearthvale.GameCode.Entities.NPCs;
 using Hearthvale.GameCode.Entities.Players;
 using Hearthvale.GameCode.UI;
@@ -15,6 +14,8 @@ using MonoGameLibrary;
 using MonoGameLibrary.Graphics;
 using System;
 using System.Collections.Generic;
+using Hearthvale.GameCode.Utils;
+using Hearthvale.GameCode.Entities;
 
 namespace Hearthvale.GameCode.Managers
 {
@@ -81,7 +82,7 @@ namespace Hearthvale.GameCode.Managers
         public void ToggleTileCoordinates()
         {
             _showTileCoordinates = !_showTileCoordinates;
-            System.Diagnostics.Debug.WriteLine($"Tile coordinates overlay: {(_showTileCoordinates ? "ON" : "OFF")}");
+            Log.Info(LogArea.UI, $"Tile coordinates overlay: {(_showTileCoordinates ? "ON" : "OFF")}");
         }
 
         /// <summary>
