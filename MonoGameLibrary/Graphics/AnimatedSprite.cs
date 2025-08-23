@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using System;
 
 namespace MonoGameLibrary.Graphics;
@@ -78,4 +79,15 @@ public class AnimatedSprite : Sprite
         this.Color = flashColor ?? Color.Yellow;
         _flashTimer = duration;
     }
+
+    /// <summary>
+    /// Submit this animated sprite for drawing using its stored Position.
+    /// </summary>
+    /// <param name="spriteBatch">The SpriteBatch instance used for batching draw calls.</param>
+    public void Draw(SpriteBatch spriteBatch)
+    {
+        base.Draw(spriteBatch, Position);
+    }
+
+    // The inherited Draw(SpriteBatch, Vector2) method is still available for manual positioning
 }

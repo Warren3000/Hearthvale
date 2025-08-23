@@ -206,27 +206,16 @@ public class Weapon
     {
         if (Sprite == null) return;
 
-        // Place the weapon at a rotated "grip" offset so it peeks outside the body even when drawn behind
-        float gripRadius = 4f * Scale;
-        Vector2 localGrip = new Vector2(gripRadius, -2f * Scale);
-        Vector2 rotatedGrip = Vector2.Transform(localGrip, Matrix.CreateRotationZ(Rotation));
+        // Calculate the final position by applying offsets to the owner's center.
+        Position = ownerCenterPosition + Offset + ManualOffset;
 
-        Position = ownerCenterPosition + rotatedGrip + Offset + ManualOffset;
+        // Set sprite position using its origin
         Sprite.Position = Position;
 
-        // Icons face ~45° in the sheet, compensate visually (use the same constant everywhere)
+        // Icons face ~45° in the sheet, compensate visually
         Sprite.Rotation = Rotation + ArtRotationOffset;
 
         Sprite.Draw(spriteBatch, Sprite.Position);
-    }
-
-    // Compute the same world pivot used by Draw and polygon transforms
-    public Vector2 GetWorldOrigin(Vector2 ownerCenter)
-    {
-        float gripRadius = 4f * Scale;
-        Vector2 localGrip = new Vector2(gripRadius, -2f * Scale);
-        Vector2 rotatedGrip = Vector2.Transform(localGrip, Matrix.CreateRotationZ(Rotation));
-        return ownerCenter + rotatedGrip + Offset + ManualOffset;
     }
 
     public List<Vector2> GetTransformedHitPolygon(Vector2 ownerCenter)
@@ -234,10 +223,10 @@ public class Weapon
         var transformed = new List<Vector2>(HitPolygon?.Count ?? 0);
         if (HitPolygon == null || HitPolygon.Count == 0) return transformed;
 
-        // Use the exact pivot used by the sprite
-        Vector2 origin = GetWorldOrigin(ownerCenter);
+        // The hit polygon should be centered at the same position as the sprite
+        Vector2 origin = ownerCenter + Offset + ManualOffset;
 
-        // Use the actual sprite rotation so visuals and hitbox match frame-by-frame
+        // Use the actual sprite rotation for the hitbox
         float totalRotation = Sprite != null ? Sprite.Rotation : (Rotation + ArtRotationOffset);
 
         foreach (var pt in HitPolygon)
@@ -247,6 +236,12 @@ public class Weapon
             transformed.Add(origin + rotated);
         }
         return transformed;
+    }
+
+    public Vector2 GetWorldOrigin(Vector2 ownerCenter)
+    {
+        // Return the actual position where the weapon is drawn
+        return ownerCenter + Offset + ManualOffset;
     }
 
     public void DrawHitPolygon(SpriteBatch spriteBatch, Texture2D pixel, Vector2 ownerCenter, Color color)

@@ -1,9 +1,10 @@
 ﻿using Hearthvale.GameCode.Entities;
+using Hearthvale.GameCode.Entities.NPCs;
 using Hearthvale.GameCode.Utils;
 using Microsoft.Xna.Framework;
 using System;
 
-namespace Hearthvale.GameCode.Entities.NPCs.Components
+namespace Hearthvale.GameCode.Entities.Components
 {
     public class NpcCombatComponent
     {
@@ -47,20 +48,16 @@ namespace Hearthvale.GameCode.Entities.NPCs.Components
 
         public bool CheckPlayerHit(Character player)
         {
-            // Don't check for hit if:
-            // - NPC is not attacking
-            // - We already hit the player this swing
-            // - The weapon isn't in the slashing phase
+            // Don't check for hit if not in active combat state
             if (!_owner.IsAttacking || _hasHitPlayerThisSwing || _owner.EquippedWeapon?.IsSlashing != true)
                 return false;
 
-            // Get the attack area using analyzed sprite bounds for the weapon
-            Rectangle attackArea = _owner.GetAttackArea();
+            // Use combat-specific attack area (only active during swing)
+            Rectangle attackArea = _owner.WeaponComponent.GetAttackArea();
 
-            // Use orientation-aware bounds instead of direct bounds for accurate hit detection
-            Rectangle playerBounds = player.GetOrientationAwareBounds();
+            // Use player's combat bounds (tight sprite bounds)
+            Rectangle playerBounds = player.GetCombatBounds();
 
-            // Check for intersection using the analyzed bounds
             if (attackArea.Intersects(playerBounds))
             {
                 _hasHitPlayerThisSwing = true;

@@ -12,6 +12,7 @@ namespace Hearthvale.GameCode.Entities.Components
         public int MaxHealth => _maxHealth;
         public int CurrentHealth => _currentHealth;
         public bool IsDefeated => _currentHealth <= 0;
+        public bool IsReadyToRemove => _character.IsDefeated && _currentHealth <= 0;
 
         public CharacterHealthComponent(Character character, int maxHealth)
         {

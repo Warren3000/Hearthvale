@@ -36,22 +36,22 @@ namespace Hearthvale.GameCode.Utils
                 logicalPosition.Y - contentBounds.Y);
         }
         
-        /// <summary>
-        /// Gets tight sprite bounds for collision detection
-        /// </summary>
-        public static Rectangle GetTightSpriteBounds(this Character character)
-        {
-            if (character?.Sprite == null)
-                return Rectangle.Empty;
+        ///// <summary>
+        ///// Gets tight sprite bounds for collision detection
+        ///// </summary>
+        //public static Rectangle GetTightSpriteBounds(this Character character)
+        //{
+        //    if (character?.Sprite == null)
+        //        return Rectangle.Empty;
                 
-            Rectangle contentBounds = character.Sprite.GetContentBounds();
+        //    Rectangle contentBounds = character.Sprite.GetContentBounds();
             
-            // Return bounds based on actual content, at character position
-            return new Rectangle(
-                (int)character.Position.X + contentBounds.X,
-                (int)character.Position.Y + contentBounds.Y,
-                contentBounds.Width,
-                contentBounds.Height);
-        }
+        //    // Return bounds based on actual content, at character position
+        //    return new Rectangle(
+        //        (int)character.Position.X + contentBounds.X,
+        //        (int)character.Position.Y + contentBounds.Y,
+        //        contentBounds.Width,
+        //        contentBounds.Height);
+        //}
     }
 }

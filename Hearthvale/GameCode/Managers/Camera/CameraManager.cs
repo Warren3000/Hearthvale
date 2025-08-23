@@ -43,8 +43,8 @@ namespace Hearthvale.GameCode.Managers
             // Add some debug output to see what's being returned
             if (DateTime.Now.Millisecond % 100 < 5) // Occasional debug output
             {
-                System.Diagnostics.Debug.WriteLine($"CameraManager returning matrix: {matrix}");
-                System.Diagnostics.Debug.WriteLine($"Camera position: {Camera2D?.Position ?? Vector2.Zero}");
+                //System.Diagnostics.Debug.WriteLine($"CameraManager returning matrix: {matrix}");
+                //System.Diagnostics.Debug.WriteLine($"Camera position: {Camera2D?.Position ?? Vector2.Zero}");
             }
 #endif
 

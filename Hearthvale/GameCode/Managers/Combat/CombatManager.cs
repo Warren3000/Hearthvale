@@ -10,7 +10,6 @@ using System.Diagnostics;
 using System.Linq;
 using System;
 using MonoGameLibrary;
-using Hearthvale.GameCode.Entities.NPCs.Components;
 
 namespace Hearthvale.GameCode.Managers;
 

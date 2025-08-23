@@ -11,6 +11,8 @@ using MonoGameLibrary.Graphics;
 using System.Collections.Generic;
 using System.Linq;
 using System;
+using Hearthvale.GameCode.Entities.Components;
+using MonoGame.Extended.Collisions;
 
 namespace Hearthvale.GameCode.Entities.Players
 {
@@ -18,10 +20,7 @@ namespace Hearthvale.GameCode.Entities.Players
     {
         private readonly TextureAtlas _atlas;
         private PlayerCombatComponent _combatController;
-        private PlayerMovementComponent _movementController;
-        private PlayerAnimationComponent _animationController;
-        private PlayerCollisionComponent _collisionController;
-        private PlayerInteractionComponent _interactionController;
+        private PlayerInteractionComponent _interactionComponent;
 
         private float _weaponOrbitRadius = 3f;
         public float WeaponOrbitRadius => _weaponOrbitRadius;
@@ -54,20 +53,16 @@ namespace Hearthvale.GameCode.Entities.Players
             Log.Info(LogArea.Player, $"[Player] Created at position: {this.Position}");
 
             // Create specialized player components
-            _movementController = new PlayerMovementComponent(this);
             _combatController = new PlayerCombatComponent(this, hitSound, defeatSound, playerAttackSound);
-            _collisionController = new PlayerCollisionComponent(this);
-            _interactionController = new PlayerInteractionComponent(this);
+            _interactionComponent = new PlayerInteractionComponent(this);
 
             var animations = new Dictionary<string, Animation>
             {
                 { "Mage_Idle", atlas.GetAnimation("Mage_Idle") },
                 { "Mage_Walk", atlas.GetAnimation("Mage_Walk") }
             };
-            _animationController = new PlayerAnimationComponent(this, this.AnimationComponent.Sprite, animations);
-
             // Set sprite position immediately
-            this.SetPosition(position);
+            this.MovementComponent.SetPosition(position);
         }
 
         public override bool TakeDamage(int amount, Vector2? knockback = null)
@@ -77,13 +72,13 @@ namespace Hearthvale.GameCode.Entities.Players
             Log.Info(LogArea.Player, $"[Player] Taking damage: {amount}, knockback={(knockback?.ToString() ?? "null")}");
             bool justDefeated = base.TakeDamage(amount, knockback);
             if (knockback.HasValue)
-                _movementController.SetVelocity(knockback.Value);
+                this.MovementComponent.SetVelocity(knockback.Value);
             return justDefeated;
         }
 
         public override void Flash()
         {
-            _animationController.Flash();
+            _animationComponent.Flash();
         }
 
         public void StartAttack()
@@ -111,24 +106,26 @@ namespace Hearthvale.GameCode.Entities.Players
                 _collisionComponent.SetKnockback(Vector2.Zero);
             }
 
-            _animationController.UpdateFlash((float)gameTime.ElapsedGameTime.TotalSeconds);
+            this.AnimationComponent.Update((float)gameTime.ElapsedGameTime.TotalSeconds);
             _combatController.Update(gameTime, npcs);
 
             // Apply animation only when movement state changes (prevents constant resets)
             if (_movingThisFrame != _wasMoving)
             {
-                _animationController.UpdateAnimation(_movingThisFrame);
+                AnimationComponent.UpdateAnimation(_movingThisFrame);
                 _wasMoving = _movingThisFrame;
             }
 
             // Always advance animation frames
             AnimationComponent.Sprite.Update(gameTime);
 
-            AnimationComponent.Sprite.Position = this.Position;
+            // Set sprite drawing position but DON'T change character logical position
+            Vector2 contentAdjustedPosition = AnimationComponent.Sprite.GetContentPosition(this.Position);
+            AnimationComponent.Sprite.Position = contentAdjustedPosition; // Only set sprite position
             AnimationComponent.Sprite.Effects = FacingRight ? SpriteEffects.None : SpriteEffects.FlipHorizontally;
 
             Log.VerboseThrottled(LogArea.Player,
-                $"[Player] Pos={Position} FacingRight={MovementComponent.FacingRight}",
+                $"[Player] Pos={Position} SpritePos={AnimationComponent.Sprite.Position} FacingRight={MovementComponent.FacingRight}",
                 TimeSpan.FromMilliseconds(250));
 
             if (float.IsNaN(this.Position.X) || float.IsNaN(this.Position.Y))
@@ -137,6 +134,9 @@ namespace Hearthvale.GameCode.Entities.Players
                 this.SetPosition(new Vector2(896, 80));
             }
 
+            // Update weapon position and state - this calls Character.UpdateWeapon
+            UpdateWeapon(gameTime);
+
             // Clear the movement flag at the end of the frame
             _movingThisFrame = false;
         }
@@ -144,8 +144,8 @@ namespace Hearthvale.GameCode.Entities.Players
         public void Move(
             Vector2 movement,
             Rectangle roomBounds,
-            float spriteWidth,
-            float spriteHeight,
+            float boundsWidth,   // Changed parameter name
+            float boundsHeight,  // Changed parameter name  
             IEnumerable<NPC> npcs,
             IEnumerable<Rectangle> obstacleRects)
         {
@@ -154,49 +154,37 @@ namespace Hearthvale.GameCode.Entities.Players
             if (movement != Vector2.Zero)
             {
                 _movingThisFrame = true;
-
                 MovementComponent.LastMovementVector = movement.LengthSquared() > 0
                     ? Vector2.Normalize(movement)
                     : MovementComponent.LastMovementVector;
-
                 MovementComponent.FacingDirection = movement.ToCardinalDirection();
-
                 if (movement.X != 0)
                     MovementComponent.FacingRight = movement.X > 0;
-
-                Log.VerboseThrottled(LogArea.Player,
-                    $"[Player.Move] input={movement} facingDir={MovementComponent.FacingDirection} facingRight={MovementComponent.FacingRight}",
-                    TimeSpan.FromMilliseconds(200));
             }
 
             Vector2 newPosition = Position + movement;
-
             if (float.IsNaN(newPosition.X) || float.IsNaN(newPosition.Y))
             {
                 Log.Error(LogArea.Player, $"❌ CRITICAL: newPosition is NaN! Position={Position}, movement={movement}");
                 return;
             }
 
-            float clampedX = MathHelper.Clamp(newPosition.X, roomBounds.Left, roomBounds.Right - spriteWidth);
-            float clampedY = MathHelper.Clamp(newPosition.Y, roomBounds.Top, roomBounds.Bottom - spriteHeight);
+            float clampedX = MathHelper.Clamp(newPosition.X, roomBounds.Left, roomBounds.Right - boundsWidth);
+            float clampedY = MathHelper.Clamp(newPosition.Y, roomBounds.Top, roomBounds.Bottom - boundsHeight);
             Vector2 candidate = new Vector2(clampedX, clampedY);
 
-            if (float.IsNaN(candidate.X) || float.IsNaN(candidate.Y))
-            {
-                Log.Error(LogArea.Player, "❌ CRITICAL: candidate position is NaN after clamping!");
-                return;
-            }
-
-            // In the Move method, update the obstacle collection:
+            // Build collision obstacles - ONLY character bodies, never weapons
             var allObstacles = (obstacleRects ?? Enumerable.Empty<Rectangle>()).ToList();
-            foreach (var npc in npcs)
-            {
-                if (!npc.IsDefeated)
-                    allObstacles.Add(npc.GetOrientationAwareBounds());
-            }
+            //foreach (var npc in npcs)
+            //{
+            //    if (!npc.IsDefeated)
+            //    {
+            //        // Use only the NPC's body bounds, not weapon bounds
+            //        allObstacles.Add(npc.GetTightSpriteBounds());
+            //    }
+            //}
 
-            // Note: weapon rectangles are intentionally ignored for movement
-            bool moved = _collisionController.TrySetPositionWithWallSliding(candidate, allObstacles);
+            bool moved = CollisionComponent.TryMove(candidate, npcs);
             if (!moved)
             {
                 Log.Verbose(LogArea.Player, "[Player.Move] Movement blocked by collision (wall slide).");
@@ -205,7 +193,7 @@ namespace Hearthvale.GameCode.Entities.Players
 
         public bool IsNearTile(int column, int row, float tileWidth, float tileHeight)
         {
-            return _interactionController.IsNearTile(column, row, tileWidth, tileHeight);
+            return _interactionComponent.IsNearTile(column, row, tileWidth, tileHeight);
         }
 
         public void SetFacingRight(bool facingRight)
@@ -220,7 +208,7 @@ namespace Hearthvale.GameCode.Entities.Players
 
         public void UpdateObstacles(IEnumerable<Rectangle> obstacleRects, IEnumerable<NPC> npcs)
         {
-            _collisionController.UpdateObstacles(obstacleRects, npcs);
+            CollisionComponent.UpdateObstacles(obstacleRects, npcs);
             _currentNpcsForObstacles = npcs;
 
             if (obstacleRects != null || (npcs != null && npcs.Any()))
@@ -233,11 +221,17 @@ namespace Hearthvale.GameCode.Entities.Players
 
         public override IEnumerable<Rectangle> GetObstacleRectangles()
         {
-            // Only bodies and static obstacles block knockback; no weapon AABBs involved
-            var baseObstacles = _collisionController.GetObstacleRectangles() ?? Enumerable.Empty<Rectangle>();
+            // Only return character body for collision detection
+            var baseObstacles = _collisionComponent.GetObstacleRectangles() ?? Enumerable.Empty<Rectangle>();
             return baseObstacles;
         }
 
-        public override Rectangle Bounds => this.GetTightSpriteBounds();
+        public override Rectangle Bounds 
+        { 
+            get 
+            {
+                return this.GetTightSpriteBounds();
+            }
+        }
     }
 }

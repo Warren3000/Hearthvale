@@ -2,9 +2,9 @@ using System;
 using System.Diagnostics;
 using Microsoft.Xna.Framework.Audio;
 
-namespace Hearthvale.GameCode.Entities.NPCs
+namespace Hearthvale.GameCode.Entities.Components
 {
-    public class NpcHealthController
+    public class NpcHealthComponent
     {
         private int _maxHealth;
         private int _currentHealth;
@@ -33,7 +33,7 @@ namespace Hearthvale.GameCode.Entities.NPCs
             }
         }
 
-        public NpcHealthController(int maxHealth, SoundEffect defeatSound)
+        public NpcHealthComponent(int maxHealth, SoundEffect defeatSound)
         {
             _maxHealth = maxHealth;
             _currentHealth = maxHealth;

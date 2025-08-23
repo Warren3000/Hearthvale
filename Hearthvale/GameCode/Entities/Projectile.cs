@@ -15,12 +15,12 @@ namespace Hearthvale.GameCode.Entities
         public Vector2 Velocity { get; set; }
         public int Damage { get; }
         public bool IsActive { get; set; } = true;
-        public Rectangle BoundingBox => new Rectangle((int)Position.X, (int)Position.Y, Sprite.Region.Width, Sprite.Region.Height);
+        public Rectangle BoundingBox => new((int)Position.X, (int)Position.Y, Sprite.Region.Width, Sprite.Region.Height);
 
         // Aether collision properties
         public IShapeF Bounds { get; set; }
 
-        private float _gracePeriod = 0.05f;
+        private readonly float _gracePeriod = 0.05f;
         private float _timer;
         public bool CanCollide => _timer >= _gracePeriod;
 
@@ -95,13 +95,12 @@ namespace Hearthvale.GameCode.Entities
             if (!CanCollide) return;
 
             var otherActor = collisionInfo.Other;
-
             if (otherActor is WallCollisionActor)
             {
                 // Hit a wall - projectile should be destroyed
                 IsActive = false;
             }
-            else if (otherActor is NpcCollisionActor npcActor && OwnerId == "Player")
+            else if (otherActor is NpcCollisionActor && OwnerId == "Player")
             {
                 // Player projectile hit an NPC - handled by NpcCollisionActor.OnCollision
                 IsActive = false;
@@ -111,6 +110,11 @@ namespace Hearthvale.GameCode.Entities
                 // Enemy projectile hit player - handled by PlayerCollisionActor.OnCollision
                 IsActive = false;
             }
+        }
+        public RectangleF CalculateInitialBounds()
+        {
+            // The projectile's bounds are set on creation.
+            return (RectangleF)Bounds;
         }
     }
 

@@ -16,7 +16,7 @@ namespace Hearthvale.GameCode.Managers
         public static void InitializeForTitleScreen()
         {
             DataManager.Initialize(); // Game data is always needed
-            var whitePixel = CreateWhitePixel();
+            var whitePixel = CreateWhitePixel(); // Create it directly here
             DebugManager.Initialize(whitePixel);
             TilesetManager.Initialize(); // Initialize TilesetManager for wall/floor tilesets
         }
@@ -39,7 +39,8 @@ namespace Hearthvale.GameCode.Managers
 
             CombatEffectsManager.Initialize();
 
-            var whitePixel = GameUIManager.Instance.WhitePixel; // Use the existing white pixel from GameUIManager
+            // Re-initialize DebugManager with GameUIManager's white pixel if needed
+            var whitePixel = GameUIManager.Instance.WhitePixel;
             DebugManager.Initialize(whitePixel);
             DataManager.Initialize();
             CameraManager.Initialize(camera);

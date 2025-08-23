@@ -215,6 +215,13 @@ namespace Hearthvale.GameCode.Input
                 return true; // Consume input, don't process further
             }
 
+            // Debug Mode Controls
+            if (ProcessKeyPress(Keys.F1, keyboard))
+            {
+                DebugManager.Instance.ToggleDebugMode();
+                return false;
+            }
+
             // Toggle UIDebugGrid
             if (ProcessKeyPress(Keys.F2, keyboard))
             {
@@ -222,15 +229,22 @@ namespace Hearthvale.GameCode.Input
                 return false;
             }
 
-            // Toggle Collision Boxes
+            // Toggle Physics Debug
             if (ProcessKeyPress(Keys.F3, keyboard))
             {
-                _toggleDebugModeCallback?.Invoke();
+                DebugManager.Instance.TogglePhysicsDebug();
+                return false;
+            }
+
+            // Toggle Combat Debug
+            if (ProcessKeyPress(Keys.F4, keyboard))
+            {
+                DebugManager.Instance.ToggleCombatDebug();
                 return false;
             }
 
             // Toggle Tileset Viewer
-            if (ProcessKeyPress(Keys.F4, keyboard))
+            if (ProcessKeyPress(Keys.F5, keyboard))
             {
                 DebugManager.Instance.ShowTilesetViewer = !DebugManager.Instance.ShowTilesetViewer;
                 return false;
@@ -241,6 +255,38 @@ namespace Hearthvale.GameCode.Input
             {
                 GameUIManager.Instance.ToggleTileCoordinates();
                 return false;
+            }
+
+            // Advanced Debug Controls (Ctrl + key combinations)
+            if (keyboard.IsKeyDown(Keys.LeftControl))
+            {
+                // Toggle Rendering Debug (Ctrl + R)
+                if (ProcessKeyPress(Keys.R, keyboard))
+                {
+                    DebugManager.Instance.ToggleRenderingDebug();
+                    return false;
+                }
+
+                // Toggle Sprite Alignment Debug (Ctrl + A)
+                if (ProcessKeyPress(Keys.A, keyboard))
+                {
+                    DebugManager.Instance.ToggleSpriteAlignmentDebug();
+                    return false;
+                }
+
+                // Toggle Detailed Physics (Ctrl + P)
+                if (ProcessKeyPress(Keys.P, keyboard))
+                {
+                    DebugManager.Instance.ShowDetailedPhysics = !DebugManager.Instance.ShowDetailedPhysics;
+                    return false;
+                }
+
+                // Toggle Dungeon Elements (Ctrl + D)
+                if (ProcessKeyPress(Keys.D, keyboard))
+                {
+                    DebugManager.Instance.ShowDungeonElements = !DebugManager.Instance.ShowDungeonElements;
+                    return false;
+                }
             }
 
             return false; // Input not consumed

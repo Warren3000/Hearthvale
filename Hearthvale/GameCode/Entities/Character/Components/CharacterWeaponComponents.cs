@@ -1,6 +1,8 @@
-﻿using Microsoft.Xna.Framework;
+﻿using Hearthvale.GameCode.Utils;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
+using System.Collections.Generic;
 
 namespace Hearthvale.GameCode.Entities.Components
 {
@@ -19,96 +21,171 @@ namespace Hearthvale.GameCode.Entities.Components
             EquippedWeapon = weapon;
         }
 
-        public Rectangle GetAttackArea()
+        /// <summary>
+        /// Updates the weapon position and rotation. For NPCs, pass a target to aim at.
+        /// </summary>
+        public void Update(GameTime gameTime, Vector2? targetPosition = null)
         {
-            if (EquippedWeapon == null) return Rectangle.Empty;
+            if (EquippedWeapon == null) return;
 
-            // Prefer the weapon's current world position (grip/handle point) if available.
-            // Falls back to character center if not yet set.
-            Vector2 basePoint = (EquippedWeapon.Sprite != null)
-                ? EquippedWeapon.Sprite.Position
-                : _character.Position + new Vector2(_character.Sprite.Width / 2f, _character.Sprite.Height / 2f);
+            // Calculate character center using tight bounds for consistent positioning
+            Rectangle tightBounds = _character.GetTightSpriteBounds();
+            Vector2 characterCenter = new Vector2(
+                tightBounds.Left + tightBounds.Width / 2f,
+                tightBounds.Top + tightBounds.Height / 2f
+            );
 
-            Vector2 direction = CalculateAttackDirection();
+            // Calculate weapon offset based on facing direction
+            Vector2 weaponOffset = CalculateWeaponOffset();
+            
+            // Set the weapon's offset, but not its final position.
+            // The final position will be calculated in Weapon.Draw based on the owner's center.
+            EquippedWeapon.Offset = weaponOffset;
 
-            return CalculateWeaponArea(basePoint, direction);
+            // Update rotation based on whether we have a target (NPC) or use facing direction (Player)
+            if (targetPosition.HasValue && !IsAttacking())
+            {
+                // NPC logic: aim at target
+                Vector2 toTarget = targetPosition.Value - characterCenter;
+                if (toTarget.LengthSquared() > 0.0001f)
+                {
+                    float angle = MathF.Atan2(toTarget.Y, toTarget.X);
+                    EquippedWeapon.Rotation = angle;
+
+                    // Update character facing based on target direction
+                    _character.FacingRight = toTarget.X >= 0f;
+                    _character.MovementComponent.FacingDirection = AngleToCardinal(angle);
+                }
+            }
+            else if (!IsAttacking())
+            {
+                // Player logic: use character's facing direction
+                CardinalDirection facing = _character.MovementComponent.FacingDirection;
+                EquippedWeapon.Rotation = facing.ToRotation();
+            }
+
+            // Let weapon update its own animation state
+            EquippedWeapon.Update(gameTime);
         }
 
-        private Vector2 CalculateAttackDirection()
+        /// <summary>
+        /// Calculates weapon offset based on character's facing direction
+        /// </summary>
+        private Vector2 CalculateWeaponOffset()
         {
-            const float visualRotationOffset = MathHelper.PiOver4;
-            float totalRotation = EquippedWeapon.Rotation + visualRotationOffset;
-            return new Vector2((float)Math.Cos(totalRotation), (float)Math.Sin(totalRotation));
+            // Base offset distance from character center
+            float offsetDistance = 0f; // Adjust this value to move weapon further/closer
+
+            // Get the character's facing direction
+            CardinalDirection facing = _character.MovementComponent.FacingDirection;
+
+            // Apply directional offset based on facing
+            Vector2 offset = facing.ToVector() * offsetDistance;
+
+            // REMOVED: Don't add weapon's offset here - it's added in Weapon.Draw()
+            return offset;
         }
 
-        private Rectangle CalculateWeaponArea(Vector2 origin, Vector2 direction)
+        /// <summary>
+        /// Starts a weapon swing attack
+        /// </summary>
+        public void StartSwing(CardinalDirection facingDirection)
         {
-            // Match the same notion of handle/blade length used by DebugManager arcs and Weapon polygon
-            const float handleOffset = 6f;
-            const float thickness = 12f;
+            if (EquippedWeapon == null) return;
 
-            float length = MathF.Max(0f, EquippedWeapon.Length - handleOffset);
-
-            // Oriented rectangle along the blade direction, starting just past the handle
-            Vector2 perp = new Vector2(-direction.Y, direction.X) * (thickness / 2f);
-            Vector2 start = origin + direction * handleOffset;
-            Vector2 end = start + direction * length;
-
-            Vector2[] points = {
-                start + perp,
-                start - perp,
-                end + perp,
-                end - perp
+            bool swingClockwise = facingDirection switch
+            {
+                CardinalDirection.North => true,
+                CardinalDirection.East => true,
+                CardinalDirection.South => false,
+                CardinalDirection.West => false,
+                _ => true
             };
 
-            return CalculateBoundingRectangle(points);
+            EquippedWeapon.StartSwing(swingClockwise);
         }
 
-        private Rectangle CalculateBoundingRectangle(Vector2[] points)
+        /// <summary>
+        /// Gets whether the character is currently attacking
+        /// </summary>
+        private bool IsAttacking()
         {
-            float minX = float.MaxValue, maxX = float.MinValue;
-            float minY = float.MaxValue, maxY = float.MinValue;
-
-            foreach (var point in points)
+            // Check if character has an IsAttacking property
+            var isAttackingProp = _character.GetType().GetProperty("IsAttacking");
+            if (isAttackingProp != null)
             {
-                minX = MathF.Min(minX, point.X);
-                maxX = MathF.Max(maxX, point.X);
-                minY = MathF.Min(minY, point.Y);
-                maxY = MathF.Max(maxY, point.Y);
+                return (bool)isAttackingProp.GetValue(_character);
             }
-
-            // Use floor/ceil to ensure the AABB fully contains the rotated rect
-            int x = (int)MathF.Floor(minX);
-            int y = (int)MathF.Floor(minY);
-            int w = (int)MathF.Ceiling(maxX - minX);
-            int h = (int)MathF.Ceiling(maxY - minY);
-
-            return new Rectangle(x, y, w, h);
+            return false;
         }
 
-        public void DrawWeapon(SpriteBatch spriteBatch, Vector2 characterCenter, bool drawBehind)
+        /// <summary>
+        /// Helper method to convert angle to cardinal direction
+        /// </summary>
+        private static CardinalDirection AngleToCardinal(float angleRadians)
         {
-            if (EquippedWeapon == null) return;
+            // Normalize angle to [0, 2π)
+            float normalizedAngle = angleRadians;
+            while (normalizedAngle < 0) normalizedAngle += MathF.Tau;
+            while (normalizedAngle >= MathF.Tau) normalizedAngle -= MathF.Tau;
 
-            // Ensure deterministic z-order against the character sprite
-            float baseDepth = _character.Sprite?.LayerDepth ?? 0.5f;
-            EquippedWeapon.Sprite.LayerDepth = Math.Clamp(baseDepth - 0.0001f, 0f, 1f);
+            // Convert to degrees for easier reasoning
+            float degrees = normalizedAngle * (180f / MathF.PI);
 
-            if (drawBehind)
+            // Map angle ranges to cardinal directions
+            return degrees switch
             {
-                EquippedWeapon.Draw(spriteBatch, characterCenter);
-            }
+                >= 315f or < 45f => CardinalDirection.East,
+                >= 45f and < 135f => CardinalDirection.South,
+                >= 135f and < 225f => CardinalDirection.West,
+                >= 225f and < 315f => CardinalDirection.North,
+                _ => CardinalDirection.East // fallback
+            };
         }
 
-        public void DrawWeaponInFront(SpriteBatch spriteBatch, Vector2 characterCenter)
+        /// <summary>
+        /// Gets the weapon's attack area when slashing - ONLY used for combat hit detection
+        /// </summary>
+        public Rectangle GetAttackArea()
         {
-            if (EquippedWeapon == null) return;
+            if (EquippedWeapon?.IsSlashing != true)
+                return Rectangle.Empty; // No attack area when not slashing
 
-            // Draw slightly in front of the character
-            float baseDepth = _character.Sprite?.LayerDepth ?? 0.5f;
-            EquippedWeapon.Sprite.LayerDepth = Math.Clamp(baseDepth + 0.0001f, 0f, 1f);
+            // Use the tight bounds center for weapon positioning
+            Rectangle tightBounds = _character.GetTightSpriteBounds();
+            Vector2 characterCenter = new Vector2(
+                tightBounds.Left + tightBounds.Width / 2f,
+                tightBounds.Top + tightBounds.Height / 1.4f
+            );
 
-            EquippedWeapon.Draw(spriteBatch, characterCenter);
+            // Calculate weapon offset based on facing
+            Vector2 weaponOffset = CalculateWeaponOffset();
+            Vector2 weaponCenter = characterCenter + weaponOffset;
+
+            // Return attack area centered on weapon position
+            return new Rectangle(
+                (int)(weaponCenter.X - 20),
+                (int)(weaponCenter.Y - 20),
+                40,
+                40
+            );
+        }
+        
+        /// <summary>
+        /// Gets the weapon's hit polygon for precise combat detection - ONLY used for attack calculations
+        /// </summary>
+        public List<Vector2> GetCombatHitPolygon()
+        {
+            if (EquippedWeapon?.IsSlashing != true)
+                return new List<Vector2>(); // Empty when not attacking
+
+            Rectangle tightBounds = _character.GetTightSpriteBounds();
+            Vector2 characterCenter = new Vector2(
+                tightBounds.Left + tightBounds.Width / 2f,
+                tightBounds.Top + tightBounds.Height / 1.4f
+            );
+
+            return EquippedWeapon.GetTransformedHitPolygon(characterCenter);
         }
     }
 }

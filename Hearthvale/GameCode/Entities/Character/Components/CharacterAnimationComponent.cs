@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿using Hearthvale.GameCode.Utils;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGameLibrary.Graphics;
 using System;
@@ -109,6 +110,25 @@ namespace Hearthvale.GameCode.Entities.Components
                 // Update sprite effects based on facing direction
                 _sprite.Effects = _character.FacingRight ? SpriteEffects.None : SpriteEffects.FlipHorizontally;
             }
+        }
+        public void UpdateAnimation(bool isMoving)
+        {
+            // Get current cardinal direction from movement component
+            var direction = _character.MovementComponent.FacingDirection;
+
+            string animationName = isMoving ? "Mage_Walk" : "Mage_Idle";
+
+            // Set sprite effects based on facing direction
+            if (direction == CardinalDirection.West)
+            {
+                this.Sprite.Effects = SpriteEffects.FlipHorizontally;
+            }
+            else
+            {
+                this.Sprite.Effects = SpriteEffects.None;
+            }
+
+            SetAnimation(animationName);
         }
     }
 }

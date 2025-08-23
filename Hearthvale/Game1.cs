@@ -37,9 +37,8 @@ public class Game1 : Core
 
         // Start the game with the title scene
         SceneManager.ChangeScene(new TitleScene());
-        
-        // Add this to initialize the DebugManager
-        DebugManager.Initialize(CreateWhitePixelTexture());
+        //// Add this to initialize the DebugManager
+        //DebugManager.Initialize(GameUIManager.Instance.WhitePixel);
         // Load the hero atlas for sprite analysis
         _heroAtlas = TextureAtlas.FromFile(Core.Content, "images/npc-atlas.xml");
         // Preanalyze common sprites to avoid stuttering during gameplay

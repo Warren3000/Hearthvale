@@ -9,34 +9,34 @@ namespace Hearthvale.GameCode.Collision
     /// <summary>
     /// Collision actor for static wall tiles
     /// </summary>
-    public class WallCollisionActor : ICollisionActor
+    public class WallCollisionActor(RectangleF bounds) : ICollisionActor
     {
-        public IShapeF Bounds { get; set; }
-
-        public WallCollisionActor(RectangleF bounds)
-        {
-            Bounds = bounds;
-        }
+        public IShapeF Bounds { get; set; } = bounds;
 
         public void OnCollision(CollisionEventArgs collisionInfo)
         {
             // Walls don't react to collisions, but they block movement
         }
+
+        public RectangleF CalculateInitialBounds()
+        {
+            // The bounds are known at construction time.
+            return (RectangleF)Bounds;
+        }
     }
     /// <summary>
     /// Collision actor for NPCs
     /// </summary>
-    public class NpcCollisionActor : ICollisionActor
+    public class NpcCollisionActor(NPC npc) : ICollisionActor
     {
         // Make bounds property dynamically return orientation-aware bounds
         public IShapeF Bounds
         {
             get
             {
-                // Always return current orientation-aware bounds
-                Rectangle orientedBounds = Npc.GetOrientationAwareBounds();
-                return new RectangleF(orientedBounds.X, orientedBounds.Y,
-                                     orientedBounds.Width, orientedBounds.Height);
+                // Use the NPC's Bounds property directly instead of GetTightSpriteBounds
+                Rectangle bounds = Npc.Bounds;
+                return new RectangleF(bounds.X, bounds.Y, bounds.Width, bounds.Height);
             }
             set
             {
@@ -44,12 +44,7 @@ namespace Hearthvale.GameCode.Collision
             }
         }
 
-        public NPC Npc { get; }
-
-        public NpcCollisionActor(NPC npc)
-        {
-            Npc = npc;
-        }
+        public NPC Npc { get; } = npc;
 
         public void OnCollision(CollisionEventArgs collisionInfo)
         {
@@ -63,25 +58,32 @@ namespace Hearthvale.GameCode.Collision
                 }
             }
         }
+
+        public RectangleF CalculateInitialBounds()
+        {
+            // Use the NPC's Bounds property directly
+            Rectangle bounds = Npc.Bounds;
+            return new RectangleF(bounds.X, bounds.Y, bounds.Width, bounds.Height);
+        }
     }
     /// <summary>
     /// Collision actor for projectiles
     /// </summary>
-    public class ProjectileCollisionActor : ICollisionActor
+    public class ProjectileCollisionActor(Projectile projectile) : ICollisionActor
     {
-        public IShapeF Bounds { get; set; }
-        public Projectile Projectile { get; }
-
-        public ProjectileCollisionActor(Projectile projectile)
-        {
-            Projectile = projectile;
-            Bounds = projectile.Bounds;
-        }
+        public IShapeF Bounds { get; set; } = projectile.Bounds;
+        public Projectile Projectile { get; } = projectile;
 
         public void OnCollision(CollisionEventArgs collisionInfo)
         {
             // Forward collision to the projectile
             Projectile.OnCollision(collisionInfo);
+        }
+
+        public RectangleF CalculateInitialBounds()
+        {
+            // The projectile's bounds are set on creation.
+            return (RectangleF)Projectile.Bounds;
         }
     }
 }

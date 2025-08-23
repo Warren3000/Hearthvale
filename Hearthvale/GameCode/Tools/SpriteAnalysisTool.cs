@@ -35,7 +35,8 @@ namespace Hearthvale.GameCode.Tools
             );
             DrawRectangleOutline(spriteBatch, fullBounds, Color.Yellow);
 
-            // Get the actual content bounds
+            // Get the actual content bounds using the same logic as the character extension
+            // This should match what GetTightSpriteBounds() returns for the character
             Rectangle contentBounds = SpriteAnalyzer.GetContentBounds(
                 sprite.Region.Texture,
                 sprite.Region.SourceRectangle

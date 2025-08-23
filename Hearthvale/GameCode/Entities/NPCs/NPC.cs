@@ -1,14 +1,16 @@
-﻿using Hearthvale.GameCode.Entities.Interfaces;
-using Hearthvale.GameCode.Entities.NPCs.Components;
-using Hearthvale.GameCode.Entities.Animations;
-using Hearthvale.GameCode.Utils;
+﻿using Hearthvale.GameCode.Entities.Animations;
+using Hearthvale.GameCode.Entities.Components;
+using Hearthvale.GameCode.Entities.Interfaces;
 using Hearthvale.GameCode.Managers; // added
+using Hearthvale.GameCode.Utils;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGameLibrary.Graphics;
+using SharpDX.MediaFoundation;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace Hearthvale.GameCode.Entities.NPCs
@@ -27,11 +29,9 @@ namespace Hearthvale.GameCode.Entities.NPCs
         HeavyKnight
     }
 
-    public class NPC : Character, ICombatNpc, IDialog
+    public class NPC : Character, ICombatNpc, IDialog, INpcAnimationProvider
     {
-        private readonly NpcAnimationController _animationController;
-        private readonly NpcMovementComponent _npcMovement;
-        private readonly NpcHealthController _healthController;
+        private readonly NpcHealthComponent _healthController;
         private readonly NpcCombatComponent _combatComponent;
         private int _frameCounter;
 
@@ -65,7 +65,22 @@ namespace Hearthvale.GameCode.Entities.NPCs
         public void ResetAttackTimer() => _combatComponent.StartAttackCooldown(_attackCooldown);
         public bool IsReadyToRemove => _healthController.IsReadyToRemove;
 
-        public override Rectangle Bounds => this.GetTightSpriteBounds();
+        public override Rectangle Bounds
+        {
+            get
+            {
+                if (Sprite != null)
+                {
+                    return new Rectangle(
+                        (int)Position.X,
+                        (int)Position.Y,
+                        (int)Sprite.Width,
+                        (int)Sprite.Height
+                    );
+                }
+                return this.GetTightSpriteBounds();
+            }
+        }
 
         public bool IsAttacking { get; private set; }
         private float _attackAnimTimer = 0f;
@@ -102,6 +117,14 @@ namespace Hearthvale.GameCode.Entities.NPCs
         private Vector2 _lastAnimPosition;
         private bool _movingForAnim;
 
+        // Stuck detection
+        private int _stuckFrameCount = 0;
+        private const int STUCK_THRESHOLD = 15;
+        public bool IsStuck => _stuckFrameCount >= STUCK_THRESHOLD;
+
+        // Add field to store current player reference
+        private Character _currentPlayer;
+
         public NPC(string name, Dictionary<string, Animation> animations, Vector2 position, Rectangle bounds, SoundEffect defeatSound, int maxHealth)
         {
             Name = name;
@@ -110,11 +133,12 @@ namespace Hearthvale.GameCode.Entities.NPCs
             // Initialize base class components first
             InitializeComponents();
 
-            // Create specialized NPC components
-            _animationController = new NpcAnimationController(sprite, animations);
-            _npcMovement = new NpcMovementComponent(this, position, 60.0f, bounds, (int)sprite.Width, (int)sprite.Height);
-            _healthController = new NpcHealthController(maxHealth, defeatSound);
-            _combatComponent = new NpcCombatComponent(this, AttackPower); // synced by property setter later too
+            _healthController = new NpcHealthComponent(maxHealth, defeatSound);
+            _combatComponent = new NpcCombatComponent(this, AttackPower);
+
+            // FIXED: Use centralized speed configuration
+            var speedProfile = NpcSpeedConfiguration.GetSpeedProfile(Class);
+            speedProfile.Validate(); // Ensure all speeds are within reasonable limits
 
             // Initialize health component
             HealthComponent.SetMaxHealth(maxHealth);
@@ -141,6 +165,33 @@ namespace Hearthvale.GameCode.Entities.NPCs
                 _ => NpcClass.Merchant
             };
 
+            switch (Class)
+            {
+                case NpcClass.Knight:
+                    MovementComponent.SetMovementSpeed(2f);
+                    break;
+
+                case NpcClass.HeavyKnight:
+                    MovementComponent.SetMovementSpeed(1.5f);
+                    break;
+
+                case NpcClass.Merchant:
+                    MovementComponent.SetMovementSpeed(1.8f);
+                    break;
+            }
+            MovementComponent.SetMovementSpeed(speedProfile.MovementSpeed);
+            // Set custom AI speeds
+            MovementComponent.SetCustomSpeeds(
+                wanderSpeed: Math.Min(speedProfile.WanderSpeed * 8f, 45f),    
+                chaseSpeed: Math.Min(speedProfile.ChaseSpeed * 10f, 70f),   
+                fleeSpeed: Math.Min(speedProfile.FleeSpeed * 3f, 90f)
+            );
+            MovementComponent.ValidateSpeeds();
+            var currentSpeeds = MovementComponent.GetCurrentSpeeds();
+
+
+            System.Diagnostics.Debug.WriteLine($"NPC {Name} ({Class}) speeds set - " +
+                $"Wander: {currentSpeeds.wander}, Chase: {currentSpeeds.chase}, Flee: {currentSpeeds.flee}");
             // Apply per-type attack buffs at spawn
             ConfigureTypeAttackBuffs();
 
@@ -170,22 +221,27 @@ namespace Hearthvale.GameCode.Entities.NPCs
                     break;
             }
         }
-
+        protected override Vector2 GetAttackDirection()
+        {
+            return MovementComponent.FacingDirection.ToVector();
+        }
         public override bool TakeDamage(int amount, Vector2? knockback = null)
         {
             if (_healthController.CanTakeDamage)
             {
-                bool justDefeated = _healthController.TakeDamage(amount);
-
-                if (knockback.HasValue)
-                    _npcMovement.SetVelocity(knockback.Value);
-
+                // Use the base class TakeDamage to handle health and knockback centrally
+                bool justDefeated = base.TakeDamage(amount, knockback);
+                if (justDefeated)
+                {
+                    // Handle NPC-specific defeat logic if any
+                }
                 Flash();
                 return justDefeated;
             }
             else
             {
-                Log.Info(LogArea.NPC, $"----[NPC.{Name}] CanTakeDamage is FALSE. Damage blocked.");            }
+                Log.Info(LogArea.NPC, $"----[NPC.{Name}] CanTakeDamage is FALSE. Damage blocked.");
+            }
             return false;
         }
 
@@ -196,9 +252,16 @@ namespace Hearthvale.GameCode.Entities.NPCs
 
         public void Update(GameTime gameTime, IEnumerable<NPC> allNpcs, Character player, IEnumerable<Rectangle> rectangles)
         {
+            _currentPlayer = player; // Store for weapon update
             _frameCounter++; // Increment frame counter
-            float elapsed = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
+            Vector2 playerCenter = new Vector2(player.Bounds.Center.X, player.Bounds.Center.Y);
+            Vector2 npcCenter = new Vector2(this.Bounds.Center.X, this.Bounds.Center.Y);
+            float elapsed = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            float weaponLength = EquippedWeapon?.Length ?? 32f;
+            float attackRange = weaponLength * 0.8f; // Closer to attack range
+            // Update knockback first, as it overrides other movement.
+            UpdateKnockback(gameTime); 
             _combatComponent.Update(elapsed);
 
             // Type-specific conditional buffs (example: HeavyKnight enrages under 50% HP)
@@ -249,13 +312,81 @@ namespace Hearthvale.GameCode.Entities.NPCs
                 return;
             }
 
-            if (_healthController.IsStunned)
+            // --- Enhanced AI Behavior ---
+            if (!IsKnockedBack && !IsAttacking)
             {
-                UpdateKnockback(gameTime);
-                SetPosition(Position);
-                UpdateHealthAndAnimation(gameTime);
-                return;
+                switch (_aiType)
+                {
+                    case NpcAiType.Wander:
+                        // Clear any chase target for wandering NPCs
+                        MovementComponent.SetChaseTarget(null);
+                        break;
+                        
+                    case NpcAiType.ChasePlayer:
+                        {
+                            float distanceToPlayer = Vector2.Distance(npcCenter, playerCenter);
+                            
+                            // FIXED: More aggressive chase behavior
+                            if (distanceToPlayer <= MovementComponent.ChaseRange)
+                            {
+                                
+                                
+                                
+                                // FIXED: Always update chase target for responsive movement
+                                // Only skip update if very close to player
+                                if (distanceToPlayer > attackRange)
+                                {
+                                    Vector2 chasePoint = ComputeEngagementPoint(player.Bounds, this.Bounds, attackRange);
+                                    
+                                    // FIXED: Validate chase point before using it
+                                    if (float.IsNaN(chasePoint.X) || float.IsNaN(chasePoint.Y))
+                                    {
+                                        System.Diagnostics.Debug.WriteLine($"⚠️ NPC {Name}: Invalid chase point detected, skipping chase target update");
+                                        MovementComponent.SetChaseTarget(null); // Clear invalid target
+                                    }
+                                    else
+                                    {
+                                        MovementComponent.SetChaseTarget(chasePoint, 70f); // Use configured chase speed
+                                    }
+                                }
+                                else
+                                {
+                                    // Close enough - stop chasing, prepare to attack
+                                    MovementComponent.SetChaseTarget(null);
+                                }
+                            }
+                            else if (distanceToPlayer > MovementComponent.LoseTargetRange)
+                            {
+                                // Lost sight of player
+                                MovementComponent.SetChaseTarget(null);
+                            }
+                            break;
+                        }
+                }
+                
+                // Update AI movement
+                MovementComponent.UpdateAIMovement(elapsed);
             }
+            else
+            {
+                // If knocked back or attacking, force idle
+                MovementComponent.ForceIdle();
+            }
+
+            // --- Movement and Collision Resolution ---
+            // Use Bounds instead of GetTightSpriteBounds
+            if (!IsKnockedBack)
+            {
+                Vector2 velocity = MovementComponent.GetVelocity();
+                if (velocity.LengthSquared() > 0)
+                {
+                    Vector2 nextPosition = Position + velocity * elapsed;
+                    CollisionComponent.TryMove(nextPosition, allNpcs.Where(n => n != this).Cast<Character>().Append(player));
+                }
+            }
+
+            // Sync the AI's position with the character's final position after collision resolution.
+            MovementComponent.SetPosition(this.Position);
 
             if (IsAttacking)
             {
@@ -266,77 +397,8 @@ namespace Hearthvale.GameCode.Entities.NPCs
                 }
             }
 
-            // --- AI Behavior ---
-            switch (_aiType)
-            {
-                case NpcAiType.Wander:
-                    _npcMovement.SetChaseTarget(null);
-                    break;
-                // In the Update method, replace the chase target calculation block with:
-                case NpcAiType.ChasePlayer:
-                {
-                    // Use a smaller standoff distance to get closer
-                    float weaponLength = EquippedWeapon?.Length ?? 32f;
-                    float desiredStandOff = MathF.Max(weaponLength * 0.5f, 8f); // Reduced from previous calculation
-
-                    // Update chase target less frequently for performance
-                    if (_frameCounter % 5 == 0)
-                    {
-                        Vector2 chasePoint = ComputeEngagementPoint(player.GetOrientationAwareBounds(),
-                            this.GetOrientationAwareBounds(), desiredStandOff);
-                        _npcMovement.SetChaseTarget(chasePoint);
-                    }
-                    break;
-                }
-            }
-
-            // Use the current bounds to compute per-frame hitbox offset and size
-            Rectangle currentBounds = Bounds; // This will now use the analyzed sprite bounds
-
-            // Calculate dynamic offsets based on analyzed content bounds
-            int hitboxOffsetX = currentBounds.Left - (int)Position.X;
-            int hitboxOffsetY = currentBounds.Top - (int)Position.Y;
-            int hitboxWidth = currentBounds.Width;
-            int hitboxHeight = currentBounds.Height;
-
-            // Replace this block in the Update method:
-            _npcMovement.Update(elapsed, candidatePos =>
-            {
-                var allObstacles = rectangles.ToList();
-
-                if (!player.IsDefeated)
-                    allObstacles.Add(player.GetOrientationAwareBounds());
-
-                foreach (var npc in allNpcs)
-                {
-                    if (npc != this && !npc.IsDefeated)
-                        allObstacles.Add(npc.GetOrientationAwareBounds());
-                }
-
-                // Create collision rectangle at candidate position using orientation-aware bounds
-                Rectangle currentBounds = this.GetOrientationAwareBounds();
-                int offsetX = currentBounds.Left - (int)Position.X;
-                int offsetY = currentBounds.Top - (int)Position.Y;
-
-                Rectangle candidateRect = new Rectangle(
-                    (int)candidatePos.X + offsetX,
-                    (int)candidatePos.Y + offsetY,
-                    currentBounds.Width,
-                    currentBounds.Height
-                );
-
-                return allObstacles.Any(r => candidateRect.Intersects(r));
-            });
-
-            UpdateWeapon(gameTime, player);
-
-            // Attack range check (body-to-body distance) using analyzed bounds
-            Vector2 npcCenterForAttack = GetPixelHitboxCenter(this.Bounds);
-            Vector2 playerCenterForAttack = GetPixelHitboxCenter(player.Bounds);
-            float attackRange = MathF.Max(EquippedWeapon?.Length ?? 32f, 32f);
-
-            // Calculate true center-to-center distance based on analyzed content
-            float centerDist = Vector2.Distance(npcCenterForAttack, playerCenterForAttack);
+            // Calculate true center-to-center distance
+            float centerDist = Vector2.Distance(npcCenter, playerCenter);
 
             if (CanAttack && !IsAttacking && centerDist <= attackRange)
             {
@@ -344,102 +406,67 @@ namespace Hearthvale.GameCode.Entities.NPCs
             }
 
             // Sync base position from movement
-            MovementComponent.SetPosition(_npcMovement.Position);
+            MovementComponent.SetPosition(MovementComponent.Position);
 
             // Update facing from current velocity (so direction matches motion)
-            var vel = _npcMovement.GetVelocity();
+            var vel = MovementComponent.GetVelocity();
             if (vel.LengthSquared() > 0.0001f)
             {
                 _facingDir = AngleToCardinal(MathF.Atan2(vel.Y, vel.X));
                 FacingRight = vel.X >= 0f;
                 MovementComponent.FacingDirection = _facingDir;
-                
-                // REMOVED: Debug logging for performance
-            }
-
-            // --- Hard resolve any overlap with player or other NPCs ---
-            Rectangle myBounds = this.GetOrientationAwareBounds(); // Use orientation-aware bounds
-
-            if (!player.IsDefeated)
-            {
-                Rectangle playerBounds = player.GetOrientationAwareBounds(); // Use orientation-aware bounds
-                if (myBounds.Intersects(playerBounds))
-                {
-                    Vector2 separation = ComputeSeparationVector(myBounds, playerBounds);
-                    if (separation != Vector2.Zero)
-                    {
-                        // Test if separation would put us in a wall
-                        Vector2 candidatePosition = Position + separation;
-                        
-                        // Use tilemap bounds check to avoid pushing through walls
-                        bool wouldHitWall = IsWallAtPoint(candidatePosition);
-                        
-                        if (!wouldHitWall)
-                        {
-                            // Only apply separation if it won't push through walls
-                            _npcMovement.SetPosition(candidatePosition);
-                            MovementComponent.SetPosition(candidatePosition);
-                        }
-                    }
-                }
-            }
-
-            // Same for NPC-to-NPC collisions
-            foreach (var npc in allNpcs)
-            {
-                if (npc == this || npc.IsDefeated)
-                    continue;
-                
-                Rectangle otherBounds = npc.GetOrientationAwareBounds(); // Use orientation-aware bounds
-                if (myBounds.Intersects(otherBounds))
-                {
-                    Vector2 separation = ComputeSeparationVector(myBounds, otherBounds);
-                    if (separation != Vector2.Zero)
-                    {
-                        // Test if separation would put us in a wall
-                        Vector2 candidatePosition = Position + separation;
-                        
-                        // Use tilemap bounds check to avoid pushing through walls
-                        bool wouldHitWall = IsWallAtPoint(candidatePosition);
-                        
-                        if (!wouldHitWall)
-                        {
-                            // Only apply separation if it won't push through walls
-                            _npcMovement.SetPosition(candidatePosition);
-                            MovementComponent.SetPosition(candidatePosition);
-                        }
-                    }
-                }
             }
 
             // Compute movement delta for animation: true only if position actually changed
-            _movingForAnim = Vector2.DistanceSquared(_npcMovement.Position, _lastAnimPosition) > 0.01f;
-            _lastAnimPosition = _npcMovement.Position;
+            _movingForAnim = Vector2.DistanceSquared(MovementComponent.Position, _lastAnimPosition) > 0.01f;
 
+            // Stuck detection logic
+            bool isTryingToMove = MovementComponent.GetVelocity().LengthSquared() > 0.01f;
+            if (isTryingToMove && !_movingForAnim)
+            {
+                _stuckFrameCount++;
+            }
+            else
+            {
+                _stuckFrameCount = 0; // Reset if moving successfully or intentionally idle
+            }
+
+            _lastAnimPosition = MovementComponent.Position;
+            UpdateWeapon(gameTime);
             // Defer animation selection until movement/facing are up to date.
             UpdateHealthAndAnimation(gameTime);
+
+            if (_frameCounter % 180 == 0) // Every 3 seconds at 60 FPS
+            {
+                var velocity = MovementComponent.GetVelocity();
+                var speeds = MovementComponent.GetCurrentSpeeds();
+
+                System.Diagnostics.Debug.WriteLine($"NPC {Name}: " +
+                    $"Current velocity magnitude = {velocity.Length():F1}, " +
+                    $"Configured speeds - W:{speeds.wander}, C:{speeds.chase}, F:{speeds.flee}");
+
+                // Alert if velocity is unexpectedly high
+                if (velocity.Length() > NpcSpeedConfiguration.MAX_SPEED)
+                {
+                    System.Diagnostics.Debug.WriteLine($"⚠️ WARNING: {Name} velocity {velocity.Length():F1} exceeds max speed {NpcSpeedConfiguration.MAX_SPEED}!");
+                }
+            }
         }
         public override void Flash()
         {
-            _animationController?.Flash();
+            AnimationComponent.Flash();
         }
+        // In the Update method, store the player reference
         public void StartAttack()
         {
             IsAttacking = true;
             _attackAnimTimer = AttackAnimDuration;
 
-            bool swingClockwise = _facingDir switch
-            {
-                CardinalDirection.North => true,
-                CardinalDirection.East => true,
-                CardinalDirection.South => false,
-                CardinalDirection.West => false,
-                _ => true
-            };
-
             SetAnimationDirectionalSafe("Attack", "Walk");
 
-            EquippedWeapon?.StartSwing(swingClockwise);
+            // Use the weapon component to start the swing
+            WeaponComponent?.StartSwing(_facingDir);
+            
             ResetAttackTimer();
         }
         /// <summary>
@@ -450,19 +477,19 @@ namespace Hearthvale.GameCode.Entities.NPCs
         /// <param name="fallbackAnimation">The fallback animation to use if primary doesn't exist</param>
         private void SetAnimationDirectionalSafe(string primaryAnimation, string fallbackAnimation)
         {
-            if (_animationController != null)
+            if (AnimationComponent != null)
             {
                 // Try to set the primary animation first
-                string currentAnim = _animationController.Sprite?.Animation?.ToString() ?? "";
-                _animationController.SetAnimation(primaryAnimation);
+                string currentAnim = AnimationComponent.Sprite?.Animation?.ToString() ?? "";
+                AnimationComponent.SetAnimation(primaryAnimation);
 
                 // Check if the animation actually changed (meaning it exists)
-                string newAnim = _animationController.Sprite?.Animation?.ToString() ?? "";
+                string newAnim = AnimationComponent.Sprite?.Animation?.ToString() ?? "";
 
                 // If animation didn't change and we're not already on the primary, try fallback
                 if (currentAnim == newAnim && currentAnim != primaryAnimation)
                 {
-                    _animationController.SetAnimation(fallbackAnimation);
+                    AnimationComponent.SetAnimation(fallbackAnimation);
                 }
             }
         }
@@ -476,30 +503,29 @@ namespace Hearthvale.GameCode.Entities.NPCs
             _buffPulseTimer = 0.3f;
         }
 
-        private void UpdateWeapon(GameTime gameTime, Character player)
+        // Override the UpdateWeapon method
+        protected override void UpdateWeapon(GameTime gameTime)
         {
-            if (EquippedWeapon == null) return;
-
-            // Use dynamic content bounds for both NPC and player
-            Vector2 npcCenter = GetPixelHitboxCenter(this.Bounds);
-            Vector2 playerCenter = GetPixelHitboxCenter(player.Bounds);
-
-            Vector2 toPlayer = playerCenter - npcCenter;
-            if (toPlayer.LengthSquared() > 0.0001f)
+            if (_currentPlayer != null && EquippedWeapon != null)
             {
-                float angle = MathF.Atan2(toPlayer.Y, toPlayer.X);
+                // Calculate player center for targeting
+                //Rectangle playerTightBounds = this.GetTightSpriteBounds();
+                //Vector2 playerCenter = new Vector2(
+                //    playerTightBounds.Left + playerTightBounds.Width / 2f,
+                //    playerTightBounds.Top + playerTightBounds.Height / 2f
+                //);
+                Vector2 playerCenter = new Vector2(
+                    _currentPlayer.Bounds.Center.X,
+                    _currentPlayer.Bounds.Center.Y
+                );
 
-                _facingDir = AngleToCardinal(angle);
-
-                if (!IsAttacking)
-                    EquippedWeapon.Rotation = _facingDir.ToRotation();
-
-                FacingRight = toPlayer.X >= 0f;
-
-                // Position weapon based on actual visual center
-                EquippedWeapon.Position = npcCenter + EquippedWeapon.Offset + EquippedWeapon.ManualOffset;
-
-                EquippedWeapon.Update(gameTime);
+                // Use the weapon component's update with target position
+                _weaponComponent?.Update(gameTime, playerCenter);
+            }
+            else
+            {
+                // No target, just update normally
+                base.UpdateWeapon(gameTime);
             }
         }
 
@@ -533,95 +559,106 @@ namespace Hearthvale.GameCode.Entities.NPCs
             }
         }
 
-        // Helper to get the true visual center of a hitbox based on analyzed content
-        private static Vector2 GetPixelHitboxCenter(Rectangle bounds)
-        {
-            // Calculate center point using the analyzed content bounds
-            return new Vector2(
-                bounds.Left + bounds.Width / 2f, 
-                bounds.Top + bounds.Height / 2f
-            );
-        }
+        //// Replace the ComputeEngagementPoint method with this corrected version
+        //private static Vector2 ComputeEngagementPoint(Rectangle playerBounds, Rectangle npcBounds, float desiredStandOff)
+        //{
+        //    // FIXED: Use exact center calculations to avoid offset issues
+        //    Vector2 playerCenter = new Vector2(
+        //        playerBounds.X + playerBounds.Width * 0.5f,
+        //        playerBounds.Y + playerBounds.Height * 0.5f
+        //    );
 
-        // Replace the ComputeEngagementPoint method with this improved version
+        //    Vector2 npcCenter = new Vector2(
+        //        npcBounds.X + npcBounds.Width * 0.5f,
+        //        npcBounds.Y + npcBounds.Height * 0.5f
+        //    );
+
+        //    // Calculate direction from NPC to player
+        //    Vector2 direction = playerCenter - npcCenter;
+        //    float currentDistance = direction.Length();
+
+        //    // If already within attack range, stay put
+        //    if (currentDistance <= desiredStandOff)
+        //        return npcCenter;
+
+        //    // Normalize direction
+        //    if (currentDistance > 0.001f)
+        //        direction.Normalize();
+        //    else
+        //        direction = new Vector2(1, 0);
+
+        //    // FIXED: Calculate the exact position at attack range from player center
+        //    // This should position the NPC center at the correct distance from player center
+        //    Vector2 targetPosition = playerCenter - direction * desiredStandOff;
+
+        //    return targetPosition;
+        //}
+        // Add this debugging version temporarily to diagnose the issue
         private static Vector2 ComputeEngagementPoint(Rectangle playerBounds, Rectangle npcBounds, float desiredStandOff)
         {
-            // Use orientation-aware centers
             Vector2 playerCenter = new Vector2(
-                playerBounds.Left + playerBounds.Width / 2f,
-                playerBounds.Top + playerBounds.Height / 2f
+                playerBounds.X + playerBounds.Width * 0.5f,
+                playerBounds.Y + playerBounds.Height * 0.5f
             );
-            
+
             Vector2 npcCenter = new Vector2(
-                npcBounds.Left + npcBounds.Width / 2f,
-                npcBounds.Top + npcBounds.Height / 2f
+                npcBounds.X + npcBounds.Width * 0.5f,
+                npcBounds.Y + npcBounds.Height * 0.5f
             );
 
-            // Calculate direction from player to NPC
-            Vector2 direction = npcCenter - playerCenter;
+            // FIXED: Safety checks for invalid positions
+            if (float.IsNaN(playerCenter.X) || float.IsNaN(playerCenter.Y) ||
+                float.IsNaN(npcCenter.X) || float.IsNaN(npcCenter.Y))
+            {
+                System.Diagnostics.Debug.WriteLine($"⚠️ WARNING: NaN position detected in ComputeEngagementPoint!");
+                return npcCenter; // Return NPC center as fallback
+            }
+
+            Vector2 direction = npcCenter - playerCenter; // FIXED: Direction FROM player TO npc (where npc came from)
             float currentDistance = direction.Length();
-            
-            // Allow NPCs to get closer - reduce the standoff distance
-            float actualStandOff = MathF.Max(desiredStandOff * 0.6f, 8f);
-            
-            // If close enough, just target the player's position directly
-            if (currentDistance <= actualStandOff)
-                return playerCenter;
-                
-            // Normalize direction
+
+            // FIXED: Handle zero-distance case (player and NPC at same position)
+            if (float.IsNaN(currentDistance) || currentDistance < 0.1f)
+            {
+                System.Diagnostics.Debug.WriteLine($"⚠️ WARNING: Zero distance or NaN in ComputeEngagementPoint! Distance: {currentDistance}");
+                // Create a small offset based on random direction to avoid clustering
+                float randomAngle = (float)(new Random().NextDouble() * Math.PI * 2);
+                direction = new Vector2((float)Math.Cos(randomAngle), (float)Math.Sin(randomAngle));
+                currentDistance = 1.0f;
+            }
+
+            // If already at ideal attack range, stay put
+            if (currentDistance >= desiredStandOff - 2f && currentDistance <= desiredStandOff + 2f)
+                return npcCenter;
+
+            // Normalize direction safely
             if (currentDistance > 0.001f)
-                direction /= currentDistance;
+            {
+                direction = direction / currentDistance; // Manual normalization to avoid NaN
+            }
             else
+            {
                 direction = new Vector2(1, 0); // Default direction
-        
-            // Calculate position at adjusted standoff distance
-            return playerCenter + direction * actualStandOff;
-        }
-
-        // Lightweight wall test at a point (tile-based). Keeps chase targets out of walls.
-        private static bool IsWallAtPoint(Vector2 worldPos)
-        {
-            var tilemap = TilesetManager.Instance.Tilemap;
-            if (tilemap == null) return false;
-
-            // Convert world position to tile coordinates
-            int col = (int)(worldPos.X / tilemap.TileWidth);
-            int row = (int)(worldPos.Y / tilemap.TileHeight);
-
-            // Check bounds
-            if (col < 0 || row < 0 || col >= tilemap.Columns || row >= tilemap.Rows)
-                return true; // treat out-of-bounds as wall
-
-            var ts = tilemap.GetTileset(col, row);
-            var id = tilemap.GetTileId(col, row);
-            return ts == TilesetManager.Instance.WallTileset && AutotileMapper.IsWallTile(id);
-        }
-
-        private static Vector2 ComputeSeparationVector(Rectangle a, Rectangle b)
-        {
-            if (!a.Intersects(b))
-                return Vector2.Zero;
-
-            int overlapX = Math.Min(a.Right, b.Right) - Math.Max(a.Left, b.Left);
-            int overlapY = Math.Min(a.Bottom, b.Bottom) - Math.Max(a.Top, b.Top);
-
-            // Prefer horizontal separation when overlaps are equal
-            if (overlapX <= overlapY)
-            {
-                // Move left or right
-                if (a.Center.X < b.Center.X)
-                    return new Vector2(-overlapX, 0);
-                else
-                    return new Vector2(overlapX, 0);
             }
-            else
+
+            // FIXED: Validate direction vector after normalization
+            if (float.IsNaN(direction.X) || float.IsNaN(direction.Y))
             {
-                // Move up or down
-                if (a.Center.Y < b.Center.Y)
-                    return new Vector2(0, -overlapY);
-                else
-                    return new Vector2(0, overlapY);
+                System.Diagnostics.Debug.WriteLine($"⚠️ WARNING: NaN direction after normalization!");
+                direction = new Vector2(1, 0); // Default to moving right
             }
+
+            // FIXED: Position the NPC at attack range FROM the player, in the direction the NPC came from
+            Vector2 targetPosition = playerCenter + direction * desiredStandOff;
+
+            // FIXED: Final validation of target position
+            if (float.IsNaN(targetPosition.X) || float.IsNaN(targetPosition.Y))
+            {
+                System.Diagnostics.Debug.WriteLine($"⚠️ WARNING: NaN target position detected!");
+                return npcCenter; // Return NPC center as safe fallback
+            }
+
+            return targetPosition;
         }
         // Helper method to convert angle to cardinal direction
         private static CardinalDirection AngleToCardinal(float angleRadians)
@@ -656,7 +693,7 @@ namespace Hearthvale.GameCode.Entities.NPCs
             bool isStunned = _healthController.Update(elapsed);
 
             // Update flash effects
-            _animationController.UpdateFlash(elapsed);
+            AnimationComponent.Update(elapsed);
 
             // Skip animation updates if defeated
             if (IsDefeated)
@@ -673,51 +710,36 @@ namespace Hearthvale.GameCode.Entities.NPCs
             }
 
             // Determine animation based on current state
-            string targetAnimation;
-
             if (IsAttacking)
             {
-                targetAnimation = "Attack";
+                SetAnimationDirectionalSafe("Attack", "Idle");
             }
             else if (isStunned)
             {
-                targetAnimation = "Hit";
-            }
-            else if (_movingForAnim)
-            {
-                targetAnimation = "Walk";
+                SetAnimationDirectionalSafe("Hit", "Idle");
             }
             else
             {
-                targetAnimation = "Idle";
+                // Let the MovementAnimationDriver handle idle/walk transitions
+                _animDriver.Tick(gameTime, _movingForAnim, isMoving =>
+                {
+                    SetAnimationDirectionalSafe(isMoving ? "Walk" : "Idle", "Idle");
+                }, AnimationComponent.Sprite);
             }
 
-            // Apply animation with fallback safety
-            SetAnimationDirectionalSafe(targetAnimation, "Idle");
-
             // Update the animated sprite
-            if (_animationController.Sprite != null)
+            if (AnimationComponent.Sprite != null)
             {
-                _animationController.Sprite.Update(gameTime);
-                
-                // Use the dynamic content position instead of hard-coded offsets
-                Vector2 adjustedPosition = _animationController.Sprite.GetContentPosition(Position);
-                _animationController.Sprite.Position = adjustedPosition;
-                
+                AnimationComponent.Sprite.Update(gameTime);
+
+                // FIXED: Use the character's actual position directly without offset adjustment
+                AnimationComponent.Sprite.Position = Position; // Direct position, no GetContentPosition
+
                 // Apply sprite effects for facing direction
-                _animationController.Sprite.Effects = FacingRight
+                AnimationComponent.Sprite.Effects = FacingRight
                     ? SpriteEffects.None
                     : SpriteEffects.FlipHorizontally;
             }
-
-            // Update movement animation driver for smooth transitions
-            _animDriver.Tick(gameTime, _movingForAnim, isMoving =>
-            {
-                if (!IsAttacking && !isStunned)
-                {
-                    SetAnimationDirectionalSafe(isMoving ? "Walk" : "Idle", "Idle");
-                }
-            }, _animationController.Sprite);
         }
 
         /// <summary>
@@ -736,24 +758,23 @@ namespace Hearthvale.GameCode.Entities.NPCs
             if (obstacleRects != null)
                 obstacles.AddRange(obstacleRects);
 
-            // Add player bounds if alive, using orientation-aware bounds
+            // Add player bounds if alive, using Bounds property
             if (player != null && !player.IsDefeated)
-                obstacles.Add(player.GetOrientationAwareBounds());
+                obstacles.Add(player.Bounds);
 
-            // Add other NPC bounds (excluding self), using orientation-aware bounds
+            // Add other NPC bounds (excluding self), using Bounds property
             if (allNpcs != null)
             {
                 foreach (var otherNpc in allNpcs)
                 {
                     if (otherNpc != this && !otherNpc.IsDefeated)
-                        obstacles.Add(otherNpc.GetOrientationAwareBounds());
+                        obstacles.Add(otherNpc.Bounds);
                 }
             }
 
             // Store the obstacles for use by the movement component
             _cachedObstacles = obstacles;
-        }
-
+}
         // Add a field to cache the obstacles
         private List<Rectangle> _cachedObstacles = new List<Rectangle>();
 
@@ -765,140 +786,9 @@ namespace Hearthvale.GameCode.Entities.NPCs
             return _cachedObstacles ?? Enumerable.Empty<Rectangle>();
         }
 
-        public void DrawMovementDebug(SpriteBatch spriteBatch, Texture2D pixel)
+        public AnimatedSprite GetAnimationSprite()
         {
-            if (!DebugManager.Instance.ShowCollisionBoxes || spriteBatch == null || pixel == null) 
-                return;
-            
-            // Nothing to draw if no sprite
-            if (Sprite == null) return;
-            
-            // Get the sprite's actual rendered position
-            Vector2 spriteRenderPosition = Position;
-            if (Sprite is AnimatedSprite animSprite)
-            {
-                // This position accounts for content offsets
-                spriteRenderPosition = animSprite.GetContentPosition(Position);
-            }
-            
-            // Get collision bounds
-            Rectangle tightBounds = this.GetTightSpriteBounds();
-            Rectangle orientedBounds = this.GetOrientationAwareBounds();
-            
-            // Calculate the offset between logical position and render position
-            Vector2 renderOffset = spriteRenderPosition - Position;
-            
-            // Draw full sprite bounds for reference (cyan)
-            Rectangle spriteBounds = new Rectangle(
-                (int)spriteRenderPosition.X, 
-                (int)spriteRenderPosition.Y, 
-                (int)Sprite.Width, 
-                (int)Sprite.Height
-            );
-            DrawDebugRect(spriteBatch, pixel, spriteBounds, Color.Cyan * 0.3f);
-            
-            // Special handling for flipped sprites (facing left)
-            if (!FacingRight && Sprite != null)
-            {
-                // When flipped horizontally, we need to mirror the bounds around the sprite's center X
-                int spriteCenter = (int)spriteRenderPosition.X + (int)Sprite.Width / 2;
-                
-                // Copy bounds before modifying
-                Rectangle adjustedTight = tightBounds;
-                Rectangle adjustedOriented = orientedBounds;
-                
-                // Apply render offset first
-                adjustedTight.Offset((int)renderOffset.X, (int)renderOffset.Y);
-                adjustedOriented.Offset((int)renderOffset.X, (int)renderOffset.Y);
-                
-                // Calculate distance from left edge to center and from right edge to center
-                int tightLeftDist = spriteCenter - adjustedTight.Left;
-                int tightRightDist = adjustedTight.Right - spriteCenter;
-                int orientedLeftDist = spriteCenter - adjustedOriented.Left;
-                int orientedRightDist = adjustedOriented.Right - spriteCenter;
-                
-                // Swap left/right distances to mirror around center
-                adjustedTight.X = spriteCenter - tightRightDist;
-                adjustedTight.Width = tightLeftDist + tightRightDist;
-                
-                adjustedOriented.X = spriteCenter - orientedRightDist;
-                adjustedOriented.Width = orientedLeftDist + orientedRightDist;
-                
-                // Draw the mirrored bounds
-                DrawDebugRect(spriteBatch, pixel, adjustedTight, Color.Red * 0.5f);
-                DrawDebugRect(spriteBatch, pixel, adjustedOriented, Color.Orange * 0.6f);
-            }
-            else
-            {
-                // Standard rendering for right-facing sprites
-                tightBounds.Offset((int)renderOffset.X, (int)renderOffset.Y);
-                orientedBounds.Offset((int)renderOffset.X, (int)renderOffset.Y);
-                
-                DrawDebugRect(spriteBatch, pixel, tightBounds, Color.Red * 0.5f);
-                DrawDebugRect(spriteBatch, pixel, orientedBounds, Color.Orange * 0.6f);
-            }
-            
-            // Draw center markers using the adjusted sprite center
-            Vector2 spriteCenter = new Vector2(
-                spriteRenderPosition.X + Sprite.Width/2f, 
-                spriteRenderPosition.Y + Sprite.Height/2f
-            );
-            DrawDebugCross(spriteBatch, pixel, spriteCenter, Color.White, 4);
-            
-            // Draw movement indicators
-            if (_npcMovement != null)
-            {
-                var velocity = _npcMovement.GetVelocity();
-                if (velocity != Vector2.Zero)
-                {
-                    Vector2 normalizedVel = Vector2.Normalize(velocity) * 20f;
-                    DrawDebugLine(spriteBatch, pixel, spriteCenter, spriteCenter + normalizedVel, Color.Yellow);
-                }
-                
-                if (_npcMovement.IsStuck)
-                {
-                    DrawDebugCircle(spriteBatch, pixel, spriteCenter, 10, Color.Red * 0.5f);
-                }
-            }
-        }
-
-        private void DrawDebugLine(SpriteBatch spriteBatch, Texture2D pixel, Vector2 start, Vector2 end, Color color)
-        {
-            Vector2 edge = end - start;
-            float angle = (float)Math.Atan2(edge.Y, edge.X);
-            spriteBatch.Draw(
-                pixel,
-                start,
-                null,
-                color,
-                angle,
-                Vector2.Zero,
-                new Vector2(edge.Length(), 1),
-                SpriteEffects.None,
-                0);
-        }
-
-        private void DrawDebugCross(SpriteBatch spriteBatch, Texture2D pixel, Vector2 center, Color color, int size)
-        {
-            spriteBatch.Draw(pixel, new Rectangle((int)center.X - size, (int)center.Y, size * 2, 1), color);
-            spriteBatch.Draw(pixel, new Rectangle((int)center.X, (int)center.Y - size, 1, size * 2), color);
-        }
-
-        private void DrawDebugRect(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, Color color)
-        {
-            // Draw outline
-            spriteBatch.Draw(pixel, new Rectangle(rect.X, rect.Y, rect.Width, 1), color);
-            spriteBatch.Draw(pixel, new Rectangle(rect.X, rect.Bottom - 1, rect.Width, 1), color);
-            spriteBatch.Draw(pixel, new Rectangle(rect.X, rect.Y, 1, rect.Height), color);
-            spriteBatch.Draw(pixel, new Rectangle(rect.Right - 1, rect.Y, 1, rect.Height), color);
-        }
-
-        private void DrawDebugCircle(SpriteBatch spriteBatch, Texture2D pixel, Vector2 position, float radius, Color color)
-        {
-            spriteBatch.Draw(
-                pixel,
-                new Rectangle((int)(position.X - radius), (int)(position.Y - radius), (int)(radius * 2), (int)(radius * 2)),
-                color);
+            return AnimationComponent?.Sprite;
         }
     }
 }

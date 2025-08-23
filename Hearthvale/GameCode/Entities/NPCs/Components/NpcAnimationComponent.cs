@@ -2,9 +2,9 @@
 using MonoGameLibrary.Graphics;
 using System.Collections.Generic;
 
-namespace Hearthvale.GameCode.Entities.NPCs
+namespace Hearthvale.GameCode.Entities.Components
 {
-    internal class NpcAnimationController
+    internal class NpcAnimationComponent
     {
         private readonly AnimatedSprite _sprite;
         private readonly Dictionary<string, Animation> _animations;
@@ -16,7 +16,7 @@ namespace Hearthvale.GameCode.Entities.NPCs
 
         public AnimatedSprite Sprite => _sprite;
 
-        public NpcAnimationController(AnimatedSprite sprite, Dictionary<string, Animation> animations)
+        public NpcAnimationComponent(AnimatedSprite sprite, Dictionary<string, Animation> animations)
         {
             _sprite = sprite;
             _animations = animations;
@@ -34,21 +34,7 @@ namespace Hearthvale.GameCode.Entities.NPCs
             }
         }
 
-        public void Flash()
-        {
-            _sprite.Color = HitFlashColor;
-            _flashTimer = FlashDuration;
-        }
-
-        public void UpdateFlash(float elapsed)
-        {
-            if (_flashTimer > 0)
-            {
-                _flashTimer -= elapsed;
-                if (_flashTimer <= 0)
-                    _sprite.Color = _originalColor;
-            }
-        }
+        
     }
 }
 

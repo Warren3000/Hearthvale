@@ -15,28 +15,35 @@ using System.Collections.Generic;
 using System.Linq;
 using SpriteBatch = Microsoft.Xna.Framework.Graphics.SpriteBatch;
 using Hearthvale.GameCode.Entities;
+using Hearthvale.GameCode.Entities.Components;
 
 public class DebugManager
 {
     private static DebugManager _instance;
     public static DebugManager Instance => _instance ?? throw new InvalidOperationException("DebugManager not initialized. Call Initialize first.");
 
-    public bool DebugDrawEnabled { get; set; } = true;
-    public bool ShowCollisionBoxes { get; set; } = false;
-    public bool ShowAttackAreas { get; set; } = false; // Changed to false by default
+    #region Debug Toggle Properties
+    // --- Master Debug Controls ---
+    public bool DebugDrawEnabled { get; set; } = false; // Master switch for all debug drawing
     public bool ShowUIOverlay { get; set; } = true;
-    public bool ShowDetailedDebug { get; set; } = false;
-    public bool ShowUIDebugGrid { get; set; } = false;
-    public bool ShowDungeonElements { get; set; } = false; // Changed to false by default
-    public bool ShowWallCollisions { get; set; } = false; // Changed to false by default
-    public bool ShowTilesetViewer { get; set; } = false;
 
-    // NEW: Always-on weapon hitbox outlines (uses Weapon.HitPolygon)
-    public bool ShowWeaponHitboxes { get; set; } = false;
+    // --- Core Debug Categories ---
+    public bool ShowPhysicsDebug { get; set; } = false; // Collision boxes, velocity, AI targets
+    public bool ShowCombatDebug { get; set; } = false; // Weapon hitboxes, attack ranges
+    public bool ShowRenderingDebug { get; set; } = false; // Position discrepancies
+    public bool ShowSpriteAlignment { get; set; } = false; // Sprite/hitbox alignment
 
+    // --- Detailed Debug Options ---
+    public bool ShowDetailedPhysics { get; set; } = false; // Verbose physics info
+    public bool ShowDungeonElements { get; set; } = false; // Dungeon element bounds
+    public bool ShowUIDebugGrid { get; set; } = false; // UI alignment grid
+    public bool ShowTilesetViewer { get; set; } = false; // Tileset viewer
+    #endregion
+
+    #region Performance and Caching
     // Performance optimizations
     private int _frameCounter = 0;
-    private const int DEBUG_UPDATE_FREQUENCY = 1; // Only update debug visuals every 10 frames
+    private const int DEBUG_UPDATE_FREQUENCY = 5; // Update AI debug less frequently
     private readonly Dictionary<NPC, DebugNpcCache> _npcDebugCache = new();
 
     private readonly Texture2D _whitePixel;
@@ -51,9 +58,9 @@ public class DebugManager
         public Vector2 LastPlayerCenter;
         public Vector2 LastEngagementPoint;
         public float LastAttackRange;
-        public bool IsChaseNpc;
         public int LastUpdateFrame;
     }
+    #endregion
 
     /// <summary>
     /// The scale factor for all debug font rendering.
@@ -65,16 +72,10 @@ public class DebugManager
         _whitePixel = whitePixel;
 #if DEBUG
         DebugDrawEnabled = true;
-        ShowUIOverlay = true; // Keep UI overlay enabled for debug info
-        // Keep most debug features off by default to avoid lag
+        ShowUIOverlay = true;
 #else
         DebugDrawEnabled = false;
-        ShowCollisionBoxes = false;
-        ShowAttackAreas = false;
         ShowUIOverlay = false;
-        ShowDungeonElements = false;
-        ShowWallCollisions = false;
-        ShowWeaponHitboxes = false;
 #endif
     }
 
@@ -86,18 +87,20 @@ public class DebugManager
         _instance = new DebugManager(whitePixel);
     }
 
+    #region Debug Mode Control Methods
     /// <summary>
     /// Disables all debug drawing features. Useful for clean gameplay.
     /// </summary>
     public void DisableAllDebugDrawing()
     {
         DebugDrawEnabled = false;
-        ShowCollisionBoxes = false;
-        ShowAttackAreas = false;
+        ShowPhysicsDebug = false;
+        ShowCombatDebug = false;
+        ShowRenderingDebug = false;
+        ShowSpriteAlignment = false;
         ShowDungeonElements = false;
-        ShowWallCollisions = false;
         ShowUIDebugGrid = false;
-        ShowWeaponHitboxes = false;
+        ShowDetailedPhysics = false;
     }
 
     /// <summary>
@@ -106,13 +109,14 @@ public class DebugManager
     public void EnableMinimalDebugDrawing()
     {
         DebugDrawEnabled = true;
-        ShowCollisionBoxes = false;
-        ShowAttackAreas = false;
+        ShowPhysicsDebug = false;
+        ShowCombatDebug = false;
+        ShowRenderingDebug = false;
+        ShowSpriteAlignment = false;
         ShowDungeonElements = false;
-        ShowWallCollisions = false;
         ShowUIDebugGrid = false;
-        ShowWeaponHitboxes = false;
-        ShowUIOverlay = true; // Always keep UI overlay enabled for basic debug info
+        ShowDetailedPhysics = false;
+        ShowUIOverlay = true;
     }
 
     /// <summary>
@@ -121,12 +125,13 @@ public class DebugManager
     public void EnableAllDebugDrawing()
     {
         DebugDrawEnabled = true;
-        ShowCollisionBoxes = true;
-        ShowAttackAreas = true;
+        ShowPhysicsDebug = true;
+        ShowCombatDebug = true;
+        ShowRenderingDebug = true;
+        ShowSpriteAlignment = true;
         ShowDungeonElements = true;
-        ShowWallCollisions = true;
-        ShowUIDebugGrid = false; // Keep this off by default as it can be intrusive
-        ShowWeaponHitboxes = true;
+        ShowDetailedPhysics = true;
+        ShowUIDebugGrid = false; // Keep this off by default
     }
 
     /// <summary>
@@ -150,7 +155,7 @@ public class DebugManager
     /// </summary>
     public void ToggleDebugMode()
     {
-        if (ShowCollisionBoxes || ShowAttackAreas || ShowDungeonElements || ShowWeaponHitboxes)
+        if (ShowPhysicsDebug || ShowCombatDebug || ShowRenderingDebug)
         {
             SetGameMode();
         }
@@ -160,220 +165,381 @@ public class DebugManager
         }
     }
 
-    public void Draw(SpriteBatch spriteBatch, Player player, IEnumerable<NPC> npcs, IEnumerable<IDungeonElement> elements, Matrix viewMatrix)
+    /// <summary>
+    /// Toggles physics debug mode
+    /// </summary>
+    public void TogglePhysicsDebug()
+    {
+        ShowPhysicsDebug = !ShowPhysicsDebug;
+        if (ShowPhysicsDebug)
+        {
+            DebugDrawEnabled = true;
+        }
+    }
+
+    /// <summary>
+    /// Toggles combat debug mode
+    /// </summary>
+    public void ToggleCombatDebug()
+    {
+        ShowCombatDebug = !ShowCombatDebug;
+        if (ShowCombatDebug)
+        {
+            DebugDrawEnabled = true;
+        }
+    }
+
+    /// <summary>
+    /// Toggles rendering debug mode to diagnose position discrepancies
+    /// </summary>
+    public void ToggleRenderingDebug()
+    {
+        ShowRenderingDebug = !ShowRenderingDebug;
+        if (ShowRenderingDebug)
+        {
+            DebugDrawEnabled = true;
+        }
+    }
+
+    /// <summary>
+    /// Toggles sprite alignment debug mode to diagnose hitbox issues
+    /// </summary>
+    public void ToggleSpriteAlignmentDebug()
+    {
+        ShowSpriteAlignment = !ShowSpriteAlignment;
+        if (ShowSpriteAlignment)
+        {
+            DebugDrawEnabled = true;
+        }
+    }
+    #endregion
+
+    #region Main Draw Methods
+    /// <summary>
+    /// Main debug draw method - draws all enabled debug visualizations
+    /// </summary>
+    public void Draw(SpriteBatch spriteBatch, Player player, IEnumerable<NPC> npcs, IEnumerable<IDungeonElement> elements, Matrix viewMatrix, SpriteFont debugFont = null)
     {
         if (!DebugDrawEnabled) return;
 
         _frameCounter++;
 
-        // Character collision boxes (player and NPCs)
-        if (ShowCollisionBoxes)
+        if (ShowPhysicsDebug)
         {
-            DrawCharacterCollisionBoxes(spriteBatch, player, npcs);
-            
-            // Draw NPC movement debug visualization using public method
-            if (npcs != null)
-            {
-                foreach (var npc in npcs)
-                {
-                    if (npc != null)
-                    {
-                        npc.DrawMovementDebug(spriteBatch, _whitePixel);
-                    }
-                }
-            }
-        }
-        
-        // Wall collision boxes (cached, so less expensive)
-        if (ShowWallCollisions)
-        {
-            var tilemap = TilesetManager.Instance.Tilemap;
-            DrawWallCollisions(spriteBatch, tilemap);
+            DrawPhysicsDebug(spriteBatch, player, npcs);
         }
 
-        if (ShowAttackAreas)
+        if (ShowCombatDebug)
         {
-            DrawAttackArea(spriteBatch, player, npcs);
-            // Only update NPC AI debug every few frames to reduce lag
-            if (_frameCounter % DEBUG_UPDATE_FREQUENCY == 0)
-            {
-                DrawNpcAIDebug(spriteBatch, npcs, player);
-            }
+            DrawCombatDebug(spriteBatch, player, npcs);
         }
 
-        // NEW: Weapon hitbox outlines (uses the polygon WeaponHitboxGenerator assigned to Weapon.HitPolygon)
-        if (ShowWeaponHitboxes)
+        if (ShowRenderingDebug)
         {
-            DrawWeaponHitboxes(spriteBatch, player, npcs);
+            DrawRenderingDebug(spriteBatch, player, npcs, debugFont);
         }
 
-        // Dungeon element collision boxes (only if there are few elements)
-        if (ShowDungeonElements && elements?.Count() < 50 // Limit to avoid lag
-        )
+        if (ShowSpriteAlignment)
+        {
+            DrawSpriteAlignmentDebug(spriteBatch, player, npcs, debugFont);
+        }
+
+        if (ShowDungeonElements && elements != null)
         {
             DrawDungeonElements(spriteBatch, elements, viewMatrix);
         }
 
-        // Draw UI debug grid if enabled
         if (ShowUIDebugGrid)
         {
-            DrawUIDebugGrid(spriteBatch, Core.GraphicsDevice.Viewport, 40, 40, Color.Black * 0.25f);
+            DrawUIDebugGrid(spriteBatch, Core.GraphicsDevice.Viewport, 40, 40, Color.Black * 0.25f, debugFont);
         }
     }
 
     /// <summary>
-    /// Draws collision boxes for player and NPCs
+    /// Draws physics-related debug information like collision boxes, velocity, and AI targets.
     /// </summary>
-    private void DrawCharacterCollisionBoxes(SpriteBatch spriteBatch, Player player, IEnumerable<NPC> npcs)
+    private void DrawPhysicsDebug(SpriteBatch spriteBatch, Player player, IEnumerable<NPC> npcs)
     {
-        if (!DebugDrawEnabled || !ShowCollisionBoxes) return;
+        // Draw wall collisions
+        var tilemap = TilesetManager.Instance.Tilemap;
+        if (tilemap != null)
+        {
+            DrawWallCollisions(spriteBatch, tilemap);
+        }
 
-        // Draw player bounds (green)
+        // Draw player physics
         if (player != null)
         {
-            // Use the tight bounds from sprite analysis
-            Rectangle bounds = player.GetTightSpriteBounds();
-            DrawRect(spriteBatch, bounds, Color.LimeGreen * 0.7f);
-            
-            // Also show full sprite bounds for comparison if detailed debug is enabled
-            if (ShowDetailedDebug)
-            {
-                DrawSpriteAnalysisBounds(spriteBatch, player, Color.LimeGreen * 0.7f, Color.Yellow * 0.4f);
-            }
+            DrawCharacterPhysics(spriteBatch, player, Color.LimeGreen);
         }
 
-        // Draw NPC bounds (red for alive, gray for defeated)
-        foreach (var npc in npcs)
+        // Draw NPC physics
+        if (npcs != null)
         {
-            Color boxColor = npc.IsDefeated ? Color.Gray * 0.5f : Color.Purple * 0.7f;
-            
-            // Use the tight bounds from sprite analysis
-            Rectangle bounds = npc.GetTightSpriteBounds();
-            DrawRect(spriteBatch, bounds, boxColor);
-            
-            // Show full sprite bounds for comparison if detailed debug is enabled
-            if (ShowDetailedDebug)
+            foreach (var npc in npcs)
             {
-                DrawSpriteAnalysisBounds(spriteBatch, npc, boxColor, Color.Yellow * 0.4f);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Optimized NPC AI debugging - only updates cache periodically and limits drawing
-    /// </summary>
-    public void DrawNpcAIDebug(SpriteBatch spriteBatch, IEnumerable<NPC> npcs, Player player)
-    {
-        if (!DebugDrawEnabled || !ShowAttackAreas || player == null) return;
-
-        int npcCount = 0;
-        const int MAX_DEBUG_NPCS = 5; // Limit number of NPCs to debug at once
-
-        foreach (var npc in npcs)
-        {
-            if (npc.IsDefeated || npcCount >= MAX_DEBUG_NPCS) continue;
-
-            // Only debug knight NPCs to reduce visual clutter
-            if (!npc.Name.ToLower().Contains("knight")) continue;
-
-            npcCount++;
-
-            Vector2 npcCenter = npc.Position + new Vector2(npc.Sprite.Width / 2f, npc.Sprite.Height / 2f);
-            Vector2 playerCenter = player.Position + new Vector2(player.Sprite.Width / 2f, player.Sprite.Height / 2f);
-
-            // Update cache only periodically
-            if (!_npcDebugCache.ContainsKey(npc) ||
-                _frameCounter - _npcDebugCache[npc].LastUpdateFrame > DEBUG_UPDATE_FREQUENCY)
-            {
-                float attackRange = MathF.Max(npc.EquippedWeapon?.Length ?? 32f, 32f);
-                float desiredStandOff = attackRange - 3f;
-                Vector2 engagementPoint = ComputeEngagementPointDebug(player.Bounds, npc.Bounds, desiredStandOff);
-
-                _npcDebugCache[npc] = new DebugNpcCache
+                if (npc != null)
                 {
-                    LastPlayerCenter = playerCenter,
-                    LastEngagementPoint = engagementPoint,
-                    LastAttackRange = attackRange,
-                    IsChaseNpc = npc.Name.ToLower().Contains("knight"),
-                    LastUpdateFrame = _frameCounter
-                };
-            }
-
-            var cache = _npcDebugCache[npc];
-
-            // Draw simplified debug info
-            if (cache.IsChaseNpc)
-            {
-                // Simple line to player (reduced opacity to reduce visual noise)
-                DrawLine(spriteBatch, _whitePixel, npcCenter, cache.LastPlayerCenter, Color.Yellow * 0.3f);
-
-                // Attack range circle (thinner line)
-                DrawCircleOutline(spriteBatch, npcCenter, cache.LastAttackRange, Color.Red * 0.5f, 8); // Fewer segments
-
-                // Engagement target (smaller dot)
-                DrawCircle(spriteBatch, cache.LastEngagementPoint, 2f, Color.Lime * 0.8f);
-            }
-        }
-
-        // Clean up old cache entries
-        if (_frameCounter % (DEBUG_UPDATE_FREQUENCY * 10) == 0)
-        {
-            var toRemove = _npcDebugCache.Keys.Where(npc => npc.IsDefeated).ToList();
-            foreach (var npc in toRemove)
-            {
-                _npcDebugCache.Remove(npc);
+                    DrawCharacterPhysics(spriteBatch, npc, npc.IsDefeated ? Color.Gray : Color.CornflowerBlue);
+                }
             }
         }
     }
 
     /// <summary>
-    /// Draws weapon swing arc and active hit polygon while slashing.
+    /// Draws combat-related debug information like weapon hitboxes and attack ranges.
     /// </summary>
-    private void DrawAttackArea(SpriteBatch spriteBatch, Player player, IEnumerable<NPC> npcs)
+    private void DrawCombatDebug(SpriteBatch spriteBatch, Player player, IEnumerable<NPC> npcs)
     {
-        // Player swing debug
-        if (player?.EquippedWeapon?.IsSlashing == true)
+        // Draw player combat info
+        if (player != null)
         {
-            Vector2 playerCenter = player.Position + new Vector2(player.Sprite.Width / 2f, player.Sprite.Height / 2f);
-
-            // Arc + hit polygon in world space; SpriteBatch camera transform will handle anchoring/zoom
-            DrawSwingArcForWeapon(spriteBatch, _whitePixel, player.EquippedWeapon, playerCenter, Color.Orange, MathHelper.ToRadians(40), 24);
-            DrawHitPolygonForWeapon(spriteBatch, _whitePixel, player.EquippedWeapon, playerCenter, Color.Red);
+            DrawCharacterCombat(spriteBatch, player, Color.Pink);
         }
 
-        // NPC swing debug
-        foreach (var npc in npcs)
+        // Draw NPC combat info
+        if (npcs != null)
         {
-            if (npc?.EquippedWeapon?.IsSlashing == true)
+            if (_frameCounter % DEBUG_UPDATE_FREQUENCY == 0)
             {
-                Vector2 npcCenter = npc.Position + new Vector2(npc.Sprite.Width / 2f, npc.Sprite.Height / 2f);
-                float halfArc = MathHelper.PiOver4 + MathHelper.PiOver2; // preserves prior debug setting
+                UpdateNpcDebugCache(npcs, player);
+            }
 
-                DrawSwingArcForWeapon(spriteBatch, _whitePixel, npc.EquippedWeapon, npcCenter, Color.Orange, halfArc, 24);
-                DrawHitPolygonForWeapon(spriteBatch, _whitePixel, npc.EquippedWeapon, npcCenter, Color.Red);
+            foreach (var npc in npcs)
+            {
+                if (npc != null && !npc.IsDefeated)
+                {
+                    DrawCharacterCombat(spriteBatch, npc, Color.OrangeRed);
+                }
             }
         }
     }
 
-    // NEW: Always-on visualization of a weapon's current hitbox (idle or slashing)
-    private void DrawWeaponHitboxes(SpriteBatch spriteBatch, Player player, IEnumerable<NPC> npcs)
+    /// <summary>
+    /// Draws detailed rendering debug information to diagnose position discrepancies
+    /// </summary>
+ private void DrawRenderingDebug(SpriteBatch spriteBatch, Player player, IEnumerable<NPC> npcs, SpriteFont debugFont)
     {
-        // Player weapon
-        if (player?.EquippedWeapon != null)
+        // Draw player rendering info
+        if (player != null)
         {
-            Vector2 center = player.Position + new Vector2(player.Sprite.Width / 2f, player.Sprite.Height / 2f);
-            DrawHitPolygonForWeapon(spriteBatch, _whitePixel, player.EquippedWeapon, center, Color.LimeGreen * 0.9f);
+            DrawCharacterRenderingInfo(spriteBatch, player, "PLAYER", Color.LimeGreen, debugFont);
         }
 
-        // NPC weapons
-        foreach (var npc in npcs)
+        // Draw NPC rendering info
+        if (npcs != null)
         {
-            if (npc?.EquippedWeapon == null) continue;
-            Vector2 center = npc.Position + new Vector2(npc.Sprite.Width / 2f, npc.Sprite.Height / 2f);
-            DrawHitPolygonForWeapon(spriteBatch, _whitePixel, npc.EquippedWeapon, center, Color.Cyan * 0.9f);
+            int npcIndex = 0;
+            foreach (var npc in npcs)
+            {
+                if (npc != null && !npc.IsDefeated)
+                {
+                    DrawCharacterRenderingInfo(spriteBatch, npc, $"NPC_{npcIndex++}", Color.OrangeRed, debugFont);
+                }
+            }
         }
     }
 
+    /// <summary>
+    /// Draws sprite alignment debug info to diagnose hitbox snapping issues
+    /// </summary>
+ private void DrawSpriteAlignmentDebug(SpriteBatch spriteBatch, Player player, IEnumerable<NPC> npcs, SpriteFont debugFont)
+    {
+        // Draw player alignment
+        if (player != null)
+        {
+            DrawCharacterAlignment(spriteBatch, player, Color.LimeGreen, debugFont);
+        }
+
+        // Draw NPC alignment
+        if (npcs != null)
+        {
+            foreach (var npc in npcs)
+            {
+                if (npc != null && !npc.IsDefeated)
+                {
+                    DrawCharacterAlignment(spriteBatch, npc, Color.OrangeRed, debugFont);
+                }
+            }
+        }
+    }
+    #endregion
+
+    #region Character-Specific Debug Drawing
+    /// <summary>
+    /// Draws physics info for a single character.
+    /// </summary>
+    private void DrawCharacterPhysics(SpriteBatch spriteBatch, Character character, Color color)
+    {
+        // Draw logical position
+        DrawCross(spriteBatch, _whitePixel, character.Position, 6, Color.Blue, 2);
+
+        // Use Bounds property directly
+        Rectangle bounds = character.Bounds;
+        DrawRect(spriteBatch, bounds, color * 0.8f);
+
+        // Draw velocity vector
+        Vector2 velocity = character.GetVelocity();
+        if (velocity.LengthSquared() > 0.1f)
+        {
+            Vector2 center = new Vector2(bounds.Center.X, bounds.Center.Y);
+            DrawLine(spriteBatch, _whitePixel, center, center + Vector2.Normalize(velocity) * 20f, Color.Yellow);
+        }
+
+        // Draw detailed bounds if enabled
+        if (ShowDetailedPhysics)
+        {
+            DrawSpriteAnalysisBounds(spriteBatch, character, color, Color.Yellow * 0.4f);
+        }
+
+        // Draw NPC-specific physics info
+        if (character is NPC npc)
+        {
+            var movement = character.MovementComponent;
+            if (movement != null)
+            {
+                // Draw chase target
+                if (movement.ChaseTarget.HasValue)
+                {
+                    Vector2 center = new Vector2(bounds.Center.X, bounds.Center.Y);
+                    DrawLine(spriteBatch, _whitePixel, center, movement.ChaseTarget.Value, Color.Cyan * 0.5f);
+                    DrawCircle(spriteBatch, movement.ChaseTarget.Value, 3f, Color.Cyan);
+                }
+                // Draw stuck indicator
+                if (npc.IsStuck)
+                {
+                    DrawCircleOutline(spriteBatch, new Vector2(bounds.Center.X, bounds.Center.Y), 10, Color.Red, 16);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Draws combat info for a single character.
+    /// </summary>
+    private void DrawCharacterCombat(SpriteBatch spriteBatch, Character character, Color color)
+    {
+        if (character.EquippedWeapon == null) return;
+
+        // Use Bounds center instead of GetTightSpriteBounds
+        Vector2 center = new Vector2(character.Bounds.Center.X, character.Bounds.Center.Y);
+
+        // Draw the weapon's current hitbox polygon
+        DrawHitPolygonForWeapon(spriteBatch, _whitePixel, character.EquippedWeapon, center, color);
+
+        // If the weapon is actively slashing, draw the full swing arc
+        if (character.EquippedWeapon.IsSlashing)
+        {
+            DrawSwingArcForWeapon(spriteBatch, _whitePixel, character.EquippedWeapon, center, color * 0.6f);
+        }
+
+        // Draw NPC AI engagement info
+        if (character is NPC npc && _npcDebugCache.ContainsKey(npc))
+        {
+            var cache = _npcDebugCache[npc];
+            DrawCircleOutline(spriteBatch, center, cache.LastAttackRange, Color.Red * 0.5f, 12);
+            DrawCircle(spriteBatch, cache.LastEngagementPoint, 2f, Color.Lime);
+        }
+    }
+
+    private void DrawCharacterRenderingInfo(SpriteBatch spriteBatch, Character character, string label, Color color, SpriteFont font)
+    {
+        if (character?.Sprite == null) return;
+
+        // Get all the different position/bounds values
+        Vector2 logicalPos = character.Position;
+        Vector2 spritePos = character.Sprite.Position;
+        Rectangle bounds = character.Bounds;
+        Rectangle tightBounds = character.GetTightSpriteBounds();
+        
+        // Draw logical position (large cross)
+        DrawCross(spriteBatch, _whitePixel, logicalPos, 12, Color.Red, 3);
+        
+        // Draw sprite position (medium cross)
+        DrawCross(spriteBatch, _whitePixel, spritePos, 8, Color.Yellow, 2);
+        
+        // Draw bounds center (small cross)
+        Vector2 boundsCenter = new Vector2(bounds.Center.X, bounds.Center.Y);
+        DrawCross(spriteBatch, _whitePixel, boundsCenter, 4, Color.Blue, 1);
+        
+        // Draw tight bounds center
+        Vector2 tightCenter = new Vector2(tightBounds.Center.X, tightBounds.Center.Y);
+        DrawCross(spriteBatch, _whitePixel, tightCenter, 4, Color.Magenta, 1);
+
+        // Draw connecting lines
+        DrawLine(spriteBatch, _whitePixel, logicalPos, spritePos, Color.White * 0.3f);
+        DrawLine(spriteBatch, _whitePixel, spritePos, boundsCenter, Color.White * 0.3f);
+        
+        // Draw text info if font provided
+        if (font != null)
+        {
+            Vector2 textPos = logicalPos + new Vector2(20, -40);
+            float scale = FontScale * 0.8f;
+            
+            spriteBatch.DrawString(font, $"{label}", textPos, color, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
+            spriteBatch.DrawString(font, $"Pos: {(int)logicalPos.X},{(int)logicalPos.Y}", 
+                textPos + new Vector2(0, font.LineSpacing * scale), Color.White, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
+            spriteBatch.DrawString(font, $"Sprite: {(int)spritePos.X},{(int)spritePos.Y}", 
+                textPos + new Vector2(0, font.LineSpacing * scale * 2), Color.Yellow, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
+            spriteBatch.DrawString(font, $"Bounds: {bounds.X},{bounds.Y} {bounds.Width}x{bounds.Height}", 
+                textPos + new Vector2(0, font.LineSpacing * scale * 3), Color.Blue, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
+            spriteBatch.DrawString(font, $"Tight: {tightBounds.X},{tightBounds.Y} {tightBounds.Width}x{tightBounds.Height}", 
+                textPos + new Vector2(0, font.LineSpacing * scale * 4), Color.Magenta, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
+        }
+    }
+
+    private void DrawCharacterAlignment(SpriteBatch spriteBatch, Character character, Color color, SpriteFont font)
+    {
+        if (character?.Sprite == null) return;
+
+        var sprite = character.Sprite;
+        Rectangle spriteBounds = new Rectangle(
+            (int)sprite.Position.X,
+            (int)sprite.Position.Y,
+            (int)sprite.Width,
+            (int)sprite.Height
+        );
+
+        // Draw sprite bounds
+        DrawRect(spriteBatch, spriteBounds, Color.Yellow * 0.5f, 2f);
+        
+        // Draw character bounds
+        DrawRect(spriteBatch, character.Bounds, color * 0.5f, 2f);
+        
+        // Draw tight bounds
+        Rectangle tightBounds = character.GetTightSpriteBounds();
+        DrawRect(spriteBatch, tightBounds, Color.Magenta * 0.5f, 1f);
+
+        // Calculate and draw offset vectors
+        Vector2 spriteToLogical = character.Position - sprite.Position;
+        Vector2 boundsOffset = new Vector2(character.Bounds.X - sprite.Position.X, character.Bounds.Y - sprite.Position.Y);
+        
+        // Draw offset info
+        if (font != null && (Math.Abs(spriteToLogical.X) > 1 || Math.Abs(spriteToLogical.Y) > 1))
+        {
+            Vector2 midPoint = sprite.Position + spriteToLogical / 2;
+            string offsetText = $"Offset: {(int)spriteToLogical.X},{(int)spriteToLogical.Y}";
+            spriteBatch.DrawString(font, offsetText, midPoint, Color.Red, 0f, 
+                font.MeasureString(offsetText) / 2, FontScale * 0.7f, SpriteEffects.None, 0f);
+        }
+
+        // Draw sprite origin
+        if (sprite.Origin != Vector2.Zero)
+        {
+            Vector2 worldOrigin = sprite.Position + sprite.Origin;
+            DrawCircle(spriteBatch, worldOrigin, 3f, Color.Purple);
+            
+            if (font != null)
+            {
+                string originText = $"Origin: {(int)sprite.Origin.X},{(int)sprite.Origin.Y}";
+                spriteBatch.DrawString(font, originText, worldOrigin + new Vector2(5, 5), 
+                    Color.Purple, 0f, Vector2.Zero, FontScale * 0.6f, SpriteEffects.None, 0f);
+            }
+        }
+    }
+    #endregion
+
+    #region Weapon Debug Drawing
     // Unified helpers for arc + polygon debug rendering (moved from Weapon to DebugManager)
     private void DrawSwingArcForWeapon(SpriteBatch spriteBatch, Texture2D pixel, Weapon weapon, Vector2 ownerCenter, Color color, float? halfArcOverrideRadians = null, int segments = Weapon.DefaultDebugArcSegments)
     {
@@ -385,7 +551,7 @@ public class DebugManager
         float innerRadius = spec.HandleOffset;
         float outerRadius = spec.HandleOffset + spec.BladeLength;
 
-        // Use the weapon’s actual world origin (same as sprite) instead of ownerCenter
+        // Use the weapon's actual world origin (same as sprite) instead of ownerCenter
         Vector2 origin = weapon.GetWorldOrigin(ownerCenter);
 
         Vector2 ToPoint(float angle, float radius) => origin + new Vector2((float)Math.Cos(angle), (float)Math.Sin(angle)) * radius;
@@ -420,41 +586,81 @@ public class DebugManager
             DrawLine(spriteBatch, pixel, a, b, color);
         }
     }
+    #endregion
 
-    private static void DrawLine(SpriteBatch spriteBatch, Texture2D pixel, Vector2 a, Vector2 b, Color color)
+    #region Helper Methods for Cache and Performance
+    /// <summary>
+    /// Updates the cached debug information for NPCs to improve performance.
+    /// </summary>
+    private void UpdateNpcDebugCache(IEnumerable<NPC> npcs, Player player)
     {
-        var distance = Vector2.Distance(a, b);
-        if (distance < 0.001f) return;
+        if (player == null) return;
 
-        var angle = (float)Math.Atan2(b.Y - a.Y, b.X - a.X);
-        spriteBatch.Draw(pixel, a, null, color, angle, Vector2.Zero, new Vector2(distance, 1f), SpriteEffects.None, 0f);
+        foreach (var npc in npcs)
+        {
+            if (npc.IsDefeated)
+            {
+                _npcDebugCache.Remove(npc);
+                continue;
+            }
+
+            float attackRange = MathF.Max(npc.EquippedWeapon?.Length ?? 32f, 32f);
+            float desiredStandOff = attackRange - 5f;
+            Vector2 engagementPoint = ComputeEngagementPointDebug(player.Bounds, npc.Bounds, desiredStandOff);
+
+            _npcDebugCache[npc] = new DebugNpcCache
+            {
+                LastPlayerCenter = new Vector2(player.Bounds.Center.X, player.Bounds.Center.Y),
+                LastEngagementPoint = engagementPoint,
+                LastAttackRange = attackRange,
+                LastUpdateFrame = _frameCounter
+            };
+        }
+
+        // Clean up old cache entries
+        if (_frameCounter % 60 == 0)
+        {
+            var toRemove = _npcDebugCache.Keys.Where(n => n.IsDefeated || !npcs.Contains(n)).ToList();
+            foreach (var key in toRemove)
+            {
+                _npcDebugCache.Remove(key);
+            }
+        }
     }
 
+    // Helper method that mirrors the NPC's ComputeEngagementPoint for debugging
+    private static Vector2 ComputeEngagementPointDebug(Rectangle playerBounds, Rectangle npcBounds, float desiredStandOff)
+    {
+        Vector2 playerCenter = new Vector2(playerBounds.Left + playerBounds.Width / 2f, playerBounds.Top + playerBounds.Height / 2f);
+        Vector2 selfCenter = new Vector2(npcBounds.Left + npcBounds.Width / 2f, npcBounds.Top + npcBounds.Height / 2f);
+
+        float radius = MathF.Max(10f, desiredStandOff);
+
+        // FIXED: Calculate angle from PLAYER to NPC (where NPC should be relative to player)
+        // This ensures the engagement point is always positioned around the player center
+        float baseAngle = MathF.Atan2(selfCenter.Y - playerCenter.Y, selfCenter.X - playerCenter.X);
+
+        // Return the engagement point around the player center at the desired standoff distance
+        return playerCenter + new Vector2(MathF.Cos(baseAngle), MathF.Sin(baseAngle)) * radius;
+    }
+    #endregion
+
+    #region Environment and UI Debug Drawing
     private void DrawDungeonElements(SpriteBatch spriteBatch, IEnumerable<IDungeonElement> elements, Matrix viewMatrix)
     {
-        if (!DebugDrawEnabled || !ShowDungeonElements) return;
-
         foreach (var element in elements)
         {
             var boundsProperty = element.GetType().GetProperty("Bounds");
             if (boundsProperty != null)
             {
                 var bounds = (Rectangle)boundsProperty.GetValue(element);
-                var topLeft = Vector2.Transform(new Vector2(bounds.X, bounds.Y), viewMatrix);
-                var bottomRight = Vector2.Transform(new Vector2(bounds.Right, bounds.Bottom), viewMatrix);
-                var screenRect = new Rectangle(
-                    (int)topLeft.X,
-                    (int)topLeft.Y,
-                    (int)(bottomRight.X - topLeft.X),
-                    (int)(bottomRight.Y - topLeft.Y)
-                );
-                DrawRect(spriteBatch, screenRect, Color.Red * 0.5f);
+                DrawRect(spriteBatch, bounds, Color.Red * 0.5f);
             }
         }
     }
+
     private void DrawWallCollisions(SpriteBatch spriteBatch, Tilemap tilemap)
     {
-        if (!DebugDrawEnabled || !ShowWallCollisions || tilemap == null) return;
         EnsureWallCollisionCache(tilemap);
         // Draw wall collision rectangles in world space
         foreach (var rect in _cachedWallCollisionRects)
@@ -513,6 +719,49 @@ public class DebugManager
         DrawUIElementBounds(spriteBatch, font);
     }
 
+    /// <summary>
+    /// Title screen-specific debug drawing. Currently draws the UI grid when enabled.
+    /// </summary>
+    public void DrawTitleScreen(SpriteBatch spriteBatch)
+    {
+        if (!DebugDrawEnabled || !ShowUIDebugGrid || spriteBatch == null)
+            return;
+
+        DrawUIDebugGrid(spriteBatch, spriteBatch.GraphicsDevice.Viewport, 40, 40, Color.Black * 0.25f);
+    }
+
+    /// <summary>
+    /// Draws both full sprite bounds (yellow) and analyzed content bounds (green) for debugging
+    /// </summary>
+    public void DrawSpriteAnalysisBounds(SpriteBatch spriteBatch, Character character, Color contentColor, Color fullColor)
+    {
+        if (character?.Sprite == null) return;
+
+        // Draw full sprite bounds
+        var fullBounds = new Rectangle(
+            (int)character.Position.X,
+            (int)character.Position.Y,
+            (int)character.Sprite.Width,
+            (int)character.Sprite.Height
+        );
+        DrawRect(spriteBatch, fullBounds, fullColor);
+
+        // Draw the actual content bounds (tight fit)
+        Rectangle contentBounds = character.GetTightSpriteBounds();
+        DrawRect(spriteBatch, contentBounds, contentColor);
+
+        // Draw center points
+        Vector2 fullCenter = new Vector2(fullBounds.Center.X, fullBounds.Center.Y);
+        Vector2 contentCenter = new Vector2(contentBounds.Center.X, contentBounds.Center.Y);
+
+        // Mark the centers with small crosses
+        int crossSize = 4;
+        DrawCross(spriteBatch, _whitePixel, fullCenter, crossSize, fullColor);
+        DrawCross(spriteBatch, _whitePixel, contentCenter, crossSize, contentColor);
+    }
+    #endregion
+
+    #region UI Element Debug Methods
     private void DrawUIElementBounds(SpriteBatch spriteBatch, SpriteFont font)
     {
         var root = GumService.Default.Root;
@@ -527,14 +776,12 @@ public class DebugManager
         var type = visualObj.GetType();
         float x, y, w, h;
         string name = "";
-        string tag = "";
 
         var absXProp = type.GetProperty("AbsoluteX");
         var absYProp = type.GetProperty("AbsoluteY");
         var absWProp = type.GetProperty("AbsoluteWidth");
         var absHProp = type.GetProperty("AbsoluteHeight");
         var nameProp = type.GetProperty("Name");
-        var tagProp = type.GetProperty("Tag"); // <-- Add this
 
         if (absXProp != null && absYProp != null && absWProp != null && absHProp != null)
         {
@@ -563,7 +810,7 @@ public class DebugManager
         if (name == "StartButtonBackground" || name == "OptionsButtonBackground")
         {
             var rect = new Rectangle((int)x, (int)y, (int)w, (int)h);
-            DrawRect(spriteBatch, rect, Color.Cyan * 0.7f);
+            DrawRectScreen(spriteBatch, rect, Color.Cyan * 0.7f);
 
             if (font != null)
             {
@@ -582,30 +829,9 @@ public class DebugManager
             }
         }
     }
+    #endregion
 
-    private void DrawRect(SpriteBatch spriteBatch, Rectangle rect, Color color)
-    {
-        // Top
-        spriteBatch.Draw(_whitePixel, new Rectangle(rect.X, rect.Y, rect.Width, 1), color);
-        // Left
-        spriteBatch.Draw(_whitePixel, new Rectangle(rect.X, rect.Y, 1, rect.Height), color);
-        // Right
-        spriteBatch.Draw(_whitePixel, new Rectangle(rect.Right - 1, rect.Y, 1, rect.Height), color);
-        // Bottom
-        spriteBatch.Draw(_whitePixel, new Rectangle(rect.X, rect.Bottom - 1, rect.Width, 1), color);
-    }
-
-    /// <summary>
-    /// Title screen-specific debug drawing. Currently draws the UI grid when enabled.
-    /// </summary>
-    public void DrawTitleScreen(SpriteBatch spriteBatch)
-    {
-        if (!DebugDrawEnabled || !ShowUIDebugGrid || spriteBatch == null)
-            return;
-
-        DrawUIDebugGrid(spriteBatch, spriteBatch.GraphicsDevice.Viewport, 40, 40, Color.Black * 0.25f);
-    }
-
+    #region Wall Collision Cache Management
     private void EnsureWallCollisionCache(Tilemap tilemap)
     {
         // Rebuild cache if map size changes or cache is empty
@@ -706,8 +932,51 @@ public class DebugManager
         }
         // If none of the above worked, leave cache empty to avoid incorrect visuals.
     }
+    #endregion
 
-    private void DrawCircleOutline(SpriteBatch spriteBatch, Vector2 center, float radius, Color color, int segments = 16)
+    #region Primitive Drawing Helpers
+    private static void DrawLine(SpriteBatch spriteBatch, Texture2D pixel, Vector2 a, Vector2 b, Color color, float thickness = 1f)
+    {
+        var distance = Vector2.Distance(a, b);
+        if (distance < 0.001f) return;
+
+        var angle = (float)Math.Atan2(b.Y - a.Y, b.X - a.X);
+        spriteBatch.Draw(pixel, a, null, color, angle, Vector2.Zero, new Vector2(distance, thickness), SpriteEffects.None, 0f);
+    }
+
+    private void DrawRect(SpriteBatch spriteBatch, Rectangle rect, Color color, float thickness = 1f)
+    {
+        int th = (int)Math.Ceiling(thickness);
+        // Top
+        spriteBatch.Draw(_whitePixel, new Rectangle(rect.X, rect.Y, rect.Width, th), color);
+        // Left
+        spriteBatch.Draw(_whitePixel, new Rectangle(rect.X, rect.Y, th, rect.Height), color);
+        // Right
+        spriteBatch.Draw(_whitePixel, new Rectangle(rect.Right - th, rect.Y, th, rect.Height), color);
+        // Bottom
+        spriteBatch.Draw(_whitePixel, new Rectangle(rect.X, rect.Bottom - th, rect.Width, th), color);
+    }
+    
+    private void DrawRectScreen(SpriteBatch spriteBatch, Rectangle rect, Color color)
+    {
+        // Top
+        spriteBatch.Draw(_whitePixel, new Rectangle(rect.X, rect.Y, rect.Width, 1), color);
+        // Left
+        spriteBatch.Draw(_whitePixel, new Rectangle(rect.X, rect.Y, 1, rect.Height), color);
+        // Right
+        spriteBatch.Draw(_whitePixel, new Rectangle(rect.Right - 1, rect.Y, 1, rect.Height), color);
+        // Bottom
+        spriteBatch.Draw(_whitePixel, new Rectangle(rect.X, rect.Bottom - 1, rect.Width, 1), color);
+    }
+
+    private void DrawCross(SpriteBatch spriteBatch, Texture2D pixel, Vector2 center, int size, Color color, float thickness = 1f)
+    {
+        int th = (int)Math.Ceiling(thickness);
+        spriteBatch.Draw(pixel, new Rectangle((int)(center.X - size / 2f), (int)(center.Y - (th-1)/2f), size, th), color);
+        spriteBatch.Draw(pixel, new Rectangle((int)(center.X - (th-1)/2f), (int)(center.Y - size / 2f), th, size), color);
+    }
+
+    private void DrawCircleOutline(SpriteBatch spriteBatch, Vector2 center, float radius, Color color, int segments = 16, float thickness = 1f)
     {
         float angleStep = MathHelper.TwoPi / segments;
         Vector2 prevPoint = center + new Vector2(radius, 0);
@@ -716,79 +985,20 @@ public class DebugManager
         {
             float angle = angleStep * i;
             Vector2 newPoint = center + new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * radius;
-            DrawLine(spriteBatch, _whitePixel, prevPoint, newPoint, color);
+            DrawLine(spriteBatch, _whitePixel, prevPoint, newPoint, color, thickness);
             prevPoint = newPoint;
         }
     }
 
     private void DrawCircle(SpriteBatch spriteBatch, Vector2 center, float radius, Color color)
     {
-        int size = (int)(radius * 2);
-        Rectangle rect = new Rectangle((int)(center.X - radius), (int)(center.Y - radius), size, size);
-        spriteBatch.Draw(_whitePixel, rect, color);
+        if (radius <= 0) return;
+        // A simple way to draw a filled circle is to scale a pixel texture.
+        // This is not perfectly anti-aliased but is fast and easy for debugging.
+        var texture = _whitePixel;
+        var scale = radius * 2f; // Diameter
+        var origin = new Vector2(0.5f, 0.5f); // Center of the pixel
+        spriteBatch.Draw(texture, center, null, color, 0f, origin, scale, SpriteEffects.None, 0f);
     }
-
-    // Helper method that mirrors the NPC's ComputeEngagementPoint for debugging
-    private static Vector2 ComputeEngagementPointDebug(Rectangle playerBounds, Rectangle npcBounds, float desiredStandOff)
-    {
-        Vector2 playerCenter = new Vector2(playerBounds.Left + playerBounds.Width / 2f, playerBounds.Top + playerBounds.Height / 2f);
-        Vector2 selfCenter = new Vector2(npcBounds.Left + npcBounds.Width / 2f, npcBounds.Top + npcBounds.Height / 2f);
-
-        float radius = MathF.Max(10f, desiredStandOff);
-
-        // FIXED: Calculate angle from PLAYER to NPC (where NPC should be relative to player)
-        // This ensures the engagement point is always positioned around the player center
-        float baseAngle = MathF.Atan2(selfCenter.Y - playerCenter.Y, selfCenter.X - playerCenter.X);
-
-        // Return the engagement point around the player center at the desired standoff distance
-        return playerCenter + new Vector2(MathF.Cos(baseAngle), MathF.Sin(baseAngle)) * radius;
-    }
-
-    // Remove or comment out the verbose console logging from NPC.cs
-    // The logging in Update method should be removed or wrapped in preprocessor directives
-
-    /// <summary>
-    /// Draws both full sprite bounds (yellow) and analyzed content bounds (green) for debugging
-    /// </summary>
-    public void DrawSpriteAnalysisBounds(SpriteBatch spriteBatch, Character character, Color contentColor, Color fullColor)
-    {
-        if (character?.Sprite == null) return;
-
-        // Draw full sprite bounds
-        var fullBounds = new Rectangle(
-            (int)character.Position.X,
-            (int)character.Position.Y,
-            (int)character.Sprite.Width,
-            (int)character.Sprite.Height
-        );
-        DrawRect(spriteBatch, fullBounds, fullColor);
-
-        // Draw the actual content bounds (tight fit)
-        Rectangle contentBounds = character.GetTightSpriteBounds();
-        DrawRect(spriteBatch, contentBounds, contentColor);
-
-        // Draw center points
-        Vector2 fullCenter = new Vector2(fullBounds.Center.X, fullBounds.Center.Y);
-        Vector2 contentCenter = new Vector2(contentBounds.Center.X, contentBounds.Center.Y);
-
-        // Mark the centers with small crosses
-        int crossSize = 4;
-        DrawLine(spriteBatch, _whitePixel,
-            fullCenter - new Vector2(crossSize, 0),
-            fullCenter + new Vector2(crossSize, 0),
-            fullColor);
-        DrawLine(spriteBatch, _whitePixel,
-            fullCenter - new Vector2(0, crossSize),
-            fullCenter + new Vector2(0, crossSize),
-            fullColor);
-
-        DrawLine(spriteBatch, _whitePixel,
-            contentCenter - new Vector2(crossSize, 0),
-            contentCenter + new Vector2(crossSize, 0),
-            contentColor);
-        DrawLine(spriteBatch, _whitePixel,
-            contentCenter - new Vector2(0, crossSize),
-            contentCenter + new Vector2(0, crossSize),
-            contentColor);
-    }
+    #endregion
 }

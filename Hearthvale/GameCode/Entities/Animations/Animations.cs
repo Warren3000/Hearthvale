@@ -45,8 +45,7 @@ namespace Hearthvale.GameCode.Entities.Animations
                 _wasMoving = isMoving;
             }
 
-            // Always advance frames once per frame.
-            sprite.Update(gameTime);
+            // The sprite's Update method is now called once externally to prevent double-updates.
         }
 
         public void Reset()

@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Hearthvale.GameCode.Utils;
 using System;
 
 namespace Hearthvale.GameCode.Entities.Components
@@ -23,7 +24,13 @@ namespace Hearthvale.GameCode.Entities.Components
             Color originalColor = _character.Sprite.Color;
             ApplyVisualEffects();
 
-            Vector2 characterCenter = _character.Position + new Vector2(_character.Sprite.Width / 2f, _character.Sprite.Height / 1.4f);
+            // Calculate character center based on the actual tight bounds for accurate weapon positioning
+            Rectangle tightBounds = _character.GetTightSpriteBounds();
+            Vector2 characterCenter = new Vector2(
+                tightBounds.Left + tightBounds.Width / 2f,
+                tightBounds.Top + tightBounds.Height / 2f
+            );
+            
             bool drawWeaponBehind = _character.GetShouldDrawWeaponBehind();
 
             if (drawWeaponBehind)
@@ -37,15 +44,25 @@ namespace Hearthvale.GameCode.Entities.Components
 
         private void DrawCharacter(SpriteBatch spriteBatch)
         {
-            _character.Sprite.Draw(spriteBatch, _character.Position);
-        }
+            if (_character.Sprite == null || (_character.IsDefeated && _character.HealthComponent.IsReadyToRemove))
+                return;
 
+            // Draw the sprite using its internal position
+            _character.Sprite.Draw(spriteBatch);
+        }
+        public void DrawWeapon(SpriteBatch spriteBatch, Vector2 characterCenter, bool drawBehind)
+        {
+            if (_character.EquippedWeapon == null) return;
+
+            // The characterCenter should already be calculated from tight bounds in CharacterRenderComponent
+            _character.EquippedWeapon.Draw(spriteBatch, characterCenter);
+        }
         private void DrawWeaponBehind(SpriteBatch spriteBatch, Vector2 characterCenter)
         {
             // Also update this method to use the public accessor
             if (_character.GetShouldDrawWeaponBehind() && _character.EquippedWeapon != null)
             {
-                _character.WeaponComponent.DrawWeapon(spriteBatch, characterCenter, true);
+                DrawWeapon(spriteBatch, characterCenter, true);
             }
         }
 
@@ -54,7 +71,7 @@ namespace Hearthvale.GameCode.Entities.Components
             // And this method too
             if (!_character.GetShouldDrawWeaponBehind() && _character.EquippedWeapon != null)
             {
-                _character.WeaponComponent.DrawWeaponInFront(spriteBatch, characterCenter);
+                DrawWeapon(spriteBatch, characterCenter, false);
             }
         }
 

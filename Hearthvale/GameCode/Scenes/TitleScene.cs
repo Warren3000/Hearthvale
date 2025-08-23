@@ -85,7 +85,6 @@ public class TitleScene : Scene
     {
         // LoadContent is called during base.Initialize().
         base.Initialize();
-
         // While on the title screen, we can enable exit on escape so the player
         // can close the game by pressing the escape key.
         Core.ExitOnEscape = true;
@@ -112,6 +111,7 @@ public class TitleScene : Scene
 
     public override void LoadContent()
     {
+        UIManagerInitializer.InitializeForTitleScreen();
         // Load the font for the standard text.
         _font = Core.Content.Load<SpriteFont>("fonts/04B_30");
 

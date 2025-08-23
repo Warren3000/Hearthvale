@@ -9,31 +9,25 @@ namespace Hearthvale.GameCode.Collision
     /// <summary>
     /// Collision actor for the player character
     /// </summary>
-    public class PlayerCollisionActor : ICollisionActor
+    public class PlayerCollisionActor(Character player) : ICollisionActor
     {
         // Make bounds property dynamically return orientation-aware bounds
         public IShapeF Bounds 
         { 
             get 
             {
-                // Always return current orientation-aware bounds
-                Rectangle orientedBounds = Player.GetOrientationAwareBounds();
-                return new RectangleF(orientedBounds.X, orientedBounds.Y, 
-                                     orientedBounds.Width, orientedBounds.Height);
+                // Always return current tight sprite bounds
+                Rectangle tightBounds = Player.GetTightSpriteBounds();
+                return new RectangleF(tightBounds.X, tightBounds.Y, 
+                                     tightBounds.Width, tightBounds.Height);
             }
             set 
             {
                 // Setter required by interface, but we ignore it since we use dynamic bounds
             } 
         }
-        
-        public Character Player { get; }
 
-        public PlayerCollisionActor(Character player)
-        {
-            Player = player;
-            // No need to store initial bounds - we'll get them dynamically
-        }
+        public Character Player { get; } = player;
 
         public void OnCollision(CollisionEventArgs collisionInfo)
         {
@@ -46,6 +40,11 @@ namespace Hearthvale.GameCode.Collision
                     CombatManager.Instance?.HandleProjectilePlayerCollision(projectileActor.Projectile, Player);
                 }
             }
+        }
+        public RectangleF CalculateInitialBounds()
+        {
+            // The projectile's bounds are set on creation.
+            return (RectangleF)Player.Bounds;
         }
     }
 }

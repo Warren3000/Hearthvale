@@ -1,10 +1,10 @@
-﻿using Microsoft.Xna.Framework;
-using MonoGame.Extended.Tiled;
+﻿using Hearthvale.GameCode.Entities.NPCs;
 using Hearthvale.GameCode.Managers;
 using Hearthvale.GameCode.Utils;
+using Microsoft.Xna.Framework;
+using MonoGameLibrary.Graphics;
 using System.Collections.Generic;
 using System.Linq;
-using MonoGameLibrary.Graphics;
 
 namespace Hearthvale.GameCode.Entities.Components
 {
@@ -15,6 +15,8 @@ namespace Hearthvale.GameCode.Entities.Components
         private float _knockbackTimer;
         private const float KnockbackDuration = 0.2f;
         private const float BounceDamping = 0.5f;
+        private IEnumerable<Rectangle> _currentObstacles;
+        private IEnumerable<NPC> _currentNpcs;
 
         public Tilemap Tilemap { get; set; }
         public bool IsKnockedBack => _knockbackTimer > 0;
@@ -33,18 +35,27 @@ namespace Hearthvale.GameCode.Entities.Components
         {
             return _knockbackVelocity;
         }
-
+        public void UpdateObstacles(IEnumerable<Rectangle> obstacleRects, IEnumerable<NPC> npcs)
+        {
+            _currentObstacles = obstacleRects;
+            _currentNpcs = npcs;
+        }
         public void UpdateKnockback(GameTime gameTime)
         {
             if (_knockbackTimer > 0)
             {
                 float elapsed = (float)gameTime.ElapsedGameTime.TotalSeconds;
                 _knockbackTimer -= elapsed;
+
+                // Apply velocity damping over time for more natural feel
+                float dampingFactor = 1.0f - (elapsed * 2.0f); // Adjust multiplier as needed
+                _knockbackVelocity *= MathHelper.Clamp(dampingFactor, 0.1f, 1.0f);
+
                 Vector2 nextPosition = _character.Position + _knockbackVelocity * elapsed;
 
                 if (ValidatePosition(nextPosition))
                 {
-                    if (!TryMoveWithWallSliding(nextPosition, elapsed))
+                    if (!TryMoveWithWallSliding(nextPosition))
                     {
                         _knockbackVelocity = Vector2.Zero;
                         _knockbackTimer = 0;
@@ -54,10 +65,25 @@ namespace Hearthvale.GameCode.Entities.Components
                 if (_knockbackTimer <= 0)
                 {
                     _knockbackVelocity = Vector2.Zero;
+                    _knockbackTimer = 0;
                 }
             }
         }
+        // In ApplyBounceEffect method, add this check:
+        private void ApplyBounceEffect()
+        {
+            if (_knockbackTimer > 0)
+            {
+                _knockbackVelocity = -_knockbackVelocity * BounceDamping;
 
+                // Stop bouncing if velocity is too small
+                if (_knockbackVelocity.LengthSquared() < 25f) // Increased from 10f
+                {
+                    _knockbackVelocity = Vector2.Zero;
+                    _knockbackTimer = 0;
+                }
+            }
+        }
         private bool ValidatePosition(Vector2 position)
         {
             if (float.IsNaN(position.X) || float.IsNaN(position.Y))
@@ -70,7 +96,21 @@ namespace Hearthvale.GameCode.Entities.Components
             return true;
         }
 
-        private bool TryMoveWithWallSliding(Vector2 nextPosition, float elapsed)
+        public bool TryMove(Vector2 nextPosition, IEnumerable<Character> otherCharacters)
+        {
+            // Use Bounds for other characters instead of GetTightSpriteBounds
+            var originalObstacles = _character.GetObstacleRectangles();
+            _character.SetObstacleRectangles(otherCharacters.Select(c => c.Bounds));
+
+            bool success = TryMoveWithWallSliding(nextPosition);
+
+            // Restore the original obstacles
+            _character.SetObstacleRectangles(originalObstacles);
+
+            return success;
+        }
+
+        private bool TryMoveWithWallSliding(Vector2 nextPosition)
         {
             Vector2 currentPos = _character.Position;
             Vector2 movement = nextPosition - currentPos;
@@ -92,14 +132,18 @@ namespace Hearthvale.GameCode.Entities.Components
                 return true;
             }
 
-            // Apply bounce effect
-            ApplyBounceEffect();
+            // Apply bounce effect if being knocked back
+            if (IsKnockedBack)
+            {
+                ApplyBounceEffect();
+            }
+            
             return FindSafePosition(currentPos, nextPosition);
         }
 
         private bool TrySlideHorizontally(Vector2 nextPosition, Vector2 currentPos)
         {
-            Vector2 horizontalTarget = new Vector2(nextPosition.X, currentPos.Y);
+            Vector2 horizontalTarget = new(nextPosition.X, currentPos.Y);
             Rectangle horizontalBounds = GetBoundsAtPosition(horizontalTarget);
             if (!IsPositionBlocked(horizontalBounds))
             {
@@ -128,20 +172,27 @@ namespace Hearthvale.GameCode.Entities.Components
             }
             return false;
         }
-
-        private void ApplyBounceEffect()
+        public IEnumerable<Rectangle> GetObstacleRectangles()
         {
-            if (_knockbackTimer > 0)
+            var obstacles = new List<Rectangle>();
+
+            // Add static obstacles
+            if (_currentObstacles != null)
             {
-                _knockbackVelocity = -_knockbackVelocity * BounceDamping;
-                if (_knockbackVelocity.LengthSquared() < 10f)
+                obstacles.AddRange(_currentObstacles);
+            }
+
+            // Add NPC bounds (except defeated ones)
+            if (_currentNpcs != null)
+            {
+                foreach (var npc in _currentNpcs.Where(n => !n.IsDefeated))
                 {
-                    _knockbackVelocity = Vector2.Zero;
-                    _knockbackTimer = 0;
+                    obstacles.Add(npc.Bounds);
                 }
             }
-        }
 
+            return obstacles;
+        }
         private bool FindSafePosition(Vector2 currentPos, Vector2 targetPos)
         {
             Vector2 direction = targetPos - currentPos;
@@ -188,21 +239,21 @@ namespace Hearthvale.GameCode.Entities.Components
             return false;
         }
 
-        private Rectangle GetBoundsAtPosition(Vector2 position)
+        public Rectangle GetBoundsAtPosition(Vector2 position)
         {
-            // Get orientation-aware bounds using sprite analyzer
-            Rectangle orientationAwareBounds = _character.GetOrientationAwareBounds();
-
-            // Calculate the offset between logical position and content bounds
-            int offsetX = orientationAwareBounds.Left - (int)_character.Position.X;
-            int offsetY = orientationAwareBounds.Top - (int)_character.Position.Y;
-
-            // Apply those same offsets to the new position
+            // Use the character's Bounds property directly
+            Rectangle currentBounds = _character.Bounds;
+            
+            // Calculate the offset between logical position and bounds
+            int offsetX = currentBounds.Left - (int)_character.Position.X;
+            int offsetY = currentBounds.Top - (int)_character.Position.Y;
+            
+            // Apply the same offsets to the new position
             return new Rectangle(
                 (int)position.X + offsetX,
                 (int)position.Y + offsetY,
-                orientationAwareBounds.Width,
-                orientationAwareBounds.Height
+                currentBounds.Width,
+                currentBounds.Height
             );
         }
 
@@ -211,7 +262,7 @@ namespace Hearthvale.GameCode.Entities.Components
             return CheckWallCollision(bounds) || CheckObstacleCollision(bounds);
         }
 
-        private bool CheckWallCollision(Rectangle bounds)
+        public bool CheckWallCollision(Rectangle bounds)
         {
             if (Tilemap == null || TilesetManager.Instance.WallTileset == null)
                 return false;

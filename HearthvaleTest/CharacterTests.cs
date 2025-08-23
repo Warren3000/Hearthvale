@@ -4,7 +4,7 @@ using Xunit;
 using MonoGameLibrary.Graphics; // Add this using directive for AnimatedSprite
 using System.Collections.Generic; // Add this using directive for List<T>
 using Microsoft.Xna.Framework.Graphics;
- // Add this using directive for TextureRegion
+// Add this using directive for TextureRegion
 
 namespace HearthvaleTest
 {
@@ -68,5 +68,13 @@ namespace HearthvaleTest
             this.MovementComponent.SetPosition(pos);
         }
         public override void Flash() { }
+    
+    // Implement the missing abstract method
+        protected override Vector2 GetAttackDirection()
+        {
+            // Return a default direction for testing purposes
+            // You could make this configurable if needed for specific tests
+            return Vector2.UnitX; // Default to facing right (1, 0)
+        }
     }
 }

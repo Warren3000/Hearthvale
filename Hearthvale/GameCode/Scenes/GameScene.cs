@@ -213,8 +213,8 @@ namespace Hearthvale.Scenes
                 movement => _player.Move(
                     movement,
                     new Rectangle(0, 0, _tilemap.Columns * (int)_tilemap.TileWidth, _tilemap.Rows * (int)_tilemap.TileHeight),
-                    _player.Sprite.Width,
-                    _player.Sprite.Height,
+                    _player.Bounds.Width,  // Use Bounds instead of Sprite
+                    _player.Bounds.Height, // Use Bounds instead of Sprite
                     _npcManager.Npcs,
                     allObstacles ?? new List<Rectangle>()
                 ),
@@ -332,7 +332,10 @@ namespace Hearthvale.Scenes
             UpdateViewport(Core.GraphicsDevice.Viewport);
             
             // Camera handling
-            Vector2 playerCenter = _player.Position + new Vector2(_player.Sprite.Width / 2f, _player.Sprite.Height / 2f);
+            Vector2 playerCenter = new Vector2(
+                _player.Position.X + _player.Bounds.Width / 2f, 
+                _player.Position.Y + _player.Bounds.Height / 2f
+            );
             CameraManager.Instance.Camera2D.FollowSmooth(playerCenter, 0.1f);
             
             // Clamp camera to map bounds
@@ -369,13 +372,22 @@ namespace Hearthvale.Scenes
 
         public override void DrawWorld(GameTime gameTime)
         {
-            // Test drawing - draw a simple rectangle at world origin to verify camera is working
             #if DEBUG
-            Core.SpriteBatch.Draw(GameUIManager.Instance.WhitePixel, 
-                new Rectangle(0, 0, 100, 100), Color.Red);
-            
-            //Core.SpriteBatch.Draw(GameUIManager.Instance.WhitePixel, 
-            //    new Rectangle((int)_player.Position.X, (int)_player.Position.Y, 50, 50), Color.Green);
+            // Debug: Draw player position
+            if (_player != null)
+            {
+                //System.Diagnostics.Debug.WriteLine($"Player Position: {_player.Position}, Bounds: {_player.Bounds}");
+                Core.SpriteBatch.Draw(GameUIManager.Instance.WhitePixel, 
+                    new Rectangle((int)_player.Position.X, (int)_player.Position.Y, 50, 50), Color.Green);
+            }
+
+            // Debug: Draw NPC positions
+            foreach (var npc in _npcManager.Npcs.Take(3)) // Only first 3 to avoid spam
+            {
+                //System.Diagnostics.Debug.WriteLine($"NPC {npc.Name} Position: {npc.Position}, Bounds: {npc.Bounds}");
+                Core.SpriteBatch.Draw(GameUIManager.Instance.WhitePixel, 
+                    new Rectangle((int)npc.Position.X, (int)npc.Position.Y, 50, 50), Color.Blue);
+            }
             #endif
 
             // Draw procedural tilemap
@@ -393,7 +405,9 @@ namespace Hearthvale.Scenes
     // Draw debug overlays that should follow the camera
     GameUIManager.Instance.DrawDungeonElementCollisionBoxes(Core.SpriteBatch, DungeonManager.Instance.GetAllElements(), CameraManager.Instance.GetViewMatrix());
     GameUIManager.Instance.DrawTileCoordinatesOverlay(Core.SpriteBatch, _tilemap);
-    DebugManager.Instance.Draw(Core.SpriteBatch, _player, _npcManager.Npcs, DungeonManager.Instance.GetAllElements(), CameraManager.Instance.GetViewMatrix());
+    
+    // UPDATED: Pass the debug font to enable text rendering
+    DebugManager.Instance.Draw(Core.SpriteBatch, _player, _npcManager.Npcs, DungeonManager.Instance.GetAllElements(), CameraManager.Instance.GetViewMatrix(), _debugFont);
 }
 
 #if DEBUG
@@ -406,7 +420,7 @@ private void DebugDrawWeaponProbe()
     if (weapon == null) { System.Diagnostics.Debug.WriteLine("[Probe] No equipped weapon."); return; }
 
     // The "center" supplied to Weapon.Draw
-    Vector2 characterCenter = _player.Position + new Vector2(_player.Sprite.Width / 2f, _player.Sprite.Height / 1.4f);
+    Vector2 characterCenter = _player.Position + new Vector2(_player.Bounds.Width / 2f, _player.Bounds.Height / 1.4f);
 
     // 1) Mark the characterCenter with a small cross
     Core.SpriteBatch.Draw(white, new Rectangle((int)characterCenter.X - 2, (int)characterCenter.Y - 2, 5, 1), Color.Magenta);

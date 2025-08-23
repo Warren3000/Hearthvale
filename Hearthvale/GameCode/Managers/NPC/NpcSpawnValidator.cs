@@ -44,26 +44,32 @@ namespace Hearthvale.GameCode.Managers
             minDistanceFromPlayer ??= _defaultMinDistanceFromPlayer;
             minDistanceBetweenNpcs ??= _defaultMinDistanceBetweenNpcs;
 
-            // Check distance from player
-            if (player != null && Vector2.Distance(position, player.Position) < minDistanceFromPlayer.Value)
-                return false;
+            // Check distance from player using Bounds center
+            if (player != null)
+            {
+                Vector2 playerCenter = new Vector2(player.Bounds.Center.X, player.Bounds.Center.Y);
+                Vector2 spawnCenter = new Vector2(position.X + 16, position.Y + 16); // Assume 32x32 NPC
+                if (Vector2.Distance(spawnCenter, playerCenter) < minDistanceFromPlayer.Value)
+                    return false;
+            }
 
-            // Check distance from other NPCs
+            // Check distance from other NPCs using Bounds center
             if (existingNpcs != null)
             {
+                Vector2 spawnCenter = new Vector2(position.X + 16, position.Y + 16);
                 foreach (var npc in existingNpcs)
                 {
-                    if (Vector2.Distance(position, npc.Position) < minDistanceBetweenNpcs.Value)
+                    Vector2 npcCenter = new Vector2(npc.Bounds.Center.X, npc.Bounds.Center.Y);
+                    if (Vector2.Distance(spawnCenter, npcCenter) < minDistanceBetweenNpcs.Value)
                         return false;
                 }
             }
 
-            // Check if position is within bounds
+            // Rest of the validation logic remains the same
             var validPosition = GetValidSpawnPosition(position);
             if (validPosition != position)
                 position = validPosition;
 
-            // Check collision
             var npcBounds = CreateNpcBounds(position);
             return !_collisionManager.IsPositionBlocked(npcBounds);
         }

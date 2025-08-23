@@ -1,62 +1,83 @@
 ﻿using Hearthvale.GameCode.Utils;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using MonoGameLibrary.Graphics;
 
 namespace Hearthvale.GameCode.Entities
 {
     public static class CharacterHitboxExtensions
     {
         // Tight AABB in world space from current sprite frame's opaque pixels
-        public static Rectangle GetTightSpriteBounds(this Character character, byte alphaThreshold = 8)
+        public static Rectangle GetTightSpriteBounds(this Character character, byte alphaThreshold = 25)
         {
             var sprite = character?.Sprite;
-            var region = sprite?.Region;
             if (sprite == null)
                 return Rectangle.Empty;
 
-            // 1) Region-local tight bounds from non-alpha pixels; fallback to full region if missing
-            Rectangle localOpaque;
-            if (region == null || !SpriteBounds.TryGetOpaqueBounds(region, alphaThreshold, out localOpaque))
+            // Get the actual position where the sprite is rendered
+            Vector2 actualPosition = character.Position;
+            
+            // Use SpriteAnalyzer to get the content bounds
+            Rectangle contentBounds = Rectangle.Empty;
+            if (sprite.Region?.Texture != null)
             {
-                int w = region?.Width ?? (int)sprite.Width;
-                int h = region?.Height ?? (int)sprite.Height;
-                localOpaque = new Rectangle(0, 0, w, h);
+                contentBounds = SpriteAnalyzer.GetContentBounds(
+                    sprite.Region.Texture,
+                    sprite.Region.SourceRectangle
+                );
+            }
+            
+            // If we couldn't analyze the sprite, fall back to full sprite bounds
+            if (contentBounds.IsEmpty)
+            {
+                int w = sprite.Region?.Width ?? (int)sprite.Width;
+                int h = sprite.Region?.Height ?? (int)sprite.Height;
+                contentBounds = new Rectangle(0, 0, w, h);
             }
 
-            // 2) Convert region-local rectangle to world space using the same draw transform:
-            //    world = Position + (local - Origin) * Scale, honoring SpriteEffects flips.
+            // Apply scale to the content bounds
             var scale = sprite.Scale;
-            var origin = sprite.Origin;
-            var pos = sprite.Position;
+            int scaledWidth = (int)(contentBounds.Width * scale.X);
+            int scaledHeight = (int)(contentBounds.Height * scale.Y);
+
+            // Get sprite origin - this is the pivot point for rendering
+            Vector2 origin = sprite.Origin;
+            
+            // Calculate the world position, accounting for sprite effects and origin
             var effects = sprite.Effects;
-
             bool flipX = (effects & SpriteEffects.FlipHorizontally) != 0;
-            bool flipY = (effects & SpriteEffects.FlipVertically) != 0;
 
-            // Rect edges in region-local pixels
-            float l = localOpaque.Left;
-            float r = localOpaque.Right;
-            float t = localOpaque.Top;
-            float b = localOpaque.Bottom;
+            // The sprite is drawn at position with origin as the pivot
+            // So the top-left of the sprite is at: position - origin
+            float spriteTopLeftX = actualPosition.X - (origin.X * scale.X);
+            float spriteTopLeftY = actualPosition.Y - (origin.Y * scale.Y);
 
-            // Map X
-            float x0 = flipX ? pos.X + (origin.X - r) * scale.X
-                             : pos.X + (l - origin.X) * scale.X;
-            float x1 = flipX ? pos.X + (origin.X - l) * scale.X
-                             : pos.X + (r - origin.X) * scale.X;
+            // Now calculate where the content bounds are within the sprite
+            float worldX, worldY;
+            
+            if (flipX)
+            {
+                // When flipped horizontally, content is mirrored around the sprite center
+                float fullSpriteWidth = (sprite.Region?.Width ?? sprite.Width) * scale.X;
+                
+                // Calculate the mirrored position of the content
+                float mirroredContentX = (sprite.Region?.Width ?? sprite.Width) - contentBounds.Right;
+                worldX = spriteTopLeftX + (mirroredContentX * scale.X);
+                worldY = spriteTopLeftY + (contentBounds.Y * scale.Y);
+            }
+            else
+            {
+                // Normal positioning - content bounds relative to sprite top-left
+                worldX = spriteTopLeftX + (contentBounds.X * scale.X);
+                worldY = spriteTopLeftY + (contentBounds.Y * scale.Y);
+            }
 
-            // Map Y
-            float y0 = flipY ? pos.Y + (origin.Y - b) * scale.Y
-                             : pos.Y + (t - origin.Y) * scale.Y;
-            float y1 = flipY ? pos.Y + (origin.Y - t) * scale.Y
-                             : pos.Y + (b - origin.Y) * scale.Y;
-
-            int x = (int)System.Math.Floor(System.Math.Min(x0, x1));
-            int y = (int)System.Math.Floor(System.Math.Min(y0, y1));
-            int wWorld = (int)System.Math.Ceiling(System.Math.Abs(x1 - x0));
-            int hWorld = (int)System.Math.Ceiling(System.Math.Abs(y1 - y0));
-
-            return new Rectangle(x, y, wWorld, hWorld);
+            return new Rectangle(
+                (int)worldX,
+                (int)worldY,
+                scaledWidth,
+                scaledHeight
+            );
         }
     }
 }

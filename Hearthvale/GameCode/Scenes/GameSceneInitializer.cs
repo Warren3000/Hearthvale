@@ -55,8 +55,8 @@ namespace Hearthvale.Scenes
                 movePlayerCallback: movement => player.Move(
                 movement,
                 new Rectangle(0, 0, tilemap.Columns * (int)tilemap.TileWidth, tilemap.Rows * (int)tilemap.TileHeight),
-                player.Sprite.Width,
-                player.Sprite.Height,
+                player.Bounds.Width,
+                player.Bounds.Height,
                 npcManager.Npcs,
                 allObstacles
             ),
@@ -91,6 +91,7 @@ namespace Hearthvale.Scenes
             var whitePixel = new Texture2D(Core.GraphicsDevice, 1, 1);
             whitePixel.SetData(new[] { Color.White });
             DebugManager.Initialize(whitePixel);
+            
 
             // Initialize DataManager
             DataManager.Initialize();

@@ -10,6 +10,7 @@ using Xunit;
 using System.Collections.Generic;
 using System.Linq;
 using Hearthvale.GameCode.UI;
+using System;
 
 namespace HearthvaleTest
 {
@@ -192,7 +193,6 @@ namespace HearthvaleTest
             var position = Vector2.Zero;
             var origin = Vector2.Zero;
             ScoreManager.Initialize(dummyFont, position, origin);
-            var camera = new Camera2D(graphicsDevice.Viewport);
             CombatEffectsManager.Initialize();
 
             // Create dummy sound effects for testing

@@ -10,7 +10,7 @@ using System.Diagnostics;
 using Hearthvale.GameCode.Utils;
 using Hearthvale.GameCode.Entities.Players;
 
-namespace Hearthvale.GameCode.Entities.Players
+namespace Hearthvale.GameCode.Entities.Components
 {
     public class PlayerCombatComponent
     {
@@ -44,23 +44,15 @@ namespace Hearthvale.GameCode.Entities.Players
                 }
             }
 
+            // Set weapon orbit offset based on movement
             if (_player.EquippedWeapon != null)
             {
-                if (!IsAttacking)
-                {
-                    // Keep weapon rotation synced to player facing when idle
-                    CardinalDirection facing = _player.MovementComponent.FacingDirection;
-                    _player.EquippedWeapon.Rotation = facing.ToRotation();
-                }
-
-                // Use visual center instead of geometric width/height center
-                Vector2 playerCenter = _player.GetVisualCenter();
                 Vector2 orbitOffset = _player.MovementComponent.LastMovementVector * _player.WeaponOrbitRadius;
-                _player.EquippedWeapon.Offset = orbitOffset + _player.EquippedWeapon.ManualOffset;
-                _player.EquippedWeapon.Position = playerCenter + _player.EquippedWeapon.Offset;
+                _player.EquippedWeapon.Offset = orbitOffset;
             }
 
-            _player.EquippedWeapon?.Update(gameTime);
+            // Weapon position/rotation update is now handled by Player.Update() -> Character.UpdateWeapon()
+            // Remove any weapon rotation setting code here
 
             if (_player.EquippedWeapon?.IsSlashing == true)
             {
@@ -73,14 +65,22 @@ namespace Hearthvale.GameCode.Entities.Players
                     var npcRect = npc.Bounds;
                     var corners = new[]
                     {
-                        new Vector2(npcRect.Left, npcRect.Top),
-                        new Vector2(npcRect.Right, npcRect.Top),
-                        new Vector2(npcRect.Right, npcRect.Bottom),
-                        new Vector2(npcRect.Left, npcRect.Bottom)
-                    };
+                new Vector2(npcRect.Left, npcRect.Top),
+                new Vector2(npcRect.Right, npcRect.Top),
+                new Vector2(npcRect.Right, npcRect.Bottom),
+                new Vector2(npcRect.Left, npcRect.Bottom)
+            };
                     if (corners.Any(corner => GeometryUtils.PointInPolygon(corner, hitPoly)))
                     {
-                        Vector2 direction = Vector2.Normalize(npc.Position - _player.Position);
+                        Vector2 direction = npc.Position - _player.Position;
+                        if (direction.LengthSquared() > 0)
+                        {
+                            direction.Normalize();
+                        }
+                        else
+                        {
+                            direction = Vector2.UnitX; // Fallback direction
+                        }
                         float knockbackStrength = 150f;
                         Vector2 knockback = direction * knockbackStrength;
 
@@ -100,18 +100,7 @@ namespace Hearthvale.GameCode.Entities.Players
             if (_player.EquippedWeapon != null)
             {
                 CardinalDirection facing = _player.MovementComponent.FacingDirection;
-                _player.EquippedWeapon.Rotation = facing.ToRotation();
-
-                bool swingClockwise = facing switch
-                {
-                    CardinalDirection.North => true,
-                    CardinalDirection.East => true,
-                    CardinalDirection.South => false,
-                    CardinalDirection.West => false,
-                    _ => true
-                };
-
-                _player.EquippedWeapon.StartSwing(swingClockwise);
+                _player.WeaponComponent.StartSwing(facing);
             }
 
             _player.StartAttack();

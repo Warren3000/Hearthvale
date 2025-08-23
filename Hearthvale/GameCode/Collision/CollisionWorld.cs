@@ -17,8 +17,8 @@ namespace Hearthvale.GameCode.Collision
     public class CollisionWorld : IDisposable
     {
         private readonly World _physicsWorld;
-        private readonly Dictionary<Body, ICollisionActor> _bodyToActor = new();
-        private readonly Dictionary<ICollisionActor, Body> _actorToBody = new();
+        private readonly Dictionary<Body, ICollisionActor> _bodyToActor = [];
+        private readonly Dictionary<ICollisionActor, Body> _actorToBody = [];
         private bool _disposed = false;
 
         public IEnumerable<ICollisionActor> Actors => _bodyToActor.Values;
@@ -166,9 +166,23 @@ namespace Hearthvale.GameCode.Collision
 
         private Body CreateBodyFromActor(ICollisionActor actor)
         {
+            // Ensure the actor has valid bounds before creating a body.
+            if (actor.Bounds == null || actor.Bounds.BoundingRectangle.IsEmpty)
+            {
+                actor.Bounds = actor.CalculateInitialBounds();
+            }
+
             if (actor.Bounds is RectangleF rect)
             {
-                AetherVector2 position = ConvertDisplayToSim(new XnaVector2(rect.X + rect.Width / 2, rect.Y + rect.Height / 2));
+                // If the bounds are still empty after calculation, we cannot create a body.
+                if (rect.Width == 0 || rect.Height == 0)
+                {
+                    // Log this issue if you have a logging system.
+                    // For now, we'll return null to prevent a crash.
+                    return null;
+                }
+
+                AetherVector2 position = ConvertDisplayToSim(new XnaVector2(rect.Center.X, rect.Center.Y));
                 AetherVector2 size = ConvertDisplayToSim(new XnaVector2(rect.Width, rect.Height));
 
                 Body body = _physicsWorld.CreateRectangle(size.X, size.Y, 1f, position);
@@ -192,7 +206,12 @@ namespace Hearthvale.GameCode.Collision
             else
             {
                 var boundingRect = actor.Bounds.BoundingRectangle;
-                AetherVector2 position = ConvertDisplayToSim(new XnaVector2(boundingRect.X + boundingRect.Width / 2, boundingRect.Y + boundingRect.Height / 2));
+                if (boundingRect.Width == 0 || boundingRect.Height == 0)
+                {
+                    return null;
+                }
+
+                AetherVector2 position = ConvertDisplayToSim(new XnaVector2(boundingRect.Center.X, boundingRect.Center.Y));
                 AetherVector2 size = ConvertDisplayToSim(new XnaVector2(boundingRect.Width, boundingRect.Height));
 
                 Body body = _physicsWorld.CreateRectangle(size.X, size.Y, 1f, position);
@@ -297,6 +316,10 @@ namespace Hearthvale.GameCode.Collision
     {
         IShapeF Bounds { get; set; }
         void OnCollision(CollisionEventArgs collisionInfo);
+        /// <summary>
+        /// Calculates and returns the initial bounds of the actor.
+        /// </summary>
+        RectangleF CalculateInitialBounds();
     }
 
     /// <summary>

@@ -1,5 +1,4 @@
 ﻿using Hearthvale.GameCode.Entities.Interfaces;
-using Hearthvale.GameCode.Entities.Players;
 using Hearthvale.GameCode.Entities.Components;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -20,11 +19,26 @@ public abstract class Character : IDamageable, IMovable, IAnimatable, IDialog
     protected CharacterMovementComponent _movementComponent;
     protected CharacterAnimationComponent _animationComponent;
     protected CharacterRenderComponent _renderComponent;
+    private List<Rectangle> _cachedObstacles = new List<Rectangle>();
 
-    public string DialogText { get; set; } = "Hello, adventurer!";
-
+    public string DialogText { get; set; } = "";
     // Properties - Delegate to components
-    public virtual AnimatedSprite Sprite => _animationComponent?.Sprite;
+    public virtual AnimatedSprite Sprite 
+    { 
+        get 
+        {
+            // Try to get sprite from animation component first (Player path)
+            if (_animationComponent?.Sprite != null)
+                return _animationComponent.Sprite;
+                
+            // For classes with their own animation controllers (NPC path)
+            if (this is INpcAnimationProvider npcProvider)
+                return npcProvider.GetAnimationSprite();
+                
+            return null;
+        }
+        protected set { } // Keep for compatibility
+    }
     public virtual Vector2 Position => _movementComponent?.Position ?? Vector2.Zero;
     public virtual int Health => _healthComponent?.CurrentHealth ?? 0;
     public virtual int MaxHealth => _healthComponent?.MaxHealth ?? 0;
@@ -111,6 +125,7 @@ public abstract class Character : IDamageable, IMovable, IAnimatable, IDialog
     public void UpdateKnockback(GameTime gameTime) => _collisionComponent.UpdateKnockback(gameTime);
     public virtual void SetKnockback(Vector2 velocity) => _collisionComponent.SetKnockback(velocity);
     public virtual Vector2 GetKnockbackVelocity() => _collisionComponent.GetKnockbackVelocity();
+    public virtual Vector2 GetVelocity() => _movementComponent?.GetVelocity() ?? Vector2.Zero;
     public virtual Rectangle Bounds => this.GetTightSpriteBounds();
 
     // Abstract and virtual methods
@@ -120,13 +135,30 @@ public abstract class Character : IDamageable, IMovable, IAnimatable, IDialog
         // Return the last movement vector from the movement component
         return MovementComponent?.LastMovementVector ?? Vector2.Zero;
     }
-    
-    // Update GetAttackDirection to use cardinal directions
-    protected virtual Vector2 GetAttackDirection()
+    /// <summary>
+    /// Updates the equipped weapon's position and rotation based on character state
+    /// </summary>
+    protected virtual void UpdateWeapon(GameTime gameTime)
     {
-        CardinalDirection facing = MovementComponent?.FacingDirection ?? CardinalDirection.South;
-        return facing.ToVector();
+        // Delegate to the weapon component which handles all the logic
+        _weaponComponent?.Update(gameTime, GetWeaponTarget());
     }
+
+    /// <summary>
+    /// Gets the weapon target for aiming. Override in subclasses that need targeting.
+    /// </summary>
+    protected virtual Vector2? GetWeaponTarget()
+    {
+        // Base implementation returns null (no target)
+        // NPCs will override this to return player position
+        return null;
+    }
+
+    // Update GetAttackDirection to use cardinal directions
+    /// <summary>
+    /// Gets the attack direction for this character. Override in subclasses.
+    /// </summary>
+    protected abstract Vector2 GetAttackDirection();
 
     // Update ShouldDrawWeaponBehind to check for North direction
     public bool GetShouldDrawWeaponBehind()
@@ -147,24 +179,21 @@ public abstract class Character : IDamageable, IMovable, IAnimatable, IDialog
         if (Sprite?.Region?.Texture == null)
             return GetFallbackPolygonBounds();
 
-        // Get the orientation-aware content bounds
-        Rectangle contentBounds = this.GetOrientationAwareBounds();
-
         // Create a polygon from the analyzed bounds
         var polygon = new List<Vector2>
     {
-        new Vector2(contentBounds.Left, contentBounds.Top),
-        new Vector2(contentBounds.Right, contentBounds.Top),
-        new Vector2(contentBounds.Right, contentBounds.Bottom),
-        new Vector2(contentBounds.Left, contentBounds.Bottom)
+        new Vector2(Bounds.Left, Bounds.Top),
+        new Vector2(Bounds.Right, Bounds.Top),
+        new Vector2(Bounds.Right, Bounds.Bottom),
+        new Vector2(Bounds.Left, Bounds.Bottom)
     };
 
         // Apply rotation if the sprite is rotated
         if (Sprite.Rotation != 0)
         {
             Vector2 center = new Vector2(
-                contentBounds.Left + contentBounds.Width / 2,
-                contentBounds.Top + contentBounds.Height / 2
+                Bounds.Left + Bounds.Width / 2,
+                Bounds.Top + Bounds.Height / 2
             );
             polygon = RotatePolygon(polygon, Sprite.Rotation, center);
         }
@@ -259,19 +288,16 @@ public abstract class Character : IDamageable, IMovable, IAnimatable, IDialog
     }
 
     // Collision configuration
-    public void SetTilemap(Tilemap tilemap)
-    {
-        _collisionComponent.Tilemap = tilemap;
-    }
+    public void SetTilemap(Tilemap tilemap) => CollisionComponent.Tilemap = tilemap;
+    public Tilemap GetTilemap() => CollisionComponent.Tilemap;
+    public virtual IEnumerable<Rectangle> GetObstacleRectangles() => _cachedObstacles;
+    public void SetObstacleRectangles(IEnumerable<Rectangle> obstacles) => _cachedObstacles = obstacles.ToList();
 
-    public Tilemap GetTilemap()
+    // Add a separate method for combat hit detection
+    public virtual Rectangle GetCombatBounds()
     {
-        return _collisionComponent.Tilemap;
-    }
-
-    public virtual IEnumerable<Rectangle> GetObstacleRectangles()
-    {
-        return null;
+        // Use tight sprite bounds for combat calculations
+        return this.GetTightSpriteBounds();
     }
 
     // Make this accessible to collision component
@@ -284,38 +310,6 @@ public abstract class Character : IDamageable, IMovable, IAnimatable, IDialog
     protected virtual void InitializeSprite(AnimatedSprite sprite)
     {
         _animationComponent?.SetSprite(sprite);
-    }
-
-    /// <summary>
-    /// Gets the proper hitbox rectangle accounting for sprite orientation
-    /// </summary>
-    public Rectangle GetOrientationAwareBounds()
-    {
-        // Get the current sprite
-        var sprite = this.Sprite;
-        if (sprite == null)
-            return new Rectangle((int)Position.X, (int)Position.Y, 32, 32); // Default fallback
-
-        // Get analyzed content bounds
-        Rectangle contentBounds = this.GetTightSpriteBounds();
-
-        // For right-facing sprites, use the bounds directly
-        if (FacingRight)
-            return contentBounds;
-
-        // For left-facing sprites, we need to mirror the bounds around the sprite's center
-        // Calculate sprite center X position
-        float centerX = Position.X + (sprite.Width / 2f);
-
-        // Calculate new rectangle by flipping around center
-        int newLeft = (int)(2 * centerX - contentBounds.Right);
-
-        return new Rectangle(
-            newLeft,
-            contentBounds.Y,
-            contentBounds.Width,
-            contentBounds.Height
-        );
     }
 }
 
