@@ -38,6 +38,7 @@ public class DebugManager
     public bool ShowDungeonElements { get; set; } = false; // Dungeon element bounds
     public bool ShowUIDebugGrid { get; set; } = false; // UI alignment grid
     public bool ShowTilesetViewer { get; set; } = false; // Tileset viewer
+    public bool ShowDetailedWeaponDebug { get; set; } = false;
     #endregion
 
     #region Performance and Caching
@@ -424,8 +425,14 @@ public class DebugManager
         // Use Bounds center instead of GetTightSpriteBounds
         Vector2 center = new Vector2(character.Bounds.Center.X, character.Bounds.Center.Y);
 
-        // Draw the weapon's current hitbox polygon
-        DrawHitPolygonForWeapon(spriteBatch, _whitePixel, character.EquippedWeapon, center, color);
+        // Draw the weapon's precise hitbox polygon
+        //character.EquippedWeapon.DrawHitPolygon(spriteBatch, _whitePixel, center, color);
+        
+        // Optionally draw the opaque region bounds for debugging hitbox generation
+        if (ShowDetailedWeaponDebug)
+        {
+            character.EquippedWeapon.DrawOpaqueRegionBounds(spriteBatch, _whitePixel, center, Color.Yellow * 0.5f);
+        }
 
         // If the weapon is actively slashing, draw the full swing arc
         if (character.EquippedWeapon.IsSlashing)

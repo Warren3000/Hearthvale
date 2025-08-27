@@ -25,7 +25,6 @@ namespace Hearthvale.GameCode.Utils
 
     public static class WeaponHitboxGenerator
     {
-        // Public API
 
         public static List<Vector2> GenerateBoundingPolygon(Texture2D texture, Rectangle sourceRect, WeaponHitboxOptions options, out Rectangle opaqueBounds)
         {
@@ -72,18 +71,18 @@ namespace Hearthvale.GameCode.Utils
         }
 
         // Debug draw helpers
-        public static void DrawPolygonOutline(SpriteBatch spriteBatch, Texture2D pixel, IReadOnlyList<Vector2> polygon, Vector2 worldOrigin, float rotation, Color color)
-        {
-            if (polygon == null || polygon.Count < 2 || pixel == null) return;
+        //public static void DrawPolygonOutline(SpriteBatch spriteBatch, Texture2D pixel, IReadOnlyList<Vector2> polygon, Vector2 worldOrigin, float rotation, Color color)
+        //{
+        //    if (polygon == null || polygon.Count < 2 || pixel == null) return;
 
-            // transform each local point to world
-            for (int i = 0; i < polygon.Count; i++)
-            {
-                var a = LocalToWorld(polygon[i], worldOrigin, rotation);
-                var b = LocalToWorld(polygon[(i + 1) % polygon.Count], worldOrigin, rotation);
-                DrawLine(spriteBatch, pixel, a, b, color);
-            }
-        }
+        //    // transform each local point to world
+        //    for (int i = 0; i < polygon.Count; i++)
+        //    {
+        //        var a = LocalToWorld(polygon[i], worldOrigin, rotation);
+        //        var b = LocalToWorld(polygon[(i + 1) % polygon.Count], worldOrigin, rotation);
+        //        DrawLine(spriteBatch, pixel, a, b, color);
+        //    }
+        //}
 
         public static void DrawRectangleOutline(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, Color color)
         {
@@ -288,46 +287,46 @@ namespace Hearthvale.GameCode.Utils
         }
 
         // Optional helper: try extract Texture and SourceRect from a TextureRegion via reflection (best-effort).
-        public static bool TryGetRegionData(object textureRegion, out Texture2D texture, out Rectangle sourceRect)
-        {
-            texture = null;
-            sourceRect = Rectangle.Empty;
-            if (textureRegion == null) return false;
+        //public static bool TryGetRegionData(object textureRegion, out Texture2D texture, out Rectangle sourceRect)
+        //{
+        //    texture = null;
+        //    sourceRect = Rectangle.Empty;
+        //    if (textureRegion == null) return false;
 
-            var type = textureRegion.GetType();
+        //    var type = textureRegion.GetType();
 
-            // Common property names to try
-            var texProp = type.GetProperty("Texture") ?? type.GetProperty("AtlasTexture") ?? type.GetProperty("Sheet");
-            if (texProp != null)
-            {
-                texture = texProp.GetValue(textureRegion) as Texture2D;
-            }
+        //    // Common property names to try
+        //    var texProp = type.GetProperty("Texture") ?? type.GetProperty("AtlasTexture") ?? type.GetProperty("Sheet");
+        //    if (texProp != null)
+        //    {
+        //        texture = texProp.GetValue(textureRegion) as Texture2D;
+        //    }
 
-            // Rect-like property names
-            var rectProp = type.GetProperty("Bounds") ?? type.GetProperty("SourceRectangle") ?? type.GetProperty("Region") ?? type.GetProperty("Source");
-            if (rectProp != null)
-            {
-                var val = rectProp.GetValue(textureRegion);
-                if (val is Rectangle r) sourceRect = r;
-            }
-            else
-            {
-                // Some regions store X,Y,Width,Height separately
-                var xProp = type.GetProperty("X") ?? type.GetProperty("Left");
-                var yProp = type.GetProperty("Y") ?? type.GetProperty("Top");
-                var wProp = type.GetProperty("Width");
-                var hProp = type.GetProperty("Height");
-                if (xProp != null && yProp != null && wProp != null && hProp != null)
-                {
-                    int x = Convert.ToInt32(xProp.GetValue(textureRegion));
-                    int y = Convert.ToInt32(yProp.GetValue(textureRegion));
-                    int w = Convert.ToInt32(wProp.GetValue(textureRegion));
-                    int h = Convert.ToInt32(hProp.GetValue(textureRegion));
-                    sourceRect = new Rectangle(x, y, w, h);
-                }
-            }
+        //    // Rect-like property names
+        //    var rectProp = type.GetProperty("Bounds") ?? type.GetProperty("SourceRectangle") ?? type.GetProperty("Region") ?? type.GetProperty("Source");
+        //    if (rectProp != null)
+        //    {
+        //        var val = rectProp.GetValue(textureRegion);
+        //        if (val is Rectangle r) sourceRect = r;
+        //    }
+        //    else
+        //    {
+        //        // Some regions store X,Y,Width,Height separately
+        //        var xProp = type.GetProperty("X") ?? type.GetProperty("Left");
+        //        var yProp = type.GetProperty("Y") ?? type.GetProperty("Top");
+        //        var wProp = type.GetProperty("Width");
+        //        var hProp = type.GetProperty("Height");
+        //        if (xProp != null && yProp != null && wProp != null && hProp != null)
+        //        {
+        //            int x = Convert.ToInt32(xProp.GetValue(textureRegion));
+        //            int y = Convert.ToInt32(yProp.GetValue(textureRegion));
+        //            int w = Convert.ToInt32(wProp.GetValue(textureRegion));
+        //            int h = Convert.ToInt32(hProp.GetValue(textureRegion));
+        //            sourceRect = new Rectangle(x, y, w, h);
+        //        }
+        //    }
 
-            return texture != null && sourceRect.Width > 0 && sourceRect.Height > 0;
-        }
+        //    return texture != null && sourceRect.Width > 0 && sourceRect.Height > 0;
+        //}
     }
 }

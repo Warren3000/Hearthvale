@@ -174,19 +174,16 @@ namespace Hearthvale.GameCode.Entities.Components
                 40
             );
         }
-        
-        /// <summary>
-        /// Gets the weapon's hit polygon for precise combat detection - ONLY used for attack calculations
-        /// </summary>
+
         public List<Vector2> GetCombatHitPolygon()
         {
             if (EquippedWeapon?.IsSlashing != true)
                 return new List<Vector2>(); // Empty when not attacking
 
-            Rectangle tightBounds = _character.GetTightSpriteBounds();
+            // Use the character's center position consistently
             Vector2 characterCenter = new Vector2(
-                tightBounds.Left + tightBounds.Width / 2f,
-                tightBounds.Top + tightBounds.Height / 1.4f
+                _character.Bounds.Center.X,
+                _character.Bounds.Center.Y
             );
 
             return EquippedWeapon.GetTransformedHitPolygon(characterCenter);

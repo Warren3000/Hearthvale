@@ -8,8 +8,8 @@
     <Region name="Dagger-Cold_Steel" x="48" y="0" width="16" height="16" />
     <Region name="Dagger-Fire" x="64" y="0" width="16" height="16" />
     <Region name="Dagger-Gold" x="80" y="0" width="16" height="16" />
-    <Region name="Dagger-Water" x="96" y="0" width="16" height="16" />
-    <Region name="Dagger-Nature" x="128" y="0" width="16" height="16" />
+    <Region name="Dagger-Cold" x="96" y="0" width="16" height="16" />
+    <Region name="Dagger-Nature" x="112" y="0" width="16" height="16" />
   </Regions>
   <Animations>
     <Animation name="Dagger-Copper_Attack" delay="120">

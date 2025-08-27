@@ -35,15 +35,30 @@ public class Weapon
             }
         }
     }
-    public List<Vector2> HitPolygon { get; set; } = new List<Vector2>
+    
+    // Dynamic hitbox generated from texture
+    private List<Vector2> _generatedHitPolygon;
+    private Rectangle _opaqueRegionBounds;
+    
+    public List<Vector2> HitPolygon 
+    { 
+        get => _generatedHitPolygon ?? GetDefaultHitPolygon();
+        private set => _generatedHitPolygon = value;
+    }
+    
+    // Fallback hitbox if generation fails
+    private List<Vector2> GetDefaultHitPolygon()
     {
-        new Vector2(0, 0),      // handle/base
-        new Vector2(0, -20),    // tip
-        new Vector2(8, -16),    // right edge
-        new Vector2(8, -8),     // right base
-        new Vector2(-8, -8),    // left base
-        new Vector2(-8, -16),   // left edge
-    };
+        return new List<Vector2>
+        {
+            new Vector2(0, 0),      // handle/base
+            new Vector2(0, -20),    // tip
+            new Vector2(8, -16),    // right edge
+            new Vector2(8, -8),     // right base
+            new Vector2(-8, -8),    // left base
+            new Vector2(-8, -16),   // left edge
+        };
+    }
 
     // Unified debug/damage visualization parameters
     public const float DefaultHandleOffset = 8;
@@ -137,6 +152,9 @@ public class Weapon
             Length = region.Height * Scale;
             SetAnimation("Idle");
 
+            // Generate hitbox from texture
+            //GenerateHitboxFromTexture(region);
+
             Log.Info(LogArea.Weapon, $"[Weapon] Using atlas region '{_resolvedRegionName}' for '{Name}'.");
         }
         catch (Exception ex)
@@ -144,6 +162,49 @@ public class Weapon
             Log.Error(LogArea.Weapon, $"[Weapon] Exception creating weapon '{name}': {ex.Message}");
         }
     }
+
+    //private void GenerateHitboxFromTexture(TextureRegion region)
+    //{
+    //    try
+    //    {
+    //        var options = new WeaponHitboxOptions
+    //        {
+    //            AlphaThreshold = 1,
+    //            InflatePixels = 2, // Slight inflation for better collision detection
+    //            UseOrientedBoundingBox = false, // Use AABB for now
+    //            PivotMode = HitboxPivotMode.BottomCenter,
+    //            NormalizeYUp = true
+    //        };
+
+    //        var generatedPolygon = WeaponHitboxGenerator.GenerateBoundingPolygon(
+    //            region.Texture,
+    //            region.SourceRectangle,
+    //            options,
+    //            out _opaqueRegionBounds
+    //        );
+
+    //        if (generatedPolygon != null && generatedPolygon.Count >= 3)
+    //        {
+    //            HitPolygon = generatedPolygon;
+    //            Log.Info(LogArea.Weapon, $"[Weapon] Generated hitbox for '{Name}' with {generatedPolygon.Count} vertices");
+
+    //            // Debug: Log the generated polygon points
+    //            for (int i = 0; i < generatedPolygon.Count; i++)
+    //            {
+    //                Log.Info(LogArea.Weapon, $"  Vertex {i}: {generatedPolygon[i]}");
+    //            }
+    //            Log.Info(LogArea.Weapon, $"  Opaque bounds: {_opaqueRegionBounds}");
+    //        }
+    //        else
+    //        {
+    //            Log.Warn(LogArea.Weapon, $"[Weapon] Failed to generate hitbox for '{Name}', using default");
+    //        }
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        Log.Error(LogArea.Weapon, $"[Weapon] Exception generating hitbox for '{Name}': {ex.Message}");
+    //    }
+    //}
 
     public void PlayLevelUpEffect(SoundEffect soundEffect = null)
     {
@@ -218,6 +279,17 @@ public class Weapon
         Sprite.Draw(spriteBatch, Sprite.Position);
     }
 
+    public void DrawHitPolygon(SpriteBatch spriteBatch, Texture2D pixel, Vector2 ownerCenter, Color color)
+    {
+        var poly = GetTransformedHitPolygon(ownerCenter);
+        for (int i = 0; i < poly.Count; i++)
+        {
+            var a = poly[i];
+            var b = poly[(i + 1) % poly.Count];
+            DrawLine(spriteBatch, pixel, a, b, color);
+        }
+    }
+
     public List<Vector2> GetTransformedHitPolygon(Vector2 ownerCenter)
     {
         var transformed = new List<Vector2>(HitPolygon?.Count ?? 0);
@@ -226,8 +298,8 @@ public class Weapon
         // The hit polygon should be centered at the same position as the sprite
         Vector2 origin = ownerCenter + Offset + ManualOffset;
 
-        // Use the actual sprite rotation for the hitbox
-        float totalRotation = Sprite != null ? Sprite.Rotation : (Rotation + ArtRotationOffset);
+        // Use the weapon's base rotation, not the sprite rotation which includes art offset
+        float totalRotation = Rotation;
 
         foreach (var pt in HitPolygon)
         {
@@ -244,15 +316,20 @@ public class Weapon
         return ownerCenter + Offset + ManualOffset;
     }
 
-    public void DrawHitPolygon(SpriteBatch spriteBatch, Texture2D pixel, Vector2 ownerCenter, Color color)
+    // Debug method to draw the opaque bounds (useful for debugging hitbox generation)
+    public void DrawOpaqueRegionBounds(SpriteBatch spriteBatch, Texture2D pixel, Vector2 ownerCenter, Color color)
     {
-        var poly = GetTransformedHitPolygon(ownerCenter);
-        for (int i = 0; i < poly.Count; i++)
-        {
-            var a = poly[i];
-            var b = poly[(i + 1) % poly.Count];
-            DrawLine(spriteBatch, pixel, a, b, color);
-        }
+        if (_opaqueRegionBounds.IsEmpty) return;
+        
+        var worldOrigin = GetWorldOrigin(ownerCenter);
+        var scaledBounds = new Rectangle(
+            (int)(worldOrigin.X + _opaqueRegionBounds.X * Scale - _opaqueRegionBounds.Width * Scale / 2),
+            (int)(worldOrigin.Y - _opaqueRegionBounds.Y * Scale - _opaqueRegionBounds.Height * Scale),
+            (int)(_opaqueRegionBounds.Width * Scale),
+            (int)(_opaqueRegionBounds.Height * Scale)
+        );
+        
+        WeaponHitboxGenerator.DrawRectangleOutline(spriteBatch, pixel, scaledBounds, color);
     }
 
     // Unified debug/damage visualization parameters

@@ -186,27 +186,6 @@ namespace Hearthvale.Scenes
             _npcManager.SpawnAllNpcTypesTest(_player);
             _weaponManager.UpdateNpcList(_npcManager.Npcs);
 
-            Debug.WriteLine($"Camera initialized to player position: {CameraManager.Instance.Position}");
-            Debug.WriteLine($"Player position after creation: {_player.Position}");
-
-            // Initialize singletons ONCE with the now-initialized camera and player
-            //SingletonManager.InitializeForGameScene(
-            //    MOVEMENT_SPEED, // Movement speed
-            //    (movement) => _player.Move(movement, 
-            //        new Rectangle(0, 0, _tilemap.Columns * (int)_tilemap.TileWidth, _tilemap.Rows * (int)_tilemap.TileHeight), 
-            //        _player.Sprite.Width, 
-            //        _player.Sprite.Height, 
-            //        _npcManager.Npcs, 
-            //        allObstacles ?? new List<Rectangle>()
-            //    ), // Move player callback
-            //    () => _npcManager.SpawnRandomNpcAroundPlayer(_player), // Spawn NPC callback
-            //    () => _player.CombatController.StartProjectileAttack(), // Projectile attack callback
-            //    () => _player.CombatController.StartMeleeAttack(), // Melee attack callback
-            //    RotatePlayerWeaponLeft, // Rotate weapon left callback
-            //    RotatePlayerWeaponRight, // Rotate weapon right callback
-            //    HandleInteraction // Interaction callback
-            //);
-
             InputManagerInitializer.InitializeForGameScene(
                 CameraManager.Instance.Camera2D,
                 MOVEMENT_SPEED,
@@ -240,49 +219,21 @@ namespace Hearthvale.Scenes
             _playerWeapons = new List<Weapon>
             {
                 new Weapon("Dagger-Copper", DataManager.Instance.GetWeaponStats("Dagger-Copper"), _weaponAtlas, _arrowAtlas),
-                new Weapon("Dagger-Gold", DataManager.Instance.GetWeaponStats("Dagger-Gold"), _weaponAtlas, _arrowAtlas),
-                new Weapon("Dagger-Fire", DataManager.Instance.GetWeaponStats("Dagger-Fire"), _weaponAtlas, _arrowAtlas)
+                new Weapon("Dagger-Fire", DataManager.Instance.GetWeaponStats("Dagger-Fire"), _weaponAtlas, _arrowAtlas),
+                new Weapon("Dagger-Nature", DataManager.Instance.GetWeaponStats("Dagger-Nature"), _weaponAtlas, _arrowAtlas)
             };
             _weaponManager.EquipWeapon(_player, _playerWeapons[_currentPlayerWeaponIndex]);
-
-#if DEBUG
-            // 1) Verify atlas texture
-            System.Diagnostics.Debug.WriteLine($"[WeaponAtlas] Texture loaded: {(_weaponAtlas?.Texture != null)} size={_weaponAtlas?.Texture?.Width}x{_weaponAtlas?.Texture?.Height}");
-
-            // 2) Verify regions by name
-            void CheckRegion(string key)
-            {
-                try
-                {
-                    var r = _weaponAtlas.GetRegion(key);
-                    System.Diagnostics.Debug.WriteLine($"[WeaponAtlas] Region '{key}': {(r != null ? $"OK {r.Width}x{r.Height}" : "NULL")}");
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[WeaponAtlas] Region '{key}' threw: {ex.Message}");
-                }
-            }
-            CheckRegion("Dagger-Copper");
-            CheckRegion("Dagger-Gold");
-            CheckRegion("Dagger-Fire");
-
-            // 3) Verify constructed weapon sprites
-            foreach (var w in _playerWeapons)
-            {
-                System.Diagnostics.Debug.WriteLine($"[Weapon] '{w?.Name}' Sprite={w?.Sprite != null} Region={(w?.Sprite?.Region != null)} Scale={w?.Sprite?.Scale} Length={w?.Length}");
-            }
-#endif
-
             _dialogManager = new DialogManager(GameUIManager.Instance, _player, _npcManager.Characters, dialogDistance);
 
             // Initialize the debug viewer for tilesets
             TilesetDebugManager.Initialize(_debugFont);
             var debugKeys = new List<(string, string)>
             {
+                ("F1", "Debug UI"),
                 ("F2", "Grid"),
-                ("F3", "Debug"),
-                ("F4", "Tileset Viewer"),
-                ("F5", "Coords"),
+                ("F3", "AI"),
+                ("F4", "Weapon"),
+                ("F5", "Tileset Viewer"),
                 ("F6", "Tile Coords"), // Add the new F6 key for tile coordinates
                 // Add more as needed
             };

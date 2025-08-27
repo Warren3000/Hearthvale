@@ -7,12 +7,32 @@
     "baseDamage": 8,
     "scale": 1
   },
-  "Dagger-Cold": {
-    "baseDamage": 12,
-    "scale": 0.5
+  "Dagger-Bronze": {
+    "baseDamage": 8,
+    "scale": 1
   },
-  "NpcDagger": {
-    "baseDamage": 2,
-    "scale": 0.4
+  "Dagger-Steel": {
+    "baseDamage": 8,
+    "scale": 1
+  },
+  "Dagger-Cold_Steel": {
+    "baseDamage": 8,
+    "scale": 1
+  },
+  "Dagger-Fire": {
+    "baseDamage": 10,
+    "scale": 1
+  },
+  "Dagger-Gold": {
+    "baseDamage": 10,
+    "scale": 1
+  },
+  "Dagger-Cold": {
+    "baseDamage": 10,
+    "scale": 1
+  },
+  "Dagger-Nature": {
+    "baseDamage": 10,
+    "scale": 1
   }
 }
