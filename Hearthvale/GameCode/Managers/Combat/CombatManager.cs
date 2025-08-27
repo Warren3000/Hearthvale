@@ -179,9 +179,11 @@ public class CombatManager
             
             // Apply status effects
             if (projectile.Type == ProjectileType.Fireball)
-                npc.ApplyStatusEffect("Burn");
+                this.ApplyBurnEffect(npc);
+            //npc.ApplyStatusEffect("Burn");
             else if (projectile.Type == ProjectileType.Magic)
-                npc.ApplyStatusEffect("Magic");
+                this.ApplyMagicEffect(npc);
+            //npc.ApplyStatusEffect("Magic");
 
             // Deactivate projectile (unless it penetrates)
             if (!response.Penetrates)

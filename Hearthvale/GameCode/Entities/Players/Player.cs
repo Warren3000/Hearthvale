@@ -42,7 +42,15 @@ namespace Hearthvale.GameCode.Entities.Players
             InitializeComponents();
 
             _atlas = atlas;
-            this.AnimationComponent.SetSprite(new AnimatedSprite(atlas.GetAnimation("Mage_Idle")));
+
+            var idleAnim = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Mage_Idle"), 2.0f); // 2x slower
+            var walkAnim = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Mage_Walk"), 2.0f);
+
+            // Set up AnimatedSprite and AnimationComponent
+            this.AnimationComponent.SetSprite(new AnimatedSprite(idleAnim));
+            this.AnimationComponent.AddAnimation("Mage_Idle", idleAnim);
+            this.AnimationComponent.AddAnimation("Mage_Walk", walkAnim);
+
             this.MovementComponent.SetPosition(position);
             this.MovementComponent.SetMovementSpeed(movementSpeed);
             this.MovementComponent.FacingRight = true;
@@ -56,11 +64,6 @@ namespace Hearthvale.GameCode.Entities.Players
             _combatController = new PlayerCombatComponent(this, hitSound, defeatSound, playerAttackSound);
             _interactionComponent = new PlayerInteractionComponent(this);
 
-            var animations = new Dictionary<string, Animation>
-            {
-                { "Mage_Idle", atlas.GetAnimation("Mage_Idle") },
-                { "Mage_Walk", atlas.GetAnimation("Mage_Walk") }
-            };
             // Set sprite position immediately
             this.MovementComponent.SetPosition(position);
         }

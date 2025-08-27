@@ -20,6 +20,10 @@ namespace Hearthvale.GameCode.Entities.Components
         {
             EquippedWeapon = weapon;
         }
+        public void UnequipWeapon()
+        {
+            EquippedWeapon = null;
+        }
 
         /// <summary>
         /// Updates the weapon position and rotation. For NPCs, pass a target to aim at.

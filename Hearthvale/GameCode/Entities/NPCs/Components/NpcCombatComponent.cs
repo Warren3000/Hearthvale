@@ -66,30 +66,5 @@ namespace Hearthvale.GameCode.Entities.Components
 
             return false;
         }
-
-        public void ResetHitFlag()
-        {
-            _hasHitPlayerThisSwing = false;
-        }
-
-        public bool HandleProjectileHit(int damage, Vector2 knockback)
-        {
-            return _owner.TakeDamage(damage, knockback);
-        }
-
-        public void ApplyStatusEffect(string effectType)
-        {
-            switch (effectType)
-            {
-                case "Burn":
-                    // Implement burn logic
-                    break;
-                case "Magic":
-                    // Implement magic effect logic
-                    break;
-                default:
-                    break;
-            }
-        }
     }
 }

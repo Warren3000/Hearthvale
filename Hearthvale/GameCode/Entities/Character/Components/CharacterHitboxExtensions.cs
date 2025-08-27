@@ -1,7 +1,10 @@
-﻿using Hearthvale.GameCode.Utils;
+﻿using FlatRedBall.Glue.StateInterpolation;
+using Hearthvale.GameCode.Utils;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGameLibrary.Graphics;
+using System;
+using System.Collections.Generic;
 
 namespace Hearthvale.GameCode.Entities
 {

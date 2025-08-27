@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Hearthvale.GameCode.Utils;
 using System;
+using Hearthvale.GameCode.Entities.NPCs;
 
 namespace Hearthvale.GameCode.Entities.Components
 {
@@ -21,9 +22,24 @@ namespace Hearthvale.GameCode.Entities.Components
         {
             if (_character.Sprite == null) return;
 
-            Color originalColor = _character.Sprite.Color;
-            ApplyVisualEffects();
+            var opacity = 1f;
+            if (_character is NPC npc)
+            {
+                // Use reflection or make _fadeOpacity accessible
+                opacity = npc.GetType().GetField("_fadeOpacity", 
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                    ?.GetValue(npc) as float? ?? 1f;
+            }
 
+            // Skip drawing if fully transparent
+            if (opacity <= 0f) return;
+
+            // Store original color
+            var originalColor = _character.Sprite.Color;
+            
+            // Apply opacity to sprite
+            _character.Sprite.Color = originalColor * opacity;
+            
             // Calculate character center based on the actual tight bounds for accurate weapon positioning
             Rectangle tightBounds = _character.GetTightSpriteBounds();
             Vector2 characterCenter = new Vector2(

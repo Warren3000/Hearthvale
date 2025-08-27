@@ -61,12 +61,12 @@ namespace Hearthvale.GameCode.Entities.Components
         private readonly Random _random = new();
 
         public Vector2 Position => _position;
-        public float MovementSpeed => _movementSpeed;
-        public float ReactionTime
-        {
-            get => _reactionTime;
-            set => _reactionTime = Math.Max(0.05f, value); // Minimum reaction time
-        }
+        //public float MovementSpeed => _movementSpeed;
+        //public float ReactionTime
+        //{
+        //    get => _reactionTime;
+        //    set => _reactionTime = Math.Max(0.05f, value); // Minimum reaction time
+        //}
         public float ChaseRange
         {
             get => _chaseRange;
@@ -78,8 +78,8 @@ namespace Hearthvale.GameCode.Entities.Components
             get => _loseTargetRange;
             set => _loseTargetRange = Math.Max(_chaseRange + 20f, value);
         }
-        public AIState CurrentAIState => _currentState;
-        public bool IsMoving => _velocity.LengthSquared() > 0.1f;
+        //public AIState CurrentAIState => _currentState;
+        //public bool IsMoving => _velocity.LengthSquared() > 0.1f;
 
         public bool FacingRight
         {
@@ -240,12 +240,31 @@ namespace Hearthvale.GameCode.Entities.Components
                 case AIState.Chasing:
                     if (_chaseTarget.HasValue && _pathRecalculationTimer <= 0f)
                     {
-                        Vector2 direction = _chaseTarget.Value - _position;
-                        if (direction.LengthSquared() > 1f)
+                        // Get direction from our center to target center
+                        Vector2 myCenter = _position;
+                        if (_character.Sprite != null)
+                        {
+                            myCenter = new Vector2(
+                                _position.X + _character.Sprite.Width * 0.5f,
+                                _position.Y + _character.Sprite.Height * 0.5f
+                            );
+                        }
+                        
+                        Vector2 direction = _chaseTarget.Value - myCenter;
+                        float distance = direction.Length();
+                        
+                        // Only move if we're not already at the target
+                        if (distance > 2f) // Small threshold to prevent jitter
                         {
                             direction.Normalize();
                             _desiredVelocity = direction;
                         }
+                        else
+                        {
+                            // We've reached our target, stop
+                            _desiredVelocity = Vector2.Zero;
+                        }
+                        
                         _pathRecalculationTimer = PATH_RECALC_INTERVAL;
                     }
                     targetVelocity = _desiredVelocity;
@@ -532,15 +551,15 @@ namespace Hearthvale.GameCode.Entities.Components
             SetPosition(new Vector2(clampedX, clampedY));
         }
 
-        public Rectangle CalculateBounds()
-        {
-            return new Rectangle(
-                (int)_position.X + 8,
-                (int)_position.Y + 16,
-                (int)_character.Sprite?.Width / 2,
-                (int)_character.Sprite?.Height / 2
-            );
-        }
+        //public Rectangle CalculateBounds()
+        //{
+        //    return new Rectangle(
+        //        (int)_position.X + 8,
+        //        (int)_position.Y + 16,
+        //        (int)_character.Sprite?.Width / 2,
+        //        (int)_character.Sprite?.Height / 2
+        //    );
+        //}
 
         private void UpdateSpritePosition()
         {
