@@ -7,31 +7,35 @@
     <Columns>16</Columns>
     <Rows>12</Rows>
   </TilesetInfo>
-  
+  <!--0,0 transparent
+  1,1 red
+  0,1 blue
+  1,0 green-->
+
   <WallTiles>
     <!-- EACH TILE MUST HAVE UNIQUE COORDINATES -->
-    <Tile type="isolated" col="0" row="0" pattern="0" />       
-    <Tile type="horizontal" col="0" row="0" pattern="68" />     
-    <Tile type="vertical" col="2" row="0" pattern="17" />       
-    <Tile type="cross" col="3" row="0" pattern="85" />        
+    <Tile type="isolated" col="9" row="11" pattern="0" />       
+    <Tile type="horizontal" col="0" row="3" pattern="68" />     
+    <Tile type="vertical" col="6" row="11" pattern="17" />       
+    <Tile type="cross" col="9" row="11" pattern="85" />        
     
     <!-- Corners -->
-    <Tile type="corner_tl" col="2" row="0" pattern="20" />     
-    <Tile type="corner_tr" col="3" row="0"  pattern="80" />    
+    <Tile type="corner_tl" col="10" row="0" pattern="20" />     
+    <Tile type="corner_tr" col="5" row="0"  pattern="80" />
     <Tile type="corner_bl" col="2" row="1"  pattern="5" />     
     <Tile type="corner_br" col="3" row="1"  pattern="65" />    
     
     <!-- T-junctions -->
-    <Tile type="t_up" col="0" row="5" pattern="84" />        
-    <Tile type="t_down" col="1" row="5" pattern="69" />       
-    <Tile type="t_left" col="2" row="5" pattern="21" />       
-    <Tile type="t_right" col="3" row="5" pattern="81" />      
+    <Tile type="t_up" col="4" row="0" pattern="84" />        
+    <Tile type="t_down" col="4" row="1" pattern="69" />       
+    <Tile type="t_left" col="2" row="0" pattern="21" />       
+    <Tile type="t_right" col="3" row="0" pattern="81" />      
     
     <!-- End caps -->
-    <Tile type="end_up" col="0" row="3" pattern="1" />       
-    <Tile type="end_down" col="1" row="3"  pattern="16" />    
-    <Tile type="end_left" col="2" row="3"  pattern="64" />     
-    <Tile type="end_right" col="3" row="3"  pattern="4" />     
+    <Tile type="end_up" col="4" row="11" pattern="1" />       
+    <Tile type="end_down" col="5" row="11"  pattern="16" />    
+    <Tile type="end_left" col="0" row="3"  pattern="64" />     
+    <Tile type="end_right" col="0" row="3"  pattern="4" />     
     
   </WallTiles>
 </AutotileConfiguration>

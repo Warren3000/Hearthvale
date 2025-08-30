@@ -252,6 +252,7 @@ namespace Hearthvale.GameCode.Managers
             _pausePanel.Visual.Height = 70;
             _pausePanel.Visual.Width = 264;
             _pausePanel.IsVisible = false;
+            _pausePanel.Visual.Z = 1000;
             _pausePanel.AddToRoot();
 
             TextureRegion backgroundRegion = _atlas.GetRegion("panel-background");
@@ -482,6 +483,11 @@ namespace Hearthvale.GameCode.Managers
         public void ShowPausePanel()
         {
             _pausePanel.IsVisible = true;
+
+            // Remove the panel from root and re-add it to ensure it's on top
+            _pausePanel.RemoveFromRoot();
+            _pausePanel.AddToRoot();
+
             _resumeButton.IsFocused = true;
         }
 

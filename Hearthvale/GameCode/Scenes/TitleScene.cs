@@ -2,6 +2,7 @@
 using Hearthvale.GameCode.Entities.Players;
 using Hearthvale.GameCode.Input;
 using Hearthvale.GameCode.Managers;
+using Hearthvale.GameCode.Scenes;
 using Hearthvale.GameCode.UI;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
@@ -78,8 +79,15 @@ public class TitleScene : Scene
     private SoundEffect _uiSoundEffect;
     private Gum.Forms.Controls.Panel _titleScreenButtonsPanel;
     private Gum.Forms.Controls.Panel _optionsPanel;
+    private Gum.Forms.Controls.Panel _sceneSelectorPanel;
 
     private AnimatedButton _startButton;
+    private AnimatedButton _sceneSelectorButton;
+    private AnimatedButton _sceneSelectorBackButton;
+
+    // Scene selector buttons
+    private AnimatedButton _gameSceneButton;
+    private AnimatedButton _autotileTestSceneButton;
 
     public override void Initialize()
     {
@@ -162,6 +170,10 @@ public class TitleScene : Scene
             {
                 HandleStartClicked(_startButton, EventArgs.Empty);
             }
+            else if (_sceneSelectorButton.IsFocused)
+            {
+                HandleSceneSelectorClicked(_sceneSelectorButton, EventArgs.Empty);
+            }
             else if (_optionsButton.IsFocused)
             {
                 HandleOptionsClicked(_optionsButton, EventArgs.Empty);
@@ -171,7 +183,16 @@ public class TitleScene : Scene
         // Replace WasPausePressed with direct ProcessKeyPress
         if (InputHandler.Instance.ProcessKeyPress(Keys.Escape, keyboard))
         {
-            // Pause/unpause logic
+            // If scene selector is open, go back to main menu
+            if (_sceneSelectorPanel.IsVisible)
+            {
+                HandleSceneSelectorBackClicked(_sceneSelectorBackButton, EventArgs.Empty);
+            }
+            // If options are open, go back to main menu
+            else if (_optionsPanel.IsVisible)
+            {
+                HandleOptionsButtonBack(_optionsBackButton, EventArgs.Empty);
+            }
         }
 
         // Replace WasDebugGridTogglePressed with direct ProcessKeyPress
@@ -221,9 +242,9 @@ public class TitleScene : Scene
         // --- Create a panel to hold the buttons ---
         _titleScreenButtonsPanel = new Gum.Forms.Controls.Panel();
         _titleScreenButtonsPanel.Visual.Width = 180f;
-        _titleScreenButtonsPanel.Visual.Height = 90f;
+        _titleScreenButtonsPanel.Visual.Height = 150f; // Increased height for new button
         _titleScreenButtonsPanel.Visual.X = Core.GraphicsDevice.PresentationParameters.BackBufferWidth / 2f - 90f;
-        _titleScreenButtonsPanel.Visual.Y = 740;
+        _titleScreenButtonsPanel.Visual.Y = 680; // Moved up slightly
         GumService.Default.Root.AddChild(_titleScreenButtonsPanel);
 
         // Start Button
@@ -234,12 +255,21 @@ public class TitleScene : Scene
         _startButton.Click += HandleStartClicked;
         _titleScreenButtonsPanel.AddChild(_startButton);
 
+        // Scene Selector Button
+        _sceneSelectorButton = new AnimatedButton(_atlas);
+        _sceneSelectorButton.Text = "SCENE SELECT";
+        _sceneSelectorButton.Width = 180f;
+        _sceneSelectorButton.Height = 38f;
+        _sceneSelectorButton.Y = 55f;
+        _sceneSelectorButton.Click += HandleSceneSelectorClicked;
+        _titleScreenButtonsPanel.AddChild(_sceneSelectorButton);
+
         // Options Button
         _optionsButton = new AnimatedButton(_atlas);
         _optionsButton.Text = "OPTIONS";
         _optionsButton.Width = 180f;
         _optionsButton.Height = 38f;
-        _optionsButton.Y = 55f;
+        _optionsButton.Y = 110f;
         _optionsButton.Click += HandleOptionsClicked;
         _titleScreenButtonsPanel.AddChild(_optionsButton);
 
@@ -259,6 +289,7 @@ public class TitleScene : Scene
         _startButton.IsFocused = true;
 
         CreateOptionsPanel();
+        CreateSceneSelectorPanel();
     }
 
     protected override void Dispose(bool disposing)
@@ -270,9 +301,12 @@ public class TitleScene : Scene
             // IMPORTANT: Unsubscribe from events to prevent them from
             // firing in other scenes.
             if (_startButton != null) _startButton.Click -= HandleStartClicked;
+            if (_sceneSelectorButton != null) _sceneSelectorButton.Click -= HandleSceneSelectorClicked;
             if (_optionsButton != null) _optionsButton.Click -= HandleOptionsClicked;
             if (_optionsBackButton != null) _optionsBackButton.Click -= HandleOptionsButtonBack;
-
+            if (_sceneSelectorBackButton != null) _sceneSelectorBackButton.Click -= HandleSceneSelectorBackClicked;
+            if (_gameSceneButton != null) _gameSceneButton.Click -= HandleGameSceneClicked;
+            if (_autotileTestSceneButton != null) _autotileTestSceneButton.Click -= HandleAutotileTestSceneClicked;
 
             // Remove all UI elements from the global Gum root
             // to prevent them from capturing input in other scenes.
@@ -335,6 +369,73 @@ public class TitleScene : Scene
         _optionsPanel.AddChild(_optionsBackButton);
     }
 
+    private void CreateSceneSelectorPanel()
+    {
+        _sceneSelectorPanel = new Gum.Forms.Controls.Panel();
+        _sceneSelectorPanel.Dock(Gum.Wireframe.Dock.Fill);
+        _sceneSelectorPanel.IsVisible = false;
+        _sceneSelectorPanel.AddToRoot();
+
+        // Title text
+        TextRuntime sceneSelectorText = new TextRuntime();
+        sceneSelectorText.X = Core.GraphicsDevice.PresentationParameters.BackBufferWidth / 2f;
+        sceneSelectorText.Y = 100;
+        sceneSelectorText.Text = "SELECT SCENE";
+        sceneSelectorText.UseCustomFont = true;
+        sceneSelectorText.FontScale = 1.0f;
+        sceneSelectorText.CustomFontFile = @"fonts/04b_30.fnt";
+        sceneSelectorText.Anchor(Gum.Wireframe.Anchor.Center);
+        _sceneSelectorPanel.AddChild(sceneSelectorText);
+
+        // Scene buttons container
+        var sceneButtonsContainer = new Gum.Forms.Controls.Panel();
+        sceneButtonsContainer.Visual.Width = 300f;
+        sceneButtonsContainer.Visual.Height = 400f;
+        sceneButtonsContainer.Visual.X = Core.GraphicsDevice.PresentationParameters.BackBufferWidth / 2f - 150f;
+        sceneButtonsContainer.Visual.Y = 200f;
+        _sceneSelectorPanel.AddChild(sceneButtonsContainer);
+
+        // Game Scene button
+        _gameSceneButton = new AnimatedButton(_atlas);
+        _gameSceneButton.Text = "MAIN GAME";
+        _gameSceneButton.Width = 300f;
+        _gameSceneButton.Height = 50f;
+        _gameSceneButton.Y = 0f;
+        _gameSceneButton.Click += HandleGameSceneClicked;
+        sceneButtonsContainer.AddChild(_gameSceneButton);
+
+        // Autotile Test Scene button
+        _autotileTestSceneButton = new AnimatedButton(_atlas);
+        _autotileTestSceneButton.Text = "AUTOTILE TEST";
+        _autotileTestSceneButton.Width = 300f;
+        _autotileTestSceneButton.Height = 50f;
+        _autotileTestSceneButton.Y = 70f;
+        _autotileTestSceneButton.Click += HandleAutotileTestSceneClicked;
+        sceneButtonsContainer.AddChild(_autotileTestSceneButton);
+
+        // Add more scene buttons here as needed
+        // Example:
+        // _anotherSceneButton = new AnimatedButton(_atlas);
+        // _anotherSceneButton.Text = "ANOTHER SCENE";
+        // _anotherSceneButton.Width = 300f;
+        // _anotherSceneButton.Height = 50f;
+        // _anotherSceneButton.Y = 140f;
+        // _anotherSceneButton.Click += HandleAnotherSceneClicked;
+        // sceneButtonsContainer.AddChild(_anotherSceneButton);
+
+        // Back button
+        _sceneSelectorBackButton = new AnimatedButton(_atlas);
+        _sceneSelectorBackButton.Text = "BACK";
+        _sceneSelectorBackButton.Anchor(Gum.Wireframe.Anchor.BottomRight);
+        _sceneSelectorBackButton.X = -28f;
+        _sceneSelectorBackButton.Y = -10f;
+        _sceneSelectorBackButton.Click += HandleSceneSelectorBackClicked;
+        _sceneSelectorPanel.AddChild(_sceneSelectorBackButton);
+
+        // Set initial focus
+        _gameSceneButton.IsFocused = true;
+    }
+
     private void HandleSfxSliderChanged(object sender, EventArgs args)
     {
         // Intentionally not playing the UI sound effect here so that it is not
@@ -395,6 +496,48 @@ public class TitleScene : Scene
 
         // Use the factory to create a properly initialized GameScene
         SceneManager.ChangeScene(GameSceneFactory.CreateGameScene());
+    }
+
+    private void HandleSceneSelectorClicked(object sender, EventArgs e)
+    {
+        // Play UI sound effect
+        Core.Audio.PlaySoundEffect(_uiSoundEffect);
+
+        // Show the scene selector panel and hide the title buttons panel
+        _sceneSelectorPanel.IsVisible = true;
+        _titleScreenButtonsPanel.IsVisible = false;
+
+        // Set focus to the first scene button
+        _gameSceneButton.IsFocused = true;
+    }
+
+    private void HandleSceneSelectorBackClicked(object sender, EventArgs e)
+    {
+        // Play UI sound effect
+        Core.Audio.PlaySoundEffect(_uiSoundEffect);
+
+        // Hide scene selector and show main menu
+        _sceneSelectorPanel.IsVisible = false;
+        _titleScreenButtonsPanel.IsVisible = true;
+
+        // Return focus to scene selector button
+        _sceneSelectorButton.IsFocused = true;
+    }
+
+    private void HandleGameSceneClicked(object sender, EventArgs e)
+    {
+        Core.Audio.PlaySoundEffect(_uiSoundEffect);
+
+        // Use the factory to create a properly initialized GameScene
+        SceneManager.ChangeScene(GameSceneFactory.CreateGameScene());
+    }
+
+    private void HandleAutotileTestSceneClicked(object sender, EventArgs e)
+    {
+        Core.Audio.PlaySoundEffect(_uiSoundEffect);
+
+        // Change to the autotile test scene
+        SceneManager.ChangeScene(new AutotileTestScene());
     }
 
     private void HandleOptionsClicked(object sender, EventArgs e)

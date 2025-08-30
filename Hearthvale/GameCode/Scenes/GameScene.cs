@@ -325,20 +325,20 @@ namespace Hearthvale.Scenes
         {
             #if DEBUG
             // Debug: Draw player position
-            if (_player != null)
-            {
-                //System.Diagnostics.Debug.WriteLine($"Player Position: {_player.Position}, Bounds: {_player.Bounds}");
-                Core.SpriteBatch.Draw(GameUIManager.Instance.WhitePixel, 
-                    new Rectangle((int)_player.Position.X, (int)_player.Position.Y, 50, 50), Color.Green);
-            }
+            //if (_player != null)
+            //{
+            //    //System.Diagnostics.Debug.WriteLine($"Player Position: {_player.Position}, Bounds: {_player.Bounds}");
+            //    Core.SpriteBatch.Draw(GameUIManager.Instance.WhitePixel, 
+            //        new Rectangle((int)_player.Position.X, (int)_player.Position.Y, 50, 50), Color.Green);
+            //}
 
-            // Debug: Draw NPC positions
-            foreach (var npc in _npcManager.Npcs.Take(3)) // Only first 3 to avoid spam
-            {
-                //System.Diagnostics.Debug.WriteLine($"NPC {npc.Name} Position: {npc.Position}, Bounds: {npc.Bounds}");
-                Core.SpriteBatch.Draw(GameUIManager.Instance.WhitePixel, 
-                    new Rectangle((int)npc.Position.X, (int)npc.Position.Y, 50, 50), Color.Blue);
-            }
+            //// Debug: Draw NPC positions
+            //foreach (var npc in _npcManager.Npcs.Take(3)) // Only first 3 to avoid spam
+            //{
+            //    //System.Diagnostics.Debug.WriteLine($"NPC {npc.Name} Position: {npc.Position}, Bounds: {npc.Bounds}");
+            //    Core.SpriteBatch.Draw(GameUIManager.Instance.WhitePixel, 
+            //        new Rectangle((int)npc.Position.X, (int)npc.Position.Y, 50, 50), Color.Blue);
+            //}
             #endif
 
             // Draw procedural tilemap
