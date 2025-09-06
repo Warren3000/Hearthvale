@@ -1,10 +1,20 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Collections.Generic;
+using System;
+using Hearthvale.GameCode.Managers;
+using Hearthvale.GameCode.Utils;
+using MonoGameLibrary.Graphics;
+using Hearthvale.GameCode.Collision;
+using MonoGame.Extended;
 
-/// <summary>
-/// Represents a loot table for generating random items.
-/// </summary>
+public enum ChestState
+{
+    Closed,
+    Opening,
+    Opened
+}
+
 public class LootTable
 {
     public string Id { get; }
@@ -16,15 +26,10 @@ public class LootTable
         Entries = new List<LootEntry>();
     }
 
-    /// <summary>
-    /// Generates loot based on the table entries.
-    /// </summary>
-    /// <returns>List of generated loot items.</returns>
     public List<string> GenerateLoot()
     {
         var loot = new List<string>();
-        var random = new System.Random();
-
+        var random = new Random();
         foreach (var entry in Entries)
         {
             if (random.NextDouble() <= entry.DropChance)
@@ -32,14 +37,10 @@ public class LootTable
                 loot.Add(entry.ItemId);
             }
         }
-
         return loot;
     }
 }
 
-/// <summary>
-/// Represents a single entry in a loot table.
-/// </summary>
 public class LootEntry
 {
     public string ItemId { get; }
@@ -56,9 +57,6 @@ public class LootEntry
     }
 }
 
-/// <summary>
-/// Interactive loot container that can be opened to reveal items.
-/// </summary>
 public class DungeonLoot : IDungeonElement
 {
     public string Id { get; }
@@ -66,21 +64,37 @@ public class DungeonLoot : IDungeonElement
     public LootTable LootTable { get; }
     public int Column { get; }
     public int Row { get; }
-    public bool IsOpened { get; private set; }
     public bool IsTrapped { get; }
     public string TrapId { get; }
+    public ChestState State { get; private set; } = ChestState.Closed;
+    public bool IsOpened => State == ChestState.Opened;
 
-    private List<string> _generatedLoot;
+    private List<string> _generatedLoot = new();
 
-    /// <summary>
-    /// Creates a new dungeon loot container.
-    /// </summary>
-    /// <param name="id">Unique identifier for the loot container.</param>
-    /// <param name="lootTableId">ID of the loot table to use.</param>
-    /// <param name="column">Column position in the tilemap.</param>
-    /// <param name="row">Row position in the tilemap.</param>
-    /// <param name="isTrapped">Whether the container is trapped.</param>
-    /// <param name="trapId">ID of the associated trap (if trapped).</param>
+    private AnimatedSprite _closedIdleSprite;
+    private AnimatedSprite _openingSprite;
+    private AnimatedSprite _openedIdleSprite;
+    private AnimatedSprite _currentSprite;
+
+    private double _openingElapsed;
+    private double _openingDurationSeconds;
+
+    // Collision actor (optional if collision world attached)
+    private ChestCollisionActor _collisionActor;
+    private CollisionWorld _collisionWorld;
+
+    // Cache last tight bounds to avoid redundant updates
+    private Rectangle _lastTightBounds;
+
+    public Rectangle Bounds
+    {
+        get
+        {
+            int size = GetTileSize();
+            return new Rectangle(Column * size, Row * size, size, size);
+        }
+    }
+
     public DungeonLoot(string id, string lootTableId, int column = 0, int row = 0,
         bool isTrapped = false, string trapId = null)
     {
@@ -89,21 +103,44 @@ public class DungeonLoot : IDungeonElement
         Row = row;
         IsTrapped = isTrapped;
         TrapId = trapId;
-
-        // TODO: Load LootTable from data source using lootTableId
-        // For now, create a default empty table
         LootTable = new LootTable(lootTableId);
+
+        Hearthvale.GameCode.Rendering.DungeonLootRenderer.Register(this);
+    }
+
+    internal void InitializeAnimations(TextureAtlas atlas, string closedIdleAnim, string openingAnim, string openedIdleAnim)
+    {
+        _closedIdleSprite = atlas.HasAnimation(closedIdleAnim) ? atlas.CreateAnimatedSprite(closedIdleAnim) : null;
+        _openingSprite = atlas.HasAnimation(openingAnim) ? atlas.CreateAnimatedSprite(openingAnim) : null;
+        _openedIdleSprite = !string.IsNullOrEmpty(openedIdleAnim) && atlas.HasAnimation(openedIdleAnim)
+            ? atlas.CreateAnimatedSprite(openedIdleAnim)
+            : null;
+
+        _currentSprite = _closedIdleSprite ?? _openingSprite ?? _openedIdleSprite;
+
+        if (_openingSprite?.Animation != null)
+        {
+            var frames = _openingSprite.Animation.Frames?.Count ?? 1;
+            var delay = _openingSprite.Animation.Delay.TotalSeconds;
+            _openingDurationSeconds = Math.Max(0.01, frames * delay);
+        }
+
+        // Initialize initial collision bounds if a collision world already attached
+        if (_collisionWorld != null)
+        {
+            EnsureCollisionActorInitialized();
+            UpdateCollisionActorBounds(force: true);
+        }
     }
 
     public void Activate()
     {
-        if (!IsOpened)
+        if (State == ChestState.Closed)
         {
-            IsOpened = true;
-            IsActive = true;
+            State = ChestState.Opening;
+            _currentSprite = _openingSprite ?? _openedIdleSprite ?? _closedIdleSprite;
             _generatedLoot = LootTable?.GenerateLoot() ?? new List<string>();
 
-            // Trigger trap if container is trapped
             if (IsTrapped && !string.IsNullOrEmpty(TrapId))
             {
                 var trap = DungeonManager.Instance.GetElement<DungeonTrap>(TrapId);
@@ -112,61 +149,156 @@ public class DungeonLoot : IDungeonElement
         }
     }
 
-    public void Deactivate()
-    {
-        // Loot containers typically don't deactivate once opened
-    }
+    public void Deactivate() { }
 
     public void Update(GameTime gameTime)
     {
-        // Loot containers don't need continuous updates once opened
+        if (_currentSprite == null) return;
+
+        _currentSprite.Update(gameTime);
+
+        if (State == ChestState.Opening)
+        {
+            _openingElapsed += gameTime.ElapsedGameTime.TotalSeconds;
+            if (_openingElapsed >= _openingDurationSeconds)
+            {
+                State = ChestState.Opened;
+                _currentSprite = _openedIdleSprite ?? _openingSprite ?? _closedIdleSprite;
+                IsActive = true;
+            }
+        }
+
+        // Keep collision in sync
+        if (_collisionActor != null)
+        {
+            UpdateCollisionActorBounds();
+        }
     }
 
     public void DrawDebug(SpriteBatch spriteBatch, Texture2D pixel)
     {
-        var color = IsOpened ? Color.Gold : Color.Brown;
-        if (IsTrapped && !IsOpened)
-            color = Color.DarkRed;
+        var color = State switch
+        {
+            ChestState.Closed => (IsTrapped ? Color.DarkRed : Color.SaddleBrown),
+            ChestState.Opening => Color.Goldenrod,
+            ChestState.Opened => Color.Gold,
+            _ => Color.Brown
+        };
+        spriteBatch.Draw(pixel, Bounds, color * 0.25f);
 
-        var rect = new Rectangle(Column * 32, Row * 32, 32, 32);
-        spriteBatch.Draw(pixel, rect, color * 0.8f);
+        // Show tight collision bounds if different
+        if (_collisionActor?.Bounds is RectangleF rf)
+        {
+            var rect = new Rectangle((int)rf.X, (int)rf.Y, (int)rf.Width, (int)rf.Height);
+            spriteBatch.Draw(pixel, rect, Color.Lime * 0.35f);
+        }
     }
 
-    /// <summary>
-    /// Attempts to open the loot container.
-    /// </summary>
-    /// <returns>List of items found in the container, or null if already opened.</returns>
     public List<string> TryOpen()
     {
-        if (IsOpened)
-            return null;
+        if (State == ChestState.Opened)
+            return new List<string>(_generatedLoot);
 
-        Activate();
-        return new List<string>(_generatedLoot);
+        if (State == ChestState.Closed)
+        {
+            Activate();
+            return new List<string>(); // Loot accessible after opening
+        }
+        return new List<string>();
     }
 
-    /// <summary>
-    /// Gets the generated loot items.
-    /// </summary>
-    /// <returns>List of loot item IDs.</returns>
-    public List<string> GetLoot()
-    {
-        return IsOpened ? new List<string>(_generatedLoot) : new List<string>();
-    }
+    public List<string> GetLoot() =>
+        State == ChestState.Opened ? new List<string>(_generatedLoot) : new List<string>();
 
-    /// <summary>
-    /// Checks if a position overlaps with this loot container.
-    /// </summary>
-    /// <param name="x">X position in world coordinates.</param>
-    /// <param name="y">Y position in world coordinates.</param>
-    /// <param name="tileSize">Size of a tile in pixels.</param>
-    /// <returns>True if the position overlaps with this container.</returns>
     public bool IsPositionOnContainer(float x, float y, int tileSize = 32)
     {
         var containerX = Column * tileSize;
         var containerY = Row * tileSize;
-
         return x >= containerX && x < containerX + tileSize &&
                y >= containerY && y < containerY + tileSize;
+    }
+
+    internal AnimatedSprite GetSprite() => _currentSprite;
+
+    public void AttachCollision(CollisionWorld world)
+    {
+        if (world == null || _collisionWorld == world) return;
+        _collisionWorld = world;
+        EnsureCollisionActorInitialized();
+        UpdateCollisionActorBounds(force: true);
+        if (_collisionActor != null)
+        {
+            _collisionWorld.AddActor(_collisionActor);
+        }
+    }
+
+    private void EnsureCollisionActorInitialized()
+    {
+        if (_collisionActor != null) return;
+        var tight = ComputeTightWorldBounds();
+        if (tight.Width <= 0 || tight.Height <= 0)
+        {
+            // fallback to tile bounds
+            tight = Bounds;
+        }
+        _collisionActor = new ChestCollisionActor(this, tight);
+    }
+
+    private void UpdateCollisionActorBounds(bool force = false)
+    {
+        var tight = ComputeTightWorldBounds();
+        if (force || tight != _lastTightBounds)
+        {
+            _collisionActor.UpdateFrom(tight);
+            _lastTightBounds = tight;
+        }
+    }
+
+    /// <summary>
+    /// Computes the tight opaque pixel AABB in world space for current frame.
+    /// </summary>
+    private Rectangle ComputeTightWorldBounds()
+    {
+        if (_currentSprite?.Animation == null ||
+            _currentSprite.Animation.Frames == null ||
+            _currentSprite.Animation.Frames.Count == 0)
+            return Bounds;
+
+        // Current frame index inferred from animated sprite private state is not exposed;
+        // we approximate using Region (animated sprite sets Region as it advances).
+        var region = _currentSprite.Region;
+        if (region?.Texture == null)
+            return Bounds;
+
+        // Analyze region pixels
+        Rectangle source = region.SourceRectangle;
+        var content = SpriteAnalyzer.GetContentBounds(region.Texture, source);
+        if (content.IsEmpty)
+            content = new Rectangle(0, 0, source.Width, source.Height);
+
+        // World top-left for sprite = tile world (Column*size, Row*size)
+        int tileSize = GetTileSize();
+        int worldX = Column * tileSize;
+        int worldY = Row * tileSize;
+
+        // Offset inside region
+        return new Rectangle(
+            worldX + content.X,
+            worldY + content.Y,
+            content.Width,
+            content.Height
+        );
+    }
+
+    private static int GetTileSize()
+    {
+        try
+        {
+            var map = TilesetManager.Instance?.Tilemap;
+            if (map != null)
+                return (int)MathF.Round(MathF.Max(map.TileWidth, map.TileHeight));
+        }
+        catch { }
+        return 32;
     }
 }

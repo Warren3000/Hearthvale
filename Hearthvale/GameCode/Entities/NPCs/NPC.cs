@@ -233,14 +233,15 @@ namespace Hearthvale.GameCode.Entities.NPCs
         {
             var velocity = MovementComponent.GetVelocity();
             var speeds = MovementComponent.GetCurrentSpeeds();
-
-            System.Diagnostics.Debug.WriteLine($"NPC {Name}: " +
-                $"Current velocity magnitude = {velocity.Length():F1}, " +
-                $"Configured speeds - W:{speeds.wander}, C:{speeds.chase}, F:{speeds.flee}");
+            Log.Info(LogArea.NPC, $"----[NPC.{Name}] Velocity: {velocity}, Speeds: W:{speeds.wander}, C:{speeds.chase}, F:{speeds.flee}");
+            //System.Diagnostics.Debug.WriteLine($"NPC {Name}: " +
+            //    $"Current velocity magnitude = {velocity.Length():F1}, " +
+            //    $"Configured speeds - W:{speeds.wander}, C:{speeds.chase}, F:{speeds.flee}");
 
             if (velocity.Length() > NpcSpeedConfiguration.MAX_SPEED)
             {
-                System.Diagnostics.Debug.WriteLine($"⚠️ WARNING: {Name} velocity {velocity.Length():F1} exceeds max speed {NpcSpeedConfiguration.MAX_SPEED}!");
+                Log.Warn(LogArea.NPC, $"NPC {Name} velocity {velocity.Length():F1} exceeds max speed {NpcSpeedConfiguration.MAX_SPEED}!");
+                //System.Diagnostics.Debug.WriteLine($"⚠️ WARNING: {Name} velocity {velocity.Length():F1} exceeds max speed {NpcSpeedConfiguration.MAX_SPEED}!");
             }
         }
 

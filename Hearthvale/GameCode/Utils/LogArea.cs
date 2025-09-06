@@ -35,7 +35,7 @@ namespace Hearthvale.GameCode.Utils
         // Configure at runtime anywhere (e.g., LoadContent)
         public static LogArea EnabledAreas { get; set; } =
 #if DEBUG
-            LogArea.Scene | LogArea.Dungeon | LogArea.Atlas | LogArea.Weapon | LogArea.Player | LogArea.NPC;
+            LogArea.Scene | LogArea.Camera | LogArea.Dungeon | LogArea.Atlas | LogArea.Weapon | LogArea.Player | LogArea.NPC;
 #else
             LogArea.None;
 #endif
@@ -61,7 +61,7 @@ namespace Hearthvale.GameCode.Utils
         {
             if ((EnabledAreas & area) == 0) return;
             if (level > MinLevel) return;
-            System.Diagnostics.Debug.WriteLine(message);
+            System.Diagnostics.Debug.WriteLine($"[{area}] {message}");
         }
 
         // Optional: quick throttle for high-frequency logs
@@ -75,7 +75,7 @@ namespace Hearthvale.GameCode.Utils
             if (now - _lastVerbose >= interval)
             {
                 _lastVerbose = now;
-                System.Diagnostics.Debug.WriteLine(message);
+                System.Diagnostics.Debug.WriteLine($"[{area}] {message}");
             }
         }
     }

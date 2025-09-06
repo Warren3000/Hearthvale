@@ -1,10 +1,12 @@
 ﻿using Hearthvale.GameCode.Data;
+using Hearthvale.GameCode.Entities;
 using Hearthvale.GameCode.Entities.Interfaces;
 using Hearthvale.GameCode.Entities.NPCs;
 using Hearthvale.GameCode.Entities.Players;
-using Hearthvale.GameCode.Entities;
 using Hearthvale.GameCode.Input;
 using Hearthvale.GameCode.Managers;
+using Hearthvale.GameCode.Managers.Dungeon;
+using Hearthvale.GameCode.Rendering;
 using Hearthvale.GameCode.UI;
 using Hearthvale.GameCode.Utils;
 using Microsoft.Xna.Framework;
@@ -16,6 +18,7 @@ using MonoGameGum;
 using MonoGameLibrary;
 using MonoGameLibrary.Graphics;
 using MonoGameLibrary.Scenes;
+using SharpDX.Direct2D1;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -287,23 +290,18 @@ namespace Hearthvale.Scenes
                 _player.Position.X + _player.Bounds.Width / 2f, 
                 _player.Position.Y + _player.Bounds.Height / 2f
             );
-            CameraManager.Instance.Camera2D.FollowSmooth(playerCenter, 0.1f);
-            
+
+            // Update camera to follow player
+            CameraManager.Instance.Camera2D.Position = playerCenter;
+
             // Clamp camera to map bounds
             CameraManager.Instance.Camera2D.ClampToMap(
                 _tilemap.Columns * (int)_tilemap.TileWidth, 
                 _tilemap.Rows * (int)_tilemap.TileHeight, 
                 (int)_tilemap.TileWidth);
-            
+
             // Update camera with game time for shake effects
             CameraManager.Instance.Camera2D.Update(gameTime);
-
-            // REMOVE THIS REDUNDANT CALL - It's causing the problem!
-            // _player.Move(
-            //    InputHandler.Instance.GetMovement(), 
-            //    new Rectangle(0, 0, _tilemap.Columns * (int)_tilemap.TileWidth, _tilemap.Rows * (int)_tilemap.TileHeight), 
-            //    _player.Sprite.Width, _player.Sprite.Height,
-            //    _npcManager.Npcs, allObstacles ?? new List<Rectangle>());
 
             // Update NPCs
             foreach (var npc in _npcManager.Npcs)
@@ -343,7 +341,7 @@ namespace Hearthvale.Scenes
 
             // Draw procedural tilemap
             _tilemap.Draw(Core.SpriteBatch);
-
+            DungeonLootRenderer.Draw(Core.SpriteBatch, DungeonManager.Instance.GetElements<DungeonLoot>(), layerDepth: 0.55f);
             // Draw entities
             _player.Draw(Core.SpriteBatch);
             foreach (var npc in _npcManager.Npcs)

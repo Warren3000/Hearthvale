@@ -1,414 +1,329 @@
-﻿using Microsoft.Xna.Framework;
+﻿using Hearthvale.GameCode.Rendering;
+using Hearthvale.GameCode.Utils;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
+using MonoGameLibrary;
 using MonoGameLibrary.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Hearthvale.GameCode.Utils;
 using System.Xml.Linq;
 
-public class ProceduralDungeonManager : DungeonManager
+namespace Hearthvale.GameCode.Managers.Dungeon
 {
-    public const int DefaultWallTileId = 0;
-    public const int DefaultFloorTileId = 80; // Updated to use autotile floor
-
-    // Support for different tile sizes
-    public const int AutotileSize = 16; // 16x16 for autotiles
-    public const int StandardTileSize = 32; // 32x32 for standard tiles
-
-    // Room generation parameters
-    private const int MinRoomSize = 8;
-    private const int MaxRoomSize = 16;
-    private const int MaxRoomAttempts = 50;
-    private const int CorridorWidth = 3;
-
-    private Random _random;
-    private List<Rectangle> _rooms;
-    private List<Rectangle> _corridors;
-
-    public int WallTileId => DefaultWallTileId;
-
-    public Tilemap GenerateBasicDungeon(
-         ContentManager content,
-         int columns, int rows,
-         Tileset wallTileset, XDocument wallAutotileXml,
-         Tileset floorTileset, XDocument floorAutotileXml)
-        {
-        AutotileMapper.Initialize(wallAutotileXml, floorAutotileXml);
-
-        _random = new Random();
-        _rooms = new List<Rectangle>();
-        _corridors = new List<Rectangle>();
-
-        int initialWallTileId = AutotileMapper.GetWallTileIndex("isolated");
-        int[] floorTileIds = AutotileMapper.GetFloorTileIds();
-
-        System.Diagnostics.Debug.WriteLine($"Initial wall tile ID (for wall tileset): {initialWallTileId}");
-        System.Diagnostics.Debug.WriteLine($"Floor tile IDs (for floor tileset): [{string.Join(", ", floorTileIds)}]");
-
-        var tilemap = new Tilemap(floorTileset, columns, rows);
-
-        FillWithWalls(tilemap, columns, rows, wallTileset, initialWallTileId);
-        GenerateRooms(columns, rows);
-        ConnectRooms();
-
-        CarveRoomsWithDebug(tilemap, floorTileIds, floorTileset);
-        CarveCorridors(tilemap, floorTileIds[0], floorTileset);
-
-        AutotileMapper.ApplyAutotiling(tilemap, initialWallTileId, wallTileset, floorTileset);
-
-        PlaceDungeonElements(tilemap, columns, rows, floorTileIds, floorTileset);
-
-        return tilemap;
-    }
-
-    // Update FillWithWalls to accept tileset parameter
-    private void FillWithWalls(Tilemap tilemap, int columns, int rows, Tileset wallTileset, int initialWallTileId)
+    public class ProceduralDungeonManager : DungeonManager
     {
-        for (int y = 0; y < rows; y++)
+        public const int AutotileSize = 16;
+        private Random _random = new Random();
+        private DungeonElementRenderer _elementRenderer;
+
+        // Room generation parameters
+        private const float CHEST_SPAWN_CHANCE = 0.3f; // 30% chance per room
+        private const float TRAPPED_CHEST_CHANCE = 0.2f; // 20% of chests are trapped
+        private const float MULTI_CHEST_CHANCE = 0.1f; // 10% chance for multiple chests
+
+        // Store room information for element placement
+        private List<Rectangle> _rooms = new List<Rectangle>();
+
+        public MonoGameLibrary.Graphics.Tilemap GenerateBasicDungeon(
+            ContentManager content,
+            int columns, int rows,
+            Tileset wallTileset, XDocument wallAutotileXml,
+            Tileset floorTileset, XDocument floorAutotileXml)
+        {
+            // Create the tilemap with wall tileset as default
+            var tilemap = new MonoGameLibrary.Graphics.Tilemap(wallTileset, columns, rows);
+
+            // Initialize with all walls (don't use SetTile here, just set the tile IDs)
+            int initialWallTileId = 15; // Original wall tile ID before autotiling
             for (int x = 0; x < columns; x++)
-                tilemap.SetTile(x, y, initialWallTileId, wallTileset);
-    }
-    private void ValidateTilesetIndices(int[] floorTileIds, Tileset floorTileset, Tileset wallTileset)
-    {
-        System.Diagnostics.Debug.WriteLine("=== TILESET VALIDATION ===");
-
-        // Check floor tile indices
-        System.Diagnostics.Debug.WriteLine($"Floor tileset has {floorTileset.Count} tiles");
-        foreach (int tileId in floorTileIds)
-        {
-            if (tileId >= floorTileset.Count || tileId < 0)
             {
-                System.Diagnostics.Debug.WriteLine($"❌ ERROR: Floor tile ID {tileId} is out of bounds (0-{floorTileset.Count - 1})");
-            }
-            else
-            {
-                System.Diagnostics.Debug.WriteLine($"✅ Floor tile ID {tileId} is valid");
-            }
-        }
-
-        // Check wall tile indices
-        System.Diagnostics.Debug.WriteLine($"Wall tileset has {wallTileset.Count} tiles");
-        var wallTileIds = AutotileMapper.GetWallTileIndices();
-        foreach (int tileId in wallTileIds)
-        {
-            if (tileId >= wallTileset.Count || tileId < 0)
-            {
-                System.Diagnostics.Debug.WriteLine($"❌ ERROR: Wall tile ID {tileId} is out of bounds (0-{wallTileset.Count - 1})");
-            }
-            else
-            {
-                System.Diagnostics.Debug.WriteLine($"✅ Wall tile ID {tileId} is valid");
-            }
-        }
-    }
-
-    private void GenerateRooms(int mapWidth, int mapHeight)
-    {
-        for (int attempt = 0; attempt < MaxRoomAttempts; attempt++)
-        {
-            int roomWidth = _random.Next(MinRoomSize, MaxRoomSize + 1);
-            int roomHeight = _random.Next(MinRoomSize, MaxRoomSize + 1);
-            int roomX = _random.Next(2, mapWidth - roomWidth - 2);
-            int roomY = _random.Next(2, mapHeight - roomHeight - 2);
-
-            var newRoom = new Rectangle(roomX, roomY, roomWidth, roomHeight);
-
-            // Check if this room overlaps with existing rooms (with padding)
-            bool overlaps = false;
-            foreach (var existingRoom in _rooms)
-            {
-                var paddedRoom = new Rectangle(
-                    existingRoom.X - 2, existingRoom.Y - 2,
-                    existingRoom.Width + 4, existingRoom.Height + 4);
-
-                if (newRoom.Intersects(paddedRoom))
+                for (int y = 0; y < rows; y++)
                 {
-                    overlaps = true;
-                    break;
+                    // Use the wall tile ID that's compatible with the autotile system
+                    tilemap.SetTile(x, y, initialWallTileId); // 15 is typically a solid wall in autotile systems
                 }
             }
 
-            if (!overlaps)
+            // Generate rooms
+            GenerateRooms(tilemap, 10, 15); // Generate 10-15 rooms
+
+            // Generate corridors to connect rooms
+            GenerateCorridors(tilemap);
+
+            // Apply autotiling BEFORE placing elements
+            ApplyAutotiling(tilemap, initialWallTileId, wallTileset, wallAutotileXml, floorTileset, floorAutotileXml);
+
+            // Place dungeon elements (treasure chests, etc.) AFTER autotiling
+            PlaceDungeonElements(tilemap);
+
+            return tilemap;
+        }
+
+        private void GenerateRooms(MonoGameLibrary.Graphics.Tilemap tilemap, int minRooms, int maxRooms)
+        {
+            int roomCount = _random.Next(minRooms, maxRooms + 1);
+            _rooms.Clear();
+
+            for (int i = 0; i < roomCount; i++)
             {
-                _rooms.Add(newRoom);
+                int roomWidth = _random.Next(5, 12);
+                int roomHeight = _random.Next(5, 10);
+                int x = _random.Next(2, tilemap.Columns - roomWidth - 2);
+                int y = _random.Next(2, tilemap.Rows - roomHeight - 2);
 
-                // Stop when we have enough rooms
-                if (_rooms.Count >= 8)
-                    break;
-            }
-        }
+                Rectangle newRoom = new Rectangle(x, y, roomWidth, roomHeight);
 
-        // Ensure we have at least one room
-        if (_rooms.Count == 0)
-        {
-            _rooms.Add(new Rectangle(10, 10, 12, 12));
-        }
-    }
-
-    private void ConnectRooms()
-    {
-        if (_rooms.Count < 2) return;
-
-        // Sort rooms by position for better connectivity
-        var sortedRooms = _rooms.OrderBy(r => r.X + r.Y).ToList();
-
-        for (int i = 0; i < sortedRooms.Count - 1; i++)
-        {
-            var roomA = sortedRooms[i];
-            var roomB = sortedRooms[i + 1];
-
-            CreateCorridor(roomA, roomB);
-        }
-
-        // Add some additional connections for interesting layouts
-        if (_rooms.Count > 3)
-        {
-            int additionalConnections = Math.Min(2, _rooms.Count / 3);
-            for (int i = 0; i < additionalConnections; i++)
-            {
-                var roomA = _rooms[_random.Next(_rooms.Count)];
-                var roomB = _rooms[_random.Next(_rooms.Count)];
-                if (roomA != roomB)
+                // Check if room overlaps with existing rooms
+                bool overlaps = false;
+                foreach (var room in _rooms)
                 {
-                    CreateCorridor(roomA, roomB);
-                }
-            }
-        }
-    }
-
-    private void CreateCorridor(Rectangle roomA, Rectangle roomB)
-    {
-        var centerA = roomA.Center;
-        var centerB = roomB.Center;
-
-        // Create L-shaped corridor
-        if (_random.Next(2) == 0)
-        {
-            // Horizontal first, then vertical
-            var horizontalCorridor = new Rectangle(
-                Math.Min(centerA.X, centerB.X) - CorridorWidth / 2,
-                centerA.Y - CorridorWidth / 2,
-                Math.Abs(centerB.X - centerA.X) + CorridorWidth,
-                CorridorWidth);
-
-            var verticalCorridor = new Rectangle(
-                centerB.X - CorridorWidth / 2,
-                Math.Min(centerA.Y, centerB.Y) - CorridorWidth / 2,
-                CorridorWidth,
-                Math.Abs(centerB.Y - centerA.Y) + CorridorWidth);
-
-            _corridors.Add(horizontalCorridor);
-            _corridors.Add(verticalCorridor);
-        }
-        else
-        {
-            // Vertical first, then horizontal
-            var verticalCorridor = new Rectangle(
-                centerA.X - CorridorWidth / 2,
-                Math.Min(centerA.Y, centerB.Y) - CorridorWidth / 2,
-                CorridorWidth,
-                Math.Abs(centerB.Y - centerA.Y) + CorridorWidth);
-
-            var horizontalCorridor = new Rectangle(
-                Math.Min(centerA.X, centerB.X) - CorridorWidth / 2,
-                centerB.Y - CorridorWidth / 2,
-                Math.Abs(centerB.X - centerA.X) + CorridorWidth,
-                CorridorWidth);
-
-            _corridors.Add(verticalCorridor);
-            _corridors.Add(horizontalCorridor);
-        }
-    }
-
-    private void CarveRoomsWithDebug(Tilemap tilemap, int[] floorTileIds, Tileset floorTileset)
-    {
-        System.Diagnostics.Debug.WriteLine($"=== CarveRooms DEBUG ===");
-
-        int totalTilesCarved = 0;
-        Dictionary<int, int> tileUsageCount = new Dictionary<int, int>();
-
-        foreach (int tileId in floorTileIds)
-        {
-            tileUsageCount[tileId] = 0;
-        }
-
-        foreach (var room in _rooms)
-        {
-            System.Diagnostics.Debug.WriteLine($"Carving room at ({room.X}, {room.Y}) size {room.Width}x{room.Height}");
-
-            for (int y = room.Y; y < room.Y + room.Height; y++)
-            {
-                for (int x = room.X; x < room.X + room.Width; x++)
-                {
-                    if (x >= 0 && x < tilemap.Columns && y >= 0 && y < tilemap.Rows)
+                    if (newRoom.Intersects(room))
                     {
-                        int floorTileId = floorTileIds[_random.Next(floorTileIds.Length)];
+                        overlaps = true;
+                        break;
+                    }
+                }
 
-                        // ✅ FIXED: Use tileset parameter correctly
-                        if (floorTileset != null)
-                        {
-                            tilemap.SetTile(x, y, floorTileId, floorTileset);
-                        }
-                        else
-                        {
-                            tilemap.SetTile(x, y, floorTileId); // Use default tileset
-                        }
+                if (!overlaps)
+                {
+                    _rooms.Add(newRoom);
+                    CarveRoom(tilemap, newRoom);
+                }
+            }
+        }
 
-                        tileUsageCount[floorTileId]++;
-                        totalTilesCarved++;
+        private void CarveRoom(MonoGameLibrary.Graphics.Tilemap tilemap, Rectangle room)
+        {
+            // Temporarily mark floor tiles as -1 to distinguish them during autotiling
+            for (int x = room.X; x < room.X + room.Width; x++)
+            {
+                for (int y = room.Y; y < room.Y + room.Height; y++)
+                {
+                    tilemap.SetTile(x, y, -1); // Temporary floor marker
+                }
+            }
+        }
+
+        private void GenerateCorridors(MonoGameLibrary.Graphics.Tilemap tilemap)
+        {
+            // Connect each room to the next
+            for (int i = 0; i < _rooms.Count - 1; i++)
+            {
+                Rectangle roomA = _rooms[i];
+                Rectangle roomB = _rooms[i + 1];
+
+                Point centerA = new Point(roomA.Center.X, roomA.Center.Y);
+                Point centerB = new Point(roomB.Center.X, roomB.Center.Y);
+
+                // Create L-shaped corridor
+                if (_random.NextDouble() < 0.5)
+                {
+                    // Horizontal first, then vertical
+                    CarveHorizontalCorridor(tilemap, centerA.X, centerB.X, centerA.Y);
+                    CarveVerticalCorridor(tilemap, centerA.Y, centerB.Y, centerB.X);
+                }
+                else
+                {
+                    // Vertical first, then horizontal
+                    CarveVerticalCorridor(tilemap, centerA.Y, centerB.Y, centerA.X);
+                    CarveHorizontalCorridor(tilemap, centerA.X, centerB.X, centerB.Y);
+                }
+            }
+        }
+
+        private void CarveHorizontalCorridor(MonoGameLibrary.Graphics.Tilemap tilemap, int x1, int x2, int y)
+        {
+            int minX = Math.Min(x1, x2);
+            int maxX = Math.Max(x1, x2);
+
+            for (int x = minX; x <= maxX; x++)
+            {
+                if (y > 0 && y < tilemap.Rows - 1)
+                {
+                    tilemap.SetTile(x, y, -1); // Temporary floor marker
+                    // Make corridors 3 tiles wide
+                    if (y > 1) tilemap.SetTile(x, y - 1, -1);
+                    if (y < tilemap.Rows - 2) tilemap.SetTile(x, y + 1, -1);
+                }
+            }
+        }
+
+        private void CarveVerticalCorridor(MonoGameLibrary.Graphics.Tilemap tilemap, int y1, int y2, int x)
+        {
+            int minY = Math.Min(y1, y2);
+            int maxY = Math.Max(y1, y2);
+
+            for (int y = minY; y <= maxY; y++)
+            {
+                if (x > 0 && x < tilemap.Columns - 1)
+                {
+                    tilemap.SetTile(x, y, -1); // Temporary floor marker
+                    // Make corridors 3 tiles wide
+                    if (x > 1) tilemap.SetTile(x - 1, y, -1);
+                    if (x < tilemap.Columns - 2) tilemap.SetTile(x + 1, y, -1);
+                }
+            }
+        }
+
+        private void PlaceDungeonElements(MonoGameLibrary.Graphics.Tilemap tilemap)
+        {
+            foreach (var room in _rooms)
+            {
+                // Decide if this room should have treasure
+                if (_random.NextDouble() < CHEST_SPAWN_CHANCE)
+                {
+                    PlaceTreasureChest(tilemap, room);
+
+                    // Small chance for additional chests
+                    if (_random.NextDouble() < MULTI_CHEST_CHANCE)
+                    {
+                        PlaceTreasureChest(tilemap, room);
                     }
                 }
             }
         }
 
-        System.Diagnostics.Debug.WriteLine($"Carved {totalTilesCarved} floor tiles total:");
-        foreach (var kvp in tileUsageCount)
+        private void PlaceTreasureChest(MonoGameLibrary.Graphics.Tilemap tilemap, Rectangle room)
         {
-            System.Diagnostics.Debug.WriteLine($"  Tile ID {kvp.Key}: used {kvp.Value} times ({(kvp.Value * 100.0 / totalTilesCarved):F1}%)");
-        }
-    }
+            // Find a valid position in the room (not against walls)
+            List<Point> validPositions = new List<Point>();
 
-    private void CarveCorridors(Tilemap tilemap, int floorTileId, Tileset floorTileset)
-    {
-        foreach (var corridor in _corridors)
-        {
-            for (int y = corridor.Y; y < corridor.Y + corridor.Height; y++)
+            for (int x = room.X + 1; x < room.X + room.Width - 1; x++)
             {
-                for (int x = corridor.X; x < corridor.X + corridor.Width; x++)
+                for (int y = room.Y + 1; y < room.Y + room.Height - 1; y++)
                 {
-                    if (x >= 0 && x < tilemap.Columns && y >= 0 && y < tilemap.Rows)
+                    // Check if position is floor (we'll check for proper floor tiles after autotiling)
+                    if (!HasNearbyElement(x, y))
                     {
-                        // Use the floor tileset for corridor tiles
-                        tilemap.SetTile(x, y, floorTileId, floorTileset);
+                        validPositions.Add(new Point(x, y));
                     }
                 }
             }
-        }
-    }
 
-    private void PlaceDungeonElements(Tilemap tilemap, int columns, int rows, int[] floorTileIds, Tileset floorTileset)
-    {
-        if (_rooms.Count < 2) return;
-
-        // Find valid floor positions
-        var floorPositions = FindFloorPositions(tilemap, columns, rows, floorTileset);
-
-        if (floorPositions.Count >= 4)
-        {
-            var selectedPositions = new List<Point>();
-
-            // Try to place elements in different rooms
-            foreach (var room in _rooms.Take(4))
+            if (validPositions.Count > 0)
             {
-                var roomFloorPositions = floorPositions
-                    .Where(p => room.Contains(p))
-                    .ToList();
+                Point position = validPositions[_random.Next(validPositions.Count)];
 
-                if (roomFloorPositions.Any())
+                // Determine if chest is trapped
+                bool isTrapped = _random.NextDouble() < TRAPPED_CHEST_CHANCE;
+                string chestId = $"chest_{position.X}_{position.Y}";
+                string lootTableId = isTrapped ? "rare_loot" : "common_loot";
+                
+                // Create trap first if needed
+                string trapId = null;
+                if (isTrapped)
                 {
-                    var randomPos = roomFloorPositions[_random.Next(roomFloorPositions.Count)];
-                    selectedPositions.Add(randomPos);
-                    floorPositions.Remove(randomPos);
+                    trapId = $"trap_{position.X}_{position.Y}";
+                    var trap = new DungeonTrap(trapId, TrapType.Spikes, 15f, 3f, position.X, position.Y);
+                    AddElement(trap);
+                }
+
+                // Create the chest with trap ID
+                var chest = new DungeonLoot(chestId, lootTableId, position.X, position.Y, isTrapped, trapId);
+                AddElement(chest);
+
+                Log.Info(LogArea.Dungeon, $"Placed {(isTrapped ? "trapped " : "")}chest at ({position.X}, {position.Y})");
+            }
+        }
+
+        private bool HasNearbyElement(int x, int y)
+        {
+            // Check if there's already an element within 2 tiles
+            foreach (var element in _elements)
+            {
+                if (element is DungeonLoot loot)
+                {
+                    int distance = Math.Abs(loot.Column - x) + Math.Abs(loot.Row - y);
+                    if (distance < 2)
+                        return true;
+                }
+            }
+            return false;
+        }
+
+        public Vector2 GetPlayerStart(MonoGameLibrary.Graphics.Tilemap tilemap)
+        {
+            // Place player in the center of the first room
+            if (_rooms.Count > 0)
+            {
+                Rectangle firstRoom = _rooms[0];
+                return new Vector2(
+                    firstRoom.Center.X * tilemap.TileWidth,
+                    firstRoom.Center.Y * tilemap.TileHeight
+                );
+            }
+
+            // Fallback: find any floor tile
+            for (int x = 0; x < tilemap.Columns; x++)
+            {
+                for (int y = 0; y < tilemap.Rows; y++)
+                {
+                    var tileset = tilemap.GetTileset(x, y);
+                    if (tileset == TilesetManager.Instance.FloorTileset)
+                    {
+                        return new Vector2(x * tilemap.TileWidth, y * tilemap.TileHeight);
+                    }
                 }
             }
 
-            // Fill remaining positions if needed
-            while (selectedPositions.Count < 4 && floorPositions.Any())
-            {
-                var randomPos = floorPositions[_random.Next(floorPositions.Count)];
-                selectedPositions.Add(randomPos);
-                floorPositions.Remove(randomPos);
-            }
-
-            // Create doors and switches with proper autotile IDs
-            if (selectedPositions.Count >= 4)
-            {
-                var wallTileId = AutotileMapper.GetWallTileIndex("isolated");
-
-                var door1 = new DungeonDoor("door_1", selectedPositions[0].X, selectedPositions[0].Y,
-                    wallTileId, floorTileIds[0]);
-                var switch1 = new DungeonSwitch("switch_1", selectedPositions[1].X, selectedPositions[1].Y,
-                    floorTileIds[0], wallTileId);
-
-                var door2 = new DungeonDoor("door_2", selectedPositions[2].X, selectedPositions[2].Y,
-                    wallTileId, floorTileIds[0]);
-                var switch2 = new DungeonSwitch("switch_2", selectedPositions[3].X, selectedPositions[3].Y,
-                    floorTileIds[0], wallTileId);
-
-                AddElement(door1);
-                AddElement(switch1);
-                AddElement(door2);
-                AddElement(switch2);
-
-                WireUp("switch_1", "door_1");
-                WireUp("switch_2", "door_2");
-            }
-        }
-    }
-
-    public Vector2 GetPlayerStart(Tilemap tilemap)
-    {
-        System.Diagnostics.Debug.WriteLine("=== PLAYER SPAWN DEBUG ===");
-        System.Diagnostics.Debug.WriteLine($"Tilemap size: {tilemap.Columns}x{tilemap.Rows}");
-        System.Diagnostics.Debug.WriteLine($"Tile size: {tilemap.TileWidth}x{tilemap.TileHeight}");
-
-        if (_rooms.Any())
-        {
-            // Spawn in the center of the first room
-            var firstRoom = _rooms.First();
-            var spawnPos = new Vector2(
-                firstRoom.Center.X * tilemap.TileWidth,
-                firstRoom.Center.Y * tilemap.TileHeight
-            );
-            System.Diagnostics.Debug.WriteLine($"✅ Valid player start in first room: {spawnPos}");
-            return spawnPos;
+            return new Vector2(100, 100); // Emergency fallback
         }
 
-        // Emergency fallback to center
-        Vector2 centerPos = new Vector2(
-            (tilemap.Columns / 2) * tilemap.TileWidth,
-            (tilemap.Rows / 2) * tilemap.TileHeight
-        );
-
-        System.Diagnostics.Debug.WriteLine($"❌ No rooms found! Using center as emergency fallback: {centerPos}");
-        return centerPos;
-    }
-
-    private List<Point> FindFloorPositions(Tilemap tilemap, int columns, int rows, Tileset floorTileset)
-    {
-        var floorPositions = new List<Point>();
-        for (int row = 2; row < rows - 2; row++) // Avoid edges
+        private void ApplyAutotiling(MonoGameLibrary.Graphics.Tilemap tilemap,
+            int originalWallTileId,
+            Tileset wallTileset, XDocument wallAutotileXml,
+            Tileset floorTileset, XDocument floorAutotileXml)
         {
-            for (int col = 2; col < columns - 2; col++) // Avoid edges
+            // First pass: Convert temporary floor markers to actual floor tiles
+            for (int x = 0; x < tilemap.Columns; x++)
             {
-                if (tilemap.GetTileset(col, row) == floorTileset && AutotileMapper.IsFloorTile(tilemap.GetTileId(col, row)))
+                for (int y = 0; y < tilemap.Rows; y++)
                 {
-                    floorPositions.Add(new Point(col, row));
+                    int tileId = tilemap.GetTileId(x, y);
+                    if (tileId == -1) // Our temporary floor marker
+                    {
+                        // Set as floor tile with the floor tileset
+                        tilemap.SetTile(x, y, 0, floorTileset);
+                    }
                 }
             }
+
+            // Initialize AutotileMapper with the configuration
+            AutotileMapper.Initialize(wallAutotileXml, floorAutotileXml);
+
+            // Apply autotiling using the existing AutotileMapper function
+            AutotileMapper.ApplyAutotiling(tilemap, originalWallTileId, wallTileset, floorTileset);
         }
-        return floorPositions;
-    }
 
-    /// <summary>
-    /// Gets all room rectangles for debugging or other purposes
-    /// </summary>
-    public IEnumerable<Rectangle> GetRooms() => _rooms ?? Enumerable.Empty<Rectangle>();
+        public void SetElementRenderer(DungeonElementRenderer renderer)
+        {
+            _elementRenderer = renderer;
+        }
 
-    /// <summary>
-    /// Gets all corridor rectangles for debugging
-    /// </summary>
-    public IEnumerable<Rectangle> GetCorridors() => _corridors ?? Enumerable.Empty<Rectangle>();
+        public void DrawElements(SpriteBatch spriteBatch)
+        {
+            if (_elementRenderer == null || spriteBatch == null) return;
 
-    public static Point ConvertToAutotileCoords(int col32, int row32)
-    {
-        return new Point(col32 * 2, row32 * 2);
-    }
+            int tileSize = (int)TilesetManager.Instance.Tilemap.TileWidth;
 
-    public static Point ConvertFromAutotileCoords(int col16, int row16)
-    {
-        return new Point(col16 / 2, row16 / 2);
+            // Draw all non-chest elements with the legacy renderer
+            foreach (var element in _elements)
+            {
+                if (element is DungeonLoot)
+                    continue; // Chests now handled exclusively by DungeonLootRenderer
+
+                _elementRenderer.DrawElement(spriteBatch, element, tileSize);
+            }
+
+            // Draw chests with row-based depth (adjust baseDepth/increment to fit your draw order)
+            var chests = GetElements<DungeonLoot>();
+            DungeonLootRenderer.Draw(spriteBatch, chests, loot =>
+            {
+                // Simple y-sort to avoid overlap issues (tweak as needed)
+                return MathHelper.Clamp(0.45f + loot.Row * 0.00005f, 0f, 1f);
+            });
+        }
     }
 }

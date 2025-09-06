@@ -13,19 +13,20 @@ namespace Hearthvale.GameCode.UI
         private float _zoom;
         private float _rotation;
 
-        //screen shake variables
+        // Screen shake variables
         private Vector2 _shakeOffset = Vector2.Zero;
         private float _shakeDuration = 0f;
         private float _shakeIntensity = 0f;
+        
+        // Height offset to compensate for player bouncing animations
+        private const float VERTICAL_OFFSET_FACTOR = 0.3f;
 
         public Camera2D(Viewport viewport)
         {
             _viewport = viewport;
             _zoom = 1f;
             _rotation = 0f;
-
         }
-
 
         public Matrix GetViewMatrix()
         {
@@ -53,7 +54,6 @@ namespace Hearthvale.GameCode.UI
             float mapWidthInPixels = mapWidth * tileSize;
             float mapHeightInPixels = mapHeight * tileSize;
 
-
             Vector2 halfScreenSize = new Vector2(_viewport.Width, _viewport.Height) / (2f * _zoom);
 
             float minX = halfScreenSize.X;
@@ -74,12 +74,18 @@ namespace Hearthvale.GameCode.UI
 
             _position.X = MathHelper.Clamp(_position.X, minX, maxX);
             _position.Y = MathHelper.Clamp(_position.Y, minY, maxY);
-
         }
 
         public void FollowWithMargin(Vector2 target, Rectangle screenMargin, float smoothing = 0.1f)
         {
-            // Convert the screen margin rectangle from screen pixels to world units.
+            // Apply vertical offset to target to compensate for bouncing animations
+            // This shifts the focal point upward from the player's feet toward the upper body
+            Vector2 adjustedTarget = new Vector2(
+                target.X, 
+                target.Y - (screenMargin.Height * VERTICAL_OFFSET_FACTOR)
+            );
+            
+            // Convert the screen margin rectangle from screen pixels to world units
             RectangleF marginWorld = new RectangleF(
                 _position.X - (_viewport.Width / 4 - screenMargin.X) / _zoom,
                 _position.Y - (_viewport.Height / 4 - screenMargin.Y) / _zoom,
@@ -89,18 +95,23 @@ namespace Hearthvale.GameCode.UI
 
             Vector2 desiredPosition = _position;
 
-            if (target.X < marginWorld.Left)
-                desiredPosition.X -= marginWorld.Left - target.X;
-            else if (target.X > marginWorld.Right)
-                desiredPosition.X += target.X - marginWorld.Right;
+            // Horizontal camera movement - normal tracking
+            if (adjustedTarget.X < marginWorld.Left)
+                desiredPosition.X -= marginWorld.Left - adjustedTarget.X;
+            else if (adjustedTarget.X > marginWorld.Right)
+                desiredPosition.X += adjustedTarget.X - marginWorld.Right;
 
-            if (target.Y < marginWorld.Top)
-                desiredPosition.Y -= marginWorld.Top - target.Y;
-            else if (target.Y > marginWorld.Bottom)
-                desiredPosition.Y += target.Y - marginWorld.Bottom;
+            // Vertical camera movement - use very slow smoothing to dampen bounce effects
+            if (adjustedTarget.Y < marginWorld.Top)
+                desiredPosition.Y -= marginWorld.Top - adjustedTarget.Y;
+            else if (adjustedTarget.Y > marginWorld.Bottom)
+                desiredPosition.Y += adjustedTarget.Y - marginWorld.Bottom;
 
-            // Smoothly interpolate the camera position towards desired position
-            _position = Vector2.Lerp(_position, desiredPosition, smoothing);
+            // Use different smoothing factors for horizontal and vertical movement
+            _position.X = MathHelper.Lerp(_position.X, desiredPosition.X, smoothing);
+            
+            // Very slow vertical smoothing to eliminate bouncing effect
+            _position.Y = MathHelper.Lerp(_position.Y, desiredPosition.Y, smoothing * 0.25f);
         }
 
         public void FollowWithDeadzone(Vector2 target, RectangleF deadzone)
@@ -143,7 +154,6 @@ namespace Hearthvale.GameCode.UI
             _shakeDuration = duration;
             _shakeIntensity = intensity;
         }
-
 
         public void Update(GameTime gameTime)
         {

@@ -136,6 +136,21 @@
 /processorParam:TextureFormat=Color
 /build:images/background-pattern.jpg
 
+#begin images/chest-definition.xml
+/copy:images/chest-definition.xml
+
+#begin images/chests.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:images/chests.png
+
 #begin images/logo.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -198,18 +213,6 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:images/RPG Icons/books.png
-
-#begin images/RPG Icons/chests.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:images/RPG Icons/chests.png
 
 #begin images/RPG Icons/consumables.png
 /importer:TextureImporter

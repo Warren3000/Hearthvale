@@ -12,12 +12,15 @@
     <ApplicationIcon>Icon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="Content\obj\**" />
     <Compile Remove="GameCode\bin\**" />
     <Compile Remove="GameCode\obj\**" />
     <Compile Remove="Map\**" />
+    <EmbeddedResource Remove="Content\obj\**" />
     <EmbeddedResource Remove="GameCode\bin\**" />
     <EmbeddedResource Remove="GameCode\obj\**" />
     <EmbeddedResource Remove="Map\**" />
+    <None Remove="Content\obj\**" />
     <None Remove="GameCode\bin\**" />
     <None Remove="GameCode\obj\**" />
     <None Remove="Map\**" />
@@ -37,10 +40,10 @@
     <Content Include="Content\Tilesets\DampDungeons\Tiles\*.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Content\data\CharacterStats.json">
+    <Content Include="Content\data\Characters\CharacterStats.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Content\data\WeaponStats.json">
+    <Content Include="Content\data\Items\Weapons\WeaponStats.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Content\Tilesets\DampDungeons\Tiles\DungeonDecorations.png" />
@@ -65,11 +68,17 @@
     <ProjectReference Include="..\MonoGameLibrary\MonoGameLibrary.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <None Update="Content\Levels\Level1.xml">
+    <None Update="Content\data\Dungeons\Levels\Level1.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="Content\data\Characters\NPCs\" />
+    <Folder Include="Content\data\Dialog\" />
+    <Folder Include="Content\data\Dungeons\Elements\" />
+    <Folder Include="Content\data\Dungeons\Layouts\" />
+    <Folder Include="Content\data\Dungeons\Levels\Campaign\" />
+    <Folder Include="Content\data\Game\" />
     <Folder Include="GameCode\Extensions\" />
   </ItemGroup>
   <Target Name="RestoreDotnetTools" BeforeTargets="CollectPackageReferences">

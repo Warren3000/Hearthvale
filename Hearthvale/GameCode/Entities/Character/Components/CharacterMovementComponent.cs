@@ -488,8 +488,7 @@ namespace Hearthvale.GameCode.Entities.Components
             _chaseSpeed = MathHelper.Clamp(chaseSpeed, 1f, 30f);
             if (fleeSpeed > 0f)
                 _fleeSpeed = MathHelper.Clamp(fleeSpeed, 1f, 35f);
-
-            System.Diagnostics.Debug.WriteLine($"CustomSpeeds CLAMPED - Wander: {_wanderSpeed}, Chase: {_chaseSpeed}, Flee: {_fleeSpeed}");
+            Log.Info(LogArea.NPC, $"CustomSpeeds CLAMPED - Wander: {_wanderSpeed}, Chase: {_chaseSpeed}, Flee: {_fleeSpeed}");
         }
 
         public (float wander, float chase, float flee) GetCurrentSpeeds()
@@ -503,19 +502,19 @@ namespace Hearthvale.GameCode.Entities.Components
             
             if (_wanderSpeed > MAX_REASONABLE_SPEED)
             {
-                System.Diagnostics.Debug.WriteLine($"⚠️ WARNING: Wander speed {_wanderSpeed} exceeds reasonable limit {MAX_REASONABLE_SPEED}");
+                Log.Info(LogArea.NPC, $"⚠️ WARNING: Wander speed {_wanderSpeed} exceeds reasonable limit {MAX_REASONABLE_SPEED}");
                 _wanderSpeed = Math.Min(_wanderSpeed, MAX_REASONABLE_SPEED);
             }
             
             if (_chaseSpeed > MAX_REASONABLE_SPEED)
             {
-                System.Diagnostics.Debug.WriteLine($"⚠️ WARNING: Chase speed {_chaseSpeed} exceeds reasonable limit {MAX_REASONABLE_SPEED}");
+                Log.Info(LogArea.NPC, $"⚠️ WARNING: Chase speed {_chaseSpeed} exceeds reasonable limit {MAX_REASONABLE_SPEED}");
                 _chaseSpeed = Math.Min(_chaseSpeed, MAX_REASONABLE_SPEED);
             }
             
             if (_fleeSpeed > MAX_REASONABLE_SPEED)
             {
-                System.Diagnostics.Debug.WriteLine($"⚠️ WARNING: Flee speed {_fleeSpeed} exceeds reasonable limit {MAX_REASONABLE_SPEED}");
+                Log.Info(LogArea.NPC, $"⚠️ WARNING: Flee speed {_fleeSpeed} exceeds reasonable limit {MAX_REASONABLE_SPEED}");
                 _fleeSpeed = Math.Min(_fleeSpeed, MAX_REASONABLE_SPEED);
             }
         }
@@ -550,17 +549,6 @@ namespace Hearthvale.GameCode.Entities.Components
             float clampedY = MathHelper.Clamp(Position.Y, bounds.Top, bounds.Bottom - _character.Sprite.Height);
             SetPosition(new Vector2(clampedX, clampedY));
         }
-
-        //public Rectangle CalculateBounds()
-        //{
-        //    return new Rectangle(
-        //        (int)_position.X + 8,
-        //        (int)_position.Y + 16,
-        //        (int)_character.Sprite?.Width / 2,
-        //        (int)_character.Sprite?.Height / 2
-        //    );
-        //}
-
         private void UpdateSpritePosition()
         {
             if (_character.Sprite != null)

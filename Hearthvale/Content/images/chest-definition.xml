@@ -1,0 +1,165 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas>
+  <Texture>images/chests</Texture>
+  <Regions>
+    <Region name="chest-wood_1" x="0" y="0" width="32" height="32" />
+    <Region name="chest-wood_2" x="0" y="32" width="32" height="32" />
+    <Region name="chest-wood_3" x="0" y="64" width="32" height="32" />
+    <Region name="chest-wood_4" x="0" y="96" width="32" height="32" />
+
+    <Region name="chest-silver_1" x="32" y="0" width="32" height="32" />
+    <Region name ="chest-silver_2" x="32" y="32" width="32" height="32" />
+    <Region name="chest-silver_3" x="32" y="64" width="32" height="32" />
+    <Region name="chest-silver_4" x="32" y="96" width="32" height="32" />
+
+    <Region name="chest-gold_1" x="64" y="0" width="32" height="32" />
+    <Region name="chest-gold_2" x="64" y="32" width="32" height="32" />
+    <Region name="chest-gold_3" x="64" y="64" width="32" height="32" />
+    <Region name="chest-gold_4" x="64" y="96" width="32" height="32" />
+
+    <Region name="chest-green_1" x ="96" y="0" width="32" height="32" />
+    <Region name="chest-green_2" x="96" y="32" width="32" height="32" />
+    <Region name="chest-green_3" x="96" y="64" width="32" height="32" />
+    <Region name="chest-green_4" x="96" y="96" width="32" height="32" />
+
+    <Region name="chest-blue_1" x="128" y="0" width="32" height="32" />
+    <Region name="chest-blue_2" x="128" y="32" width="32" height="32" />
+    <Region name="chest-blue_3" x="128" y="64" width="32" height="32" />
+    <Region name="chest-blue_4" x="128" y="96" width="32" height="32" />
+
+    <Region name="chest-red_1" x="160" y="0" width="32" height="32" />
+    <Region name="chest-red_2" x="160" y="32" width="32" height="32" />
+    <Region name="chest-red_3" x="160" y="64" width="32" height="32" />
+    <Region name="chest-red_4" x="160" y="96" width="32" height="32" />
+
+    <Region name="chest-silverwood_1" x="192" y="0" width="32" height="32" />
+    <Region name="chest-silverwood_2" x="192" y="32" width="32" height="32" />
+    <Region name="chest-silverwood_3" x="192" y="64" width="32" height="32" />
+    <Region name="chest-silverwood_4" x="192" y="96" width="32" height="32" />
+
+    <Region name="chest-goldwood_1" x="224" y="0" width="32" height="32" />
+    <Region name="chest-goldwood_2" x="224" y="32" width="32" height="32" />
+    <Region name="chest-goldwood_3" x="224" y="64" width="32" height="32" />
+    <Region name="chest-goldwood_4" x="224" y="96" width="32" height="32" />
+
+    <Region name="chest-skull_1" x="256" y="0" width="32" height="32" />
+    <Region name="chest-skull_2" x="256" y="32" width="32" height="32" />
+    <Region name="chest-skull_3" x="256" y="64" width="32" height="32" />
+    <Region name="chest-skull_4" x="256" y="96" width="32" height="32" />
+  </Regions>
+  <Animations>
+    <!-- Idle Closed (single-frame, long delay) animations -->
+    <Animation name="chest-wood_idle0" delay="1000">
+      <Frame region="chest-wood_1" />
+    </Animation>
+    <Animation name="chest-silver_idle0" delay="1000">
+      <Frame region="chest-silver_1" />
+    </Animation>
+    <Animation name="chest-gold_idle0" delay="1000">
+      <Frame region="chest-gold_1" />
+    </Animation>
+    <Animation name="chest-green_idle0" delay="1000">
+      <Frame region="chest-green_1" />
+    </Animation>
+    <Animation name="chest-blue_idle0" delay="1000">
+      <Frame region="chest-blue_1" />
+    </Animation>
+    <Animation name="chest-red_idle0" delay="1000">
+      <Frame region="chest-red_1" />
+    </Animation>
+    <Animation name="chest-silverwood_idle0" delay="1000">
+      <Frame region="chest-silverwood_1" />
+    </Animation>
+    <Animation name="chest-goldwood_idle0" delay="1000">
+      <Frame region="chest-goldwood_1" />
+    </Animation>
+    <Animation name="chest-skull_idle0" delay="1000">
+      <Frame region="chest-skull_1" />
+    </Animation>
+    
+    <!-- Idle Open (single-frame, long delay) animations -->
+    <Animation name="chest-wood_idle1" delay="1000">
+      <Frame region="chest-wood_4" />
+    </Animation>
+    <Animation name="chest-silver_idle1" delay="1000">
+      <Frame region="chest-silver_4" />
+    </Animation>
+    <Animation name="chest-gold_idle1" delay="1000">
+      <Frame region="chest-gold_4" />
+    </Animation>
+    <Animation name="chest-green_idle1" delay="1000">
+      <Frame region="chest-green_4" />
+    </Animation>
+    <Animation name="chest-blue_idle1" delay="1000">
+      <Frame region="chest-blue_4" />
+    </Animation>
+    <Animation name="chest-red_idle1" delay="1000">
+      <Frame region="chest-red_4" />
+    </Animation>
+    <Animation name="chest-silverwood_idle1" delay="1000">
+      <Frame region="chest-silverwood_4" />
+    </Animation>
+    <Animation name="chest-goldwood_idle1" delay="1000">
+      <Frame region="chest-goldwood_4" />
+    </Animation>
+    <Animation name="chest-skull_idle1" delay="1000">
+      <Frame region="chest-skull_4" />
+    </Animation>
+
+    <!-- Opening / active animations -->
+    <Animation name="chest-wood_open" delay="120">
+      <Frame region="chest-wood_1" />
+      <Frame region="chest-wood_2" />
+      <Frame region="chest-wood_3" />
+      <Frame region="chest-wood_4" />
+    </Animation>
+    <Animation name="chest-silver_open" delay="120">
+      <Frame region="chest-silver_1" />
+      <Frame region="chest-silver_2" />
+      <Frame region="chest-silver_3" />
+      <Frame region="chest-silver_4" />
+    </Animation>
+    <Animation name="chest-gold_open" delay="120">
+      <Frame region="chest-gold_1" />
+      <Frame region="chest-gold_2" />
+      <Frame region="chest-gold_3" />
+      <Frame region="chest-gold_4" />
+    </Animation>
+    <Animation name="chest-green_open" delay="120">
+      <Frame region="chest-green_1" />
+      <Frame region="chest-green_2" />
+      <Frame region="chest-green_3" />
+      <Frame region="chest-green_4" />
+    </Animation>
+    <Animation name="chest-blue_open" delay="120">
+      <Frame region="chest-blue_1" />
+      <Frame region="chest-blue_2" />
+      <Frame region="chest-blue_3" />
+      <Frame region="chest-blue_4" />
+    </Animation>
+    <Animation name="chest-red_open" delay="120">
+      <Frame region="chest-red_1" />
+      <Frame region="chest-red_2" />
+      <Frame region="chest-red_3" />
+      <Frame region="chest-red_4" />
+    </Animation>
+    <Animation name="chest-silverwood_open" delay="120">
+      <Frame region="chest-silverwood_1" />
+      <Frame region="chest-silverwood_2" />
+      <Frame region="chest-silverwood_3" />
+      <Frame region="chest-silverwood_4" />
+    </Animation>
+    <Animation name="chest-goldwood_open" delay="120">
+      <Frame region="chest-goldwood_1" />
+      <Frame region="chest-goldwood_2" />
+      <Frame region="chest-goldwood_3" />
+      <Frame region="chest-goldwood_4" />
+    </Animation>
+    <Animation name="chest-skull_open" delay="120">
+      <Frame region="chest-skull_1" />
+      <Frame region="chest-skull_2" />
+      <Frame region="chest-skull_3" />
+      <Frame region="chest-skull_4" />
+    </Animation>
+  </Animations>
+</TextureAtlas>

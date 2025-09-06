@@ -1,15 +1,15 @@
 ﻿using Gum.Forms.Controls;
 using Hearthvale.GameCode.Managers;
+using Hearthvale.GameCode.Managers.Dungeon;
+using Hearthvale.GameCode.Rendering;
 using Hearthvale.GameCode.Utils;
 using Hearthvale.Scenes;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Media;
 using MonoGameGum;
 using MonoGameLibrary;
 using MonoGameLibrary.Graphics;
-using MonoGameLibrary.Scenes;
 using System;
 
 namespace Hearthvale;
@@ -18,6 +18,7 @@ public class Game1 : Core
 {
     private Song _themeSong;
     private TextureAtlas _heroAtlas;
+    private TextureAtlas _dungeonAtlas;
 
     public Game1() : base("Hearthvale", 1920, 1080, false) { }
 
@@ -29,6 +30,13 @@ public class Game1 : Core
         ConfigurationManager.Initialize();
         DataManager.Initialize();
 
+        // Initialize dungeon manager with auto-loot placement
+        DungeonManager.Initialize(new AutoLootDungeonManager(
+            lootTableIds: new[] { "default" },
+            roomLootChance: 0.6f,
+            trapChance: 0.0f
+        ));
+
         // Start playing the background music
         Audio.PlaySong(_themeSong);
 
@@ -37,25 +45,32 @@ public class Game1 : Core
 
         // Start the game with the title scene
         SceneManager.ChangeScene(new TitleScene());
-        //// Add this to initialize the DebugManager
-        //DebugManager.Initialize(GameUIManager.Instance.WhitePixel);
+
         // Load the hero atlas for sprite analysis
         _heroAtlas = TextureAtlas.FromFile(Core.Content, "images/npc-atlas.xml");
-        // Preanalyze common sprites to avoid stuttering during gameplay
         PreloadSpriteAnalysis();
     }
 
     protected override void LoadContent()
     {
-        //Log.EnabledAreas = LogArea.Weapon | LogArea.Player;
-        //Log.EnabledAreas = LogArea.Scene | LogArea.Dungeon | LogArea.Atlas | LogArea.Weapon | LogArea.UI;
+        // Configure logging
+        Log.EnabledAreas = LogArea.Camera;
         Log.MinLevel = LogLevel.Warn;
 
-        // Bridge engine logs to our logger without adding engine->game references
         Core.CameraLog = s => Log.VerboseThrottled(LogArea.Camera, s, TimeSpan.FromMilliseconds(250));
         Core.SceneLog = s => Log.Warn(LogArea.Scene, s);
 
         _themeSong = Content.Load<Song>("audio/theme");
+
+        _dungeonAtlas = TextureAtlas.FromFile(Content, "images/chest-definition.xml");
+
+        // Animation names must exist in chest-definition.xml
+        DungeonLootRenderer.Initialize(
+            _dungeonAtlas,
+            closedIdleAnimation: "chest-wood_idle0",
+            openingAnimation: "chest-wood_open",
+            openedIdleAnimation: "chest-wood_idle1" // optional, can be null
+        );
     }
 
     protected override void Update(GameTime gameTime)
@@ -93,10 +108,8 @@ public class Game1 : Core
 
     private void PreloadSpriteAnalysis()
     {
-        // Analyze commonly used sprites to avoid stuttering during gameplay
         if (_heroAtlas != null && _heroAtlas.Texture != null)
         {
-            // Get animation names using the extension method
             foreach (var animName in _heroAtlas.GetAnimationNames())
             {
                 try
@@ -116,12 +129,5 @@ public class Game1 : Core
                 }
             }
         }
-    }
-
-    private Texture2D CreateWhitePixelTexture()
-    {
-        var texture = new Texture2D(GraphicsDevice, 1, 1);
-        texture.SetData(new[] { Color.White });
-        return texture;
     }
 }
