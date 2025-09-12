@@ -174,18 +174,24 @@ namespace Hearthvale.Scenes
             var wallRects = MapUtils.GetWallRectangles(_tilemap);
             allObstacles = wallRects.Concat(dungeonRects).ToList();
 
-            // Create player and set up collision properties BEFORE spawning NPCs
+            // Create player BEFORE spawning NPCs
             _player = new Player(
                 _heroAtlas, _playerStart, _bounceSoundEffect, _collectSoundEffect, _playerAttackSoundEffect, MOVEMENT_SPEED
             );
-            // Pass tilemap and wall info to the player for collision
-            _player.SetTilemap(_tilemap);
 
-            // Initialize managers that depend on the player or other systems
+            // Initialize managers (weapon first, then NPC which creates wall colliders)
             _weaponManager = new WeaponManager(_heroAtlas, _weaponAtlas, dungeonBounds, new List<NPC>());
             _npcManager = new NpcManager(_heroAtlas, dungeonBounds, _tilemap, _weaponManager, _weaponAtlas, _arrowAtlas);
 
-            // Now that managers are ready, spawn NPCs and update weapon manager's NPC list
+            // Register player with physics collision system so walls/chests block movement
+            _npcManager.RegisterPlayer(_player);
+
+            // Register all existing dungeon loot containers (chests) with the collision world
+            // so that they participate in movement blocking (player & NPC physics queries).
+            var dungeonLoots = DungeonManager.Instance.GetElements<DungeonLoot>();
+            _npcManager.CollisionManager.RegisterChests(dungeonLoots);
+
+            // Spawn NPC test set and sync weapon manager
             _npcManager.SpawnAllNpcTypesTest(_player);
             _weaponManager.UpdateNpcList(_npcManager.Npcs);
 
@@ -264,6 +270,9 @@ namespace Hearthvale.Scenes
             // Update the dungeon manager singleton
             DungeonManager.Instance.Update(gameTime);
 
+            // Keep chest physics actors in sync with any animation/opening state changes
+            _npcManager?.CollisionManager.SyncChestPositions();
+
             // Only update Gum UI when paused or dialog is open
             if (GameUIManager.Instance.IsPausePanelVisible || GameUIManager.Instance.IsDialogOpen)
             {
@@ -286,22 +295,23 @@ namespace Hearthvale.Scenes
             UpdateViewport(Core.GraphicsDevice.Viewport);
             
             // Camera handling
-            Vector2 playerCenter = new Vector2(
-                _player.Position.X + _player.Bounds.Width / 2f, 
-                _player.Position.Y + _player.Bounds.Height / 2f
+            // Use a stable 32x32 anchor based on logical player position instead of tight sprite bounds that bounce with animation.
+            // Assumption: Player sprites are 32x32 logical tiles; adjust if atlas changes.
+            const int logicalSpriteSize = 32; // stable reference size
+            Vector2 stableCenter = new Vector2(
+                _player.Position.X + logicalSpriteSize / 2f,
+                _player.Position.Y + logicalSpriteSize / 2f
             );
 
-            // Update camera to follow player
-            CameraManager.Instance.Camera2D.Position = playerCenter;
-
-            // Clamp camera to map bounds
-            CameraManager.Instance.Camera2D.ClampToMap(
-                _tilemap.Columns * (int)_tilemap.TileWidth, 
-                _tilemap.Rows * (int)_tilemap.TileHeight, 
-                (int)_tilemap.TileWidth);
-
-            // Update camera with game time for shake effects
-            CameraManager.Instance.Camera2D.Update(gameTime);
+            // Update via CameraManager with smoothing (reduced vertical jitter)
+            CameraManager.Instance.Update(
+                stableCenter,
+                _tilemap.Columns,
+                _tilemap.Rows,
+                (int)_tilemap.TileWidth,
+                gameTime,
+                null // default smoothing
+            );
 
             // Update NPCs
             foreach (var npc in _npcManager.Npcs)
@@ -321,24 +331,6 @@ namespace Hearthvale.Scenes
 
         public override void DrawWorld(GameTime gameTime)
         {
-            #if DEBUG
-            // Debug: Draw player position
-            //if (_player != null)
-            //{
-            //    //System.Diagnostics.Debug.WriteLine($"Player Position: {_player.Position}, Bounds: {_player.Bounds}");
-            //    Core.SpriteBatch.Draw(GameUIManager.Instance.WhitePixel, 
-            //        new Rectangle((int)_player.Position.X, (int)_player.Position.Y, 50, 50), Color.Green);
-            //}
-
-            //// Debug: Draw NPC positions
-            //foreach (var npc in _npcManager.Npcs.Take(3)) // Only first 3 to avoid spam
-            //{
-            //    //System.Diagnostics.Debug.WriteLine($"NPC {npc.Name} Position: {npc.Position}, Bounds: {npc.Bounds}");
-            //    Core.SpriteBatch.Draw(GameUIManager.Instance.WhitePixel, 
-            //        new Rectangle((int)npc.Position.X, (int)npc.Position.Y, 50, 50), Color.Blue);
-            //}
-            #endif
-
             // Draw procedural tilemap
             _tilemap.Draw(Core.SpriteBatch);
             DungeonLootRenderer.Draw(Core.SpriteBatch, DungeonManager.Instance.GetElements<DungeonLoot>(), layerDepth: 0.55f);

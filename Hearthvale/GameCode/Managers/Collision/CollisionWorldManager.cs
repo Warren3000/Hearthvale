@@ -43,6 +43,9 @@ namespace Hearthvale.GameCode.Collision
             var playerBounds = CreateEntityBounds(player.Position);
             var playerCollider = new PlayerCollisionActor(player);
             _collisionWorld.AddActor(playerCollider);
+
+            // ensure character movement queries this world (for chests)
+            player.CollisionComponent?.SetCollisionWorld(_collisionWorld);
         }
 
         public void UpdatePlayerPosition(Character player)
@@ -62,9 +65,11 @@ namespace Hearthvale.GameCode.Collision
         {
             if (npc == null) return;
 
-            // Create the NPC collision actor without passing initial bounds
             var npcCollider = new NpcCollisionActor(npc);
             _collisionWorld.AddActor(npcCollider);
+
+            // ensure NPC movement queries this world (for chests)
+            npc.CollisionComponent?.SetCollisionWorld(_collisionWorld);
         }
 
         public void UpdateNpcPosition(NPC npc)
@@ -112,10 +117,73 @@ namespace Hearthvale.GameCode.Collision
             }
         }
 
+        // ---------- Chest support ----------
+
+        public void RegisterChest(DungeonLoot loot)
+        {
+            if (loot == null) return;
+
+            // Avoid duplicate registration
+            if (_collisionWorld.GetActorsOfType<ChestCollisionActor>().Any(c => c.Loot == loot))
+                return;
+
+            var rect = loot.Bounds;
+            if (rect.Width <= 0 || rect.Height <= 0)
+                return;
+
+            var chestActor = new ChestCollisionActor(loot, rect);
+
+            // IMPORTANT: seed bounds so a physics body is created
+            chestActor.Bounds = new RectangleF(rect.X, rect.Y, rect.Width, rect.Height);
+
+            _collisionWorld.AddActor(chestActor);
+
+            // Ensure body starts at the correct place (center-based in Aether)
+            var center = new Vector2(rect.Center.X, rect.Center.Y);
+            _collisionWorld.UpdateActorPosition(chestActor, center);
+        }
+
+        public void RegisterChests(IEnumerable<DungeonLoot> loots)
+        {
+            if (loots == null) return;
+            foreach (var l in loots)
+                RegisterChest(l);
+        }
+
+        public void SyncChestPositions()
+        {
+            foreach (var chest in _collisionWorld.GetActorsOfType<ChestCollisionActor>())
+            {
+                // Keep actor state in sync with loot
+                chest.SyncFromLoot();
+
+                // Move the physics body to the loot's current center
+                var rect = chest.Loot.Bounds;
+                if (rect.Width > 0 && rect.Height > 0)
+                {
+                    var center = new Vector2(rect.Center.X, rect.Center.Y);
+                    _collisionWorld.UpdateActorPosition(chest, center);
+                }
+            }
+        }
+
+        public void UnregisterChest(DungeonLoot loot)
+        {
+            var toRemove = _collisionWorld.GetActorsOfType<ChestCollisionActor>()
+                .FirstOrDefault(c => c.Loot == loot);
+            if (toRemove != null)
+                _collisionWorld.RemoveActor(toRemove);
+        }
+
+        // ----------------------------------------
+
         public bool IsPositionBlocked(RectangleF bounds)
         {
             return _collisionWorld.GetActorsInBounds(bounds)
-                .Any(actor => actor is WallCollisionActor || actor is NpcCollisionActor);
+                .Any(actor =>
+                    actor is WallCollisionActor
+                    || actor is NpcCollisionActor
+                    || actor is ChestCollisionActor);
         }
 
         public bool CanMoveTo(Vector2 currentPosition, Vector2 newPosition, RectangleF entityBounds)

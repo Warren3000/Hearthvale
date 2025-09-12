@@ -64,7 +64,11 @@ namespace HearthvaleTest
     {
         public TestCharacter(AnimatedSprite sprite, Vector2 pos, int maxHealth)
         {
-            this.AnimationComponent.SetSprite(sprite);
+            // Initialize base components (mirrors runtime InitializeComponents usage)
+            InitializeComponents();
+            InitializeHealth(maxHealth);
+            if (sprite != null)
+                this.AnimationComponent.SetSprite(sprite);
             this.MovementComponent.SetPosition(pos);
         }
         public override void Flash() { }

@@ -11,9 +11,6 @@ using XnaVector2 = Microsoft.Xna.Framework.Vector2;
 
 namespace Hearthvale.GameCode.Collision
 {
-    /// <summary>
-    /// Collision detection system using Aether.Physics2D with XNA Vector2 for public APIs
-    /// </summary>
     public class CollisionWorld : IDisposable
     {
         private readonly World _physicsWorld;
@@ -30,9 +27,6 @@ namespace Hearthvale.GameCode.Collision
             _physicsWorld.ContactManager.EndContact = OnEndContact;
         }
 
-        /// <summary>
-        /// Adds an actor to the collision world
-        /// </summary>
         public void AddActor(ICollisionActor actor)
         {
             if (actor == null || _actorToBody.ContainsKey(actor))
@@ -47,9 +41,6 @@ namespace Hearthvale.GameCode.Collision
             }
         }
 
-        /// <summary>
-        /// Removes an actor from the collision world
-        /// </summary>
         public void RemoveActor(ICollisionActor actor)
         {
             if (actor == null || !_actorToBody.ContainsKey(actor))
@@ -62,15 +53,11 @@ namespace Hearthvale.GameCode.Collision
             _actorToBody.Remove(actor);
         }
 
-        /// <summary>
-        /// Gets all actors at a specific location (XNA Vector2 input)
-        /// </summary>
         public IEnumerable<ICollisionActor> GetActorsAt(XnaVector2 location)
         {
             var results = new List<ICollisionActor>();
             AetherVector2 worldPos = ConvertDisplayToSim(location);
 
-            // Create a small AABB around the point for querying
             var queryAABB = new nkast.Aether.Physics2D.Collision.AABB(
                 worldPos - new AetherVector2(0.01f, 0.01f),
                 worldPos + new AetherVector2(0.01f, 0.01f)
@@ -88,9 +75,6 @@ namespace Hearthvale.GameCode.Collision
             return results;
         }
 
-        /// <summary>
-        /// Gets all actors that intersect with the given bounds
-        /// </summary>
         public IEnumerable<ICollisionActor> GetActorsInBounds(RectangleF bounds)
         {
             var results = new List<ICollisionActor>();
@@ -112,9 +96,6 @@ namespace Hearthvale.GameCode.Collision
             return results;
         }
 
-        /// <summary>
-        /// Updates the collision world
-        /// </summary>
         public void Update(GameTime gameTime)
         {
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -122,25 +103,16 @@ namespace Hearthvale.GameCode.Collision
             UpdateActorBounds();
         }
 
-        /// <summary>
-        /// Checks if a position would collide with any actors of a specific type
-        /// </summary>
         public bool WouldCollideWith<T>(RectangleF bounds) where T : ICollisionActor
         {
             return GetActorsInBounds(bounds).OfType<T>().Any();
         }
 
-        /// <summary>
-        /// Gets all actors of a specific type
-        /// </summary>
         public IEnumerable<T> GetActorsOfType<T>() where T : ICollisionActor
         {
             return _bodyToActor.Values.OfType<T>();
         }
 
-        /// <summary>
-        /// Updates a specific actor's physics body position (XNA Vector2 input)
-        /// </summary>
         public void UpdateActorPosition(ICollisionActor actor, XnaVector2 newPosition)
         {
             if (_actorToBody.TryGetValue(actor, out var body))
@@ -150,9 +122,6 @@ namespace Hearthvale.GameCode.Collision
             }
         }
 
-        /// <summary>
-        /// Clears all actors from the collision world
-        /// </summary>
         public void Clear()
         {
             var actorsToRemove = _actorToBody.Keys.ToList();
@@ -162,11 +131,10 @@ namespace Hearthvale.GameCode.Collision
             }
         }
 
-        #region Private Methods - Aether.Physics2D specific
+        #region Private Methods
 
         private Body CreateBodyFromActor(ICollisionActor actor)
         {
-            // Ensure the actor has valid bounds before creating a body.
             if (actor.Bounds == null || actor.Bounds.BoundingRectangle.IsEmpty)
             {
                 actor.Bounds = actor.CalculateInitialBounds();
@@ -174,11 +142,8 @@ namespace Hearthvale.GameCode.Collision
 
             if (actor.Bounds is RectangleF rect)
             {
-                // If the bounds are still empty after calculation, we cannot create a body.
                 if (rect.Width == 0 || rect.Height == 0)
                 {
-                    // Log this issue if you have a logging system.
-                    // For now, we'll return null to prevent a crash.
                     return null;
                 }
 
@@ -187,9 +152,9 @@ namespace Hearthvale.GameCode.Collision
 
                 Body body = _physicsWorld.CreateRectangle(size.X, size.Y, 1f, position);
 
-                if (actor is WallCollisionActor)
+                if (actor is WallCollisionActor || actor is ChestCollisionActor)
                 {
-                    body.BodyType = BodyType.Static;
+                    body.BodyType = BodyType.Static; // chests are solid, non-moving
                 }
                 else if (actor is ProjectileCollisionActor)
                 {
@@ -215,7 +180,20 @@ namespace Hearthvale.GameCode.Collision
                 AetherVector2 size = ConvertDisplayToSim(new XnaVector2(boundingRect.Width, boundingRect.Height));
 
                 Body body = _physicsWorld.CreateRectangle(size.X, size.Y, 1f, position);
-                body.BodyType = BodyType.Dynamic;
+
+                if (actor is WallCollisionActor || actor is ChestCollisionActor)
+                {
+                    body.BodyType = BodyType.Static;
+                }
+                else if (actor is ProjectileCollisionActor)
+                {
+                    body.BodyType = BodyType.Kinematic;
+                }
+                else
+                {
+                    body.BodyType = BodyType.Dynamic;
+                }
+
                 body.Tag = actor;
 
                 return body;
@@ -258,7 +236,6 @@ namespace Hearthvale.GameCode.Collision
                 contact.GetWorldManifold(out AetherVector2 normal, out _);
                 AetherVector2 aetherPenetrationVector = normal * contact.Manifold.LocalNormal.Length();
 
-                // Convert to XNA Vector2 for the event args
                 XnaVector2 penetrationVector = ConvertAetherToXna(aetherPenetrationVector);
 
                 actorA.OnCollision(new CollisionEventArgs(actorB, penetrationVector));
@@ -270,7 +247,6 @@ namespace Hearthvale.GameCode.Collision
 
         private void OnEndContact(nkast.Aether.Physics2D.Dynamics.Contacts.Contact contact)
         {
-            // Handle collision end if needed
         }
 
         private AetherVector2 ConvertDisplayToSim(XnaVector2 displayCoords)
@@ -303,15 +279,11 @@ namespace Hearthvale.GameCode.Collision
             if (!_disposed && disposing)
             {
                 Clear();
-                // Aether.Physics2D World doesn't implement IDisposable
                 _disposed = true;
             }
         }
     }
 
-    /// <summary>
-    /// Interface for collision actors - uses MonoGame.Extended shapes
-    /// </summary>
     public interface ICollisionActor
     {
         IShapeF Bounds { get; set; }

@@ -106,6 +106,8 @@ namespace Hearthvale.GameCode.Entities.Components
             if (_sprite != null)
             {
                 _sprite.Update(new GameTime(new TimeSpan(), TimeSpan.FromSeconds(deltaTime)));
+                // Atlas now top-left aligned: keep sprite position locked to logical character position
+                _sprite.Position = _character.Position;
 
                 // Update sprite effects based on facing direction
                 _sprite.Effects = _character.FacingRight ? SpriteEffects.None : SpriteEffects.FlipHorizontally;

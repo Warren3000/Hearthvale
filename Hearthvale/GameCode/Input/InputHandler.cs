@@ -229,10 +229,11 @@ namespace Hearthvale.GameCode.Input
                 return false;
             }
 
-            // Toggle Physics Debug
+            // Toggle Physics Debug + Dungeon Collision overlay
             if (ProcessKeyPress(Keys.F3, keyboard))
             {
                 DebugManager.Instance.TogglePhysicsDebug();
+                DebugManager.Instance.ToggleDungeonCollisionDebug(); // NEW: show chest/trap collision shapes
                 return false;
             }
 

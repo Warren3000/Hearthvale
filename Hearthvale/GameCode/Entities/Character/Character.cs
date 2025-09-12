@@ -168,9 +168,9 @@ public abstract class Character : IDamageable, IMovable, IAnimatable, IDialog
 
     #endregion
 
-    #region Obstacle and Tilemap
+    #region Obstacles (Legacy)
 
-    public void SetTilemap(Tilemap tilemap) => CollisionComponent.Tilemap = tilemap;
+    // Legacy obstacle rectangle support retained temporarily while older systems migrate
     public virtual IEnumerable<Rectangle> GetObstacleRectangles() => _cachedObstacles;
     public void SetObstacleRectangles(IEnumerable<Rectangle> obstacles) => _cachedObstacles = obstacles.ToList();
 

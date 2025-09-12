@@ -21,6 +21,7 @@ public class DebugManager
 {
     private static DebugManager _instance;
     public static DebugManager Instance => _instance ?? throw new InvalidOperationException("DebugManager not initialized. Call Initialize first.");
+    public float FontScale { get; set; } = 1f;
 
     #region Debug Toggle Properties
     // --- Master Debug Controls ---
@@ -39,6 +40,9 @@ public class DebugManager
     public bool ShowUIDebugGrid { get; set; } = false; // UI alignment grid
     public bool ShowTilesetViewer { get; set; } = false; // Tileset viewer
     public bool ShowDetailedWeaponDebug { get; set; } = false;
+
+    // NEW: show dungeon elements’ collision (e.g., chest tight/collision bounds)
+    public bool ShowDungeonCollisionDebug { get; set; } = false;
     #endregion
 
     #region Performance and Caching
@@ -62,11 +66,6 @@ public class DebugManager
         public int LastUpdateFrame;
     }
     #endregion
-
-    /// <summary>
-    /// The scale factor for all debug font rendering.
-    /// </summary>
-    public float FontScale { get; set; } = 1f;
 
     private DebugManager(Texture2D whitePixel)
     {
@@ -102,6 +101,7 @@ public class DebugManager
         ShowDungeonElements = false;
         ShowUIDebugGrid = false;
         ShowDetailedPhysics = false;
+        ShowDungeonCollisionDebug = false;
     }
 
     /// <summary>
@@ -117,6 +117,7 @@ public class DebugManager
         ShowDungeonElements = false;
         ShowUIDebugGrid = false;
         ShowDetailedPhysics = false;
+        ShowDungeonCollisionDebug = false;
         ShowUIOverlay = true;
     }
 
@@ -132,6 +133,7 @@ public class DebugManager
         ShowSpriteAlignment = true;
         ShowDungeonElements = true;
         ShowDetailedPhysics = true;
+        ShowDungeonCollisionDebug = true;
         ShowUIDebugGrid = false; // Keep this off by default
     }
 
@@ -213,6 +215,16 @@ public class DebugManager
             DebugDrawEnabled = true;
         }
     }
+
+    // NEW: Toggle dungeon collision debug overlay
+    public void ToggleDungeonCollisionDebug()
+    {
+        ShowDungeonCollisionDebug = !ShowDungeonCollisionDebug;
+        if (ShowDungeonCollisionDebug)
+        {
+            DebugDrawEnabled = true;
+        }
+    }
     #endregion
 
     #region Main Draw Methods
@@ -248,6 +260,15 @@ public class DebugManager
         if (ShowDungeonElements && elements != null)
         {
             DrawDungeonElements(spriteBatch, elements, viewMatrix);
+        }
+
+        // NEW: draw dungeon element collision using their own DrawDebug (e.g., chests show collision)
+        if (ShowDungeonCollisionDebug && elements != null)
+        {
+            foreach (var element in elements)
+            {
+                element?.DrawDebug(spriteBatch, _whitePixel);
+            }
         }
 
         if (ShowUIDebugGrid)

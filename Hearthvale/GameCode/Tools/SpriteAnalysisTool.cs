@@ -35,25 +35,12 @@ namespace Hearthvale.GameCode.Tools
             );
             DrawRectangleOutline(spriteBatch, fullBounds, Color.Yellow);
 
-            // Get the actual content bounds using the same logic as the character extension
-            // This should match what GetTightSpriteBounds() returns for the character
-            Rectangle contentBounds = SpriteAnalyzer.GetContentBounds(
-                sprite.Region.Texture,
-                sprite.Region.SourceRectangle
-            );
-
-            // Draw the content bounds
-            var actualBounds = new Rectangle(
-                (int)position.X + contentBounds.X,
-                (int)position.Y + contentBounds.Y,
-                contentBounds.Width,
-                contentBounds.Height
-            );
-            DrawRectangleOutline(spriteBatch, actualBounds, Color.Lime);
-
-            // Draw the content position
-            Vector2 contentPosition = sprite.GetContentPosition(position);
-            DrawPoint(spriteBatch, contentPosition, Color.Red, 3);
+            // New atlas: frame is already top-left aligned; logical collision/content area removes 1px vertical padding
+            const int topPad = 1;
+            const int bottomPad = 1;
+            int contentHeight = (int)sprite.Height - (topPad + bottomPad);
+            var contentRect = new Rectangle((int)position.X, (int)position.Y + topPad, (int)sprite.Width, contentHeight);
+            DrawRectangleOutline(spriteBatch, contentRect, Color.Lime);
         }
 
         private void DrawRectangleOutline(SpriteBatch spriteBatch, Rectangle rect, Color color)

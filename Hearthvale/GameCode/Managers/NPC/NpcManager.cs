@@ -40,7 +40,7 @@ namespace Hearthvale.GameCode.Managers
         {
             _bounds = bounds;
             _collisionManager = new CollisionWorldManager(bounds, tilemap);
-            _spawnValidator = new NpcSpawnValidator(bounds, _collisionManager);
+            _spawnValidator = new NpcSpawnValidator(bounds, _collisionManager.CollisionWorld);
             _updateCoordinator = new NpcUpdateCoordinator(_collisionManager);
             _npcSpawner = new NpcSpawner(heroAtlas, weaponAtlas, arrowAtlas, weaponManager);
         }
@@ -73,9 +73,6 @@ namespace Hearthvale.GameCode.Managers
                 System.Diagnostics.Debug.WriteLine($"Failed to create NPC of type {npcType}");
                 return;
             }
-
-            // Set NPC tilemap for collision detection
-            npc.SetTilemap(_collisionManager.Tilemap);
 
             _collisionManager.RegisterNpc(npc);
             _npcs.Add(npc);

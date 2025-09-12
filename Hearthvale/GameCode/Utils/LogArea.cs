@@ -18,6 +18,7 @@ namespace Hearthvale.GameCode.Utils
         Player = 1 << 8,
         UI = 1 << 9,
         Probe = 1 << 10,
+        Collision = 1 << 11,  // Added missing Collision log area
         General = 1 << 30,
         All = ~0
     }
@@ -35,7 +36,7 @@ namespace Hearthvale.GameCode.Utils
         // Configure at runtime anywhere (e.g., LoadContent)
         public static LogArea EnabledAreas { get; set; } =
 #if DEBUG
-            LogArea.Scene | LogArea.Camera | LogArea.Dungeon | LogArea.Atlas | LogArea.Weapon | LogArea.Player | LogArea.NPC;
+            LogArea.Scene | LogArea.Camera | LogArea.Dungeon | LogArea.Atlas | LogArea.Weapon | LogArea.Player | LogArea.NPC | LogArea.Collision;
 #else
             LogArea.None;
 #endif
@@ -49,6 +50,8 @@ namespace Hearthvale.GameCode.Utils
 
         [Conditional("DEBUG")]
         public static void Error(LogArea area, string message) => Write(area, LogLevel.Error, message);
+        [Conditional("DEBUG")]
+        public static void Warning(LogArea area, string message) => Write(area, LogLevel.Warn, message);
         [Conditional("DEBUG")]
         public static void Warn(LogArea area, string message) => Write(area, LogLevel.Warn, message);
         [Conditional("DEBUG")]

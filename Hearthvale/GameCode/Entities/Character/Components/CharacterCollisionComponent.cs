@@ -5,9 +5,16 @@ using Microsoft.Xna.Framework;
 using MonoGameLibrary.Graphics;
 using System.Collections.Generic;
 using System.Linq;
+using Hearthvale.GameCode.Collision;
+using MonoGame.Extended;
+using System;
 
 namespace Hearthvale.GameCode.Entities.Components
 {
+    /// <summary>
+    /// Handles character collision detection and movement using the unified physics system.
+    /// Legacy tile-based collision has been replaced with physics world collision actors.
+    /// </summary>
     public class CharacterCollisionComponent
     {
         private readonly Character _character;
@@ -15,10 +22,14 @@ namespace Hearthvale.GameCode.Entities.Components
         private float _knockbackTimer;
         private const float KnockbackDuration = 0.2f;
         private const float BounceDamping = 0.5f;
+
+        // Physics-based collision system
+        private CollisionWorld _collisionWorld;
+
+        // Legacy obstacle system (kept for backwards compatibility during transition)
         private IEnumerable<Rectangle> _currentObstacles;
         private IEnumerable<NPC> _currentNpcs;
 
-        public Tilemap Tilemap { get; set; }
         public bool IsKnockedBack => _knockbackTimer > 0;
 
         public CharacterCollisionComponent(Character character)
@@ -26,20 +37,32 @@ namespace Hearthvale.GameCode.Entities.Components
             _character = character;
         }
 
+        public void SetCollisionWorld(CollisionWorld collisionWorld)
+        {
+            _collisionWorld = collisionWorld;
+        }
+
         public void SetKnockback(Vector2 velocity)
         {
             _knockbackVelocity = velocity;
             _knockbackTimer = KnockbackDuration;
         }
+
         public Vector2 GetKnockbackVelocity()
         {
             return _knockbackVelocity;
         }
+
+        /// <summary>
+        /// Legacy method for backwards compatibility. Consider migrating to physics-based collision.
+        /// </summary>
+        [Obsolete("Use physics collision system instead of manual obstacle tracking")]
         public void UpdateObstacles(IEnumerable<Rectangle> obstacleRects, IEnumerable<NPC> npcs)
         {
             _currentObstacles = obstacleRects;
             _currentNpcs = npcs;
         }
+
         public void UpdateKnockback(GameTime gameTime)
         {
             if (_knockbackTimer > 0)
@@ -47,8 +70,7 @@ namespace Hearthvale.GameCode.Entities.Components
                 float elapsed = (float)gameTime.ElapsedGameTime.TotalSeconds;
                 _knockbackTimer -= elapsed;
 
-                // Apply velocity damping over time for more natural feel
-                float dampingFactor = 1.0f - (elapsed * 2.0f); // Adjust multiplier as needed
+                float dampingFactor = 1.0f - (elapsed * 2.0f);
                 _knockbackVelocity *= MathHelper.Clamp(dampingFactor, 0.1f, 1.0f);
 
                 Vector2 nextPosition = _character.Position + _knockbackVelocity * elapsed;
@@ -69,26 +91,25 @@ namespace Hearthvale.GameCode.Entities.Components
                 }
             }
         }
-        // In ApplyBounceEffect method, add this check:
+
         private void ApplyBounceEffect()
         {
             if (_knockbackTimer > 0)
             {
                 _knockbackVelocity = -_knockbackVelocity * BounceDamping;
-
-                // Stop bouncing if velocity is too small
-                if (_knockbackVelocity.LengthSquared() < 25f) // Increased from 10f
+                if (_knockbackVelocity.LengthSquared() < 25f)
                 {
                     _knockbackVelocity = Vector2.Zero;
                     _knockbackTimer = 0;
                 }
             }
         }
+
         private bool ValidatePosition(Vector2 position)
         {
             if (float.IsNaN(position.X) || float.IsNaN(position.Y))
             {
-                System.Diagnostics.Debug.WriteLine($"❌ KNOCKBACK NaN detected");
+                //Log.Warning(LogArea.Collision, "Invalid position detected during knockback - resetting");
                 _knockbackVelocity = Vector2.Zero;
                 _knockbackTimer = 0;
                 return false;
@@ -96,18 +117,30 @@ namespace Hearthvale.GameCode.Entities.Components
             return true;
         }
 
-        public bool TryMove(Vector2 nextPosition, IEnumerable<Character> otherCharacters)
+        /// <summary>
+        /// Main movement method that attempts to move the character to the target position.
+        /// Uses physics-based collision detection with wall sliding for smooth movement.
+        /// </summary>
+        public bool TryMove(Vector2 nextPosition, IEnumerable<Character> otherCharacters = null)
         {
-            // Use Bounds for other characters instead of GetTightSpriteBounds
-            var originalObstacles = _character.GetObstacleRectangles();
-            _character.SetObstacleRectangles(otherCharacters.Select(c => c.Bounds));
+            // For backwards compatibility, temporarily override obstacles with other characters
+            if (otherCharacters != null)
+            {
+                var originalObstacles = GetLegacyObstacleRectangles();
+                SetTemporaryObstacles(otherCharacters.Select(c => c.Bounds));
 
-            bool success = TryMoveWithWallSliding(nextPosition);
+                bool success = TryMoveWithWallSliding(nextPosition);
 
-            // Restore the original obstacles
-            _character.SetObstacleRectangles(originalObstacles);
+                SetTemporaryObstacles(originalObstacles);
+                return success;
+            }
 
-            return success;
+            return TryMoveWithWallSliding(nextPosition);
+        }
+
+        private void SetTemporaryObstacles(IEnumerable<Rectangle> obstacles)
+        {
+            _currentObstacles = obstacles;
         }
 
         private bool TryMoveWithWallSliding(Vector2 nextPosition)
@@ -118,27 +151,74 @@ namespace Hearthvale.GameCode.Entities.Components
             if (movement.LengthSquared() < 0.001f)
                 return true;
 
-            Rectangle nextBounds = GetBoundsAtPosition(nextPosition);
-            if (!IsPositionBlocked(nextBounds))
+            // Small moves: single check + slide
+            const float MinSweepDistance = 6f;
+            if (movement.Length() <= MinSweepDistance)
             {
-                _character.SetPosition(nextPosition);
-                return true;
+                Rectangle nextBoundsSmall = GetBoundsAtPosition(nextPosition);
+                if (!IsPositionBlocked(nextBoundsSmall))
+                {
+                    _character.SetPosition(nextPosition);
+                    return true;
+                }
+
+                if (TrySlideHorizontally(nextPosition, currentPos) ||
+                    TrySlideVertically(nextPosition, currentPos))
+                {
+                    return true;
+                }
+
+                if (IsKnockedBack)
+                    ApplyBounceEffect();
+
+                return FindSafePosition(currentPos, nextPosition);
             }
 
-            // Try wall sliding
-            if (TrySlideHorizontally(nextPosition, currentPos) ||
-                TrySlideVertically(nextPosition, currentPos))
+            // Broad-phase: fetch candidate blockers for the whole path once
+            List<ICollisionActor> candidates = null;
+            if (_collisionWorld != null)
             {
-                return true;
+                Rectangle startBounds = GetBoundsAtPosition(currentPos);
+                Rectangle endBounds = GetBoundsAtPosition(nextPosition);
+                var sweptLeft = Math.Min(startBounds.Left, endBounds.Left);
+                var sweptTop = Math.Min(startBounds.Top, endBounds.Top);
+                var sweptRight = Math.Max(startBounds.Right, endBounds.Right);
+                var sweptBottom = Math.Max(startBounds.Bottom, endBounds.Bottom);
+                var sweptRectF = new RectangleF(sweptLeft, sweptTop, sweptRight - sweptLeft, sweptBottom - sweptTop);
+
+                candidates = _collisionWorld.GetActorsInBounds(sweptRectF).ToList();
             }
 
-            // Apply bounce effect if being knocked back
-            if (IsKnockedBack)
+            // Swept/path collision with capped steps to avoid heavy per-pixel checks
+            const float StepPixels = 8f;
+            int steps = Math.Max(1, Math.Min(12, (int)Math.Ceiling(movement.Length() / StepPixels)));
+            Vector2 lastValidPos = currentPos;
+
+            for (int i = 1; i <= steps; i++)
             {
-                ApplyBounceEffect();
+                float t = (float)i / steps;
+                Vector2 testPos = currentPos + movement * t;
+                Rectangle testBounds = GetBoundsAtPosition(testPos);
+
+                if (IsPositionBlocked(testBounds, candidates))
+                {
+                    if (TrySlideHorizontally(testPos, lastValidPos) ||
+                        TrySlideVertically(testPos, lastValidPos))
+                    {
+                        return true;
+                    }
+
+                    if (IsKnockedBack)
+                        ApplyBounceEffect();
+
+                    return FindSafePosition(lastValidPos, testPos);
+                }
+
+                lastValidPos = testPos;
             }
-            
-            return FindSafePosition(currentPos, nextPosition);
+
+            _character.SetPosition(nextPosition);
+            return true;
         }
 
         private bool TrySlideHorizontally(Vector2 nextPosition, Vector2 currentPos)
@@ -172,32 +252,35 @@ namespace Hearthvale.GameCode.Entities.Components
             }
             return false;
         }
+
+        /// <summary>
+        /// Legacy obstacle support for backwards compatibility
+        /// </summary>
+        [Obsolete("Use physics collision system instead of manual obstacle tracking")]
         public IEnumerable<Rectangle> GetObstacleRectangles()
         {
+            return GetLegacyObstacleRectangles();
+        }
+
+        private IEnumerable<Rectangle> GetLegacyObstacleRectangles()
+        {
             var obstacles = new List<Rectangle>();
-
-            // Add static obstacles
+            
             if (_currentObstacles != null)
-            {
                 obstacles.AddRange(_currentObstacles);
-            }
 
-            // Add NPC bounds (except defeated ones)
             if (_currentNpcs != null)
             {
                 foreach (var npc in _currentNpcs.Where(n => !n.IsDefeated))
-                {
                     obstacles.Add(npc.Bounds);
-                }
             }
-
+            
             return obstacles;
         }
+
         private bool FindSafePosition(Vector2 currentPos, Vector2 targetPos)
         {
             Vector2 direction = targetPos - currentPos;
-            
-            // Try more granular steps for finer movement
             for (float step = 0.05f; step <= 1.0f; step += 0.05f)
             {
                 Vector2 testPos = currentPos + direction * (1.0f - step);
@@ -209,26 +292,25 @@ namespace Hearthvale.GameCode.Entities.Components
                     return true;
                 }
             }
-            
-            // If normal steps fail, try micro-nudges in cardinal directions
+
             float nudgeDistance = 1.0f;
-            Vector2[] nudgeDirections = new Vector2[] 
+            Vector2[] nudgeDirections = new Vector2[]
             {
-                new Vector2(nudgeDistance, 0),       // Right
-                new Vector2(-nudgeDistance, 0),      // Left
-                new Vector2(0, nudgeDistance),       // Down
-                new Vector2(0, -nudgeDistance),      // Up
-                new Vector2(nudgeDistance, nudgeDistance),    // Down-Right
-                new Vector2(-nudgeDistance, nudgeDistance),   // Down-Left
-                new Vector2(nudgeDistance, -nudgeDistance),   // Up-Right
-                new Vector2(-nudgeDistance, -nudgeDistance)   // Up-Left
+                new Vector2(nudgeDistance, 0),
+                new Vector2(-nudgeDistance, 0),
+                new Vector2(0, nudgeDistance),
+                new Vector2(0, -nudgeDistance),
+                new Vector2(nudgeDistance, nudgeDistance),
+                new Vector2(-nudgeDistance, nudgeDistance),
+                new Vector2(nudgeDistance, -nudgeDistance),
+                new Vector2(-nudgeDistance, -nudgeDistance)
             };
-            
+
             foreach (var nudge in nudgeDirections)
             {
                 Vector2 nudgedPos = currentPos + nudge;
                 Rectangle nudgedBounds = GetBoundsAtPosition(nudgedPos);
-                
+
                 if (!IsPositionBlocked(nudgedBounds))
                 {
                     _character.SetPosition(nudgedPos);
@@ -241,14 +323,11 @@ namespace Hearthvale.GameCode.Entities.Components
 
         public Rectangle GetBoundsAtPosition(Vector2 position)
         {
-            // Use the character's Bounds property directly
             Rectangle currentBounds = _character.Bounds;
-            
-            // Calculate the offset between logical position and bounds
+
             int offsetX = currentBounds.Left - (int)_character.Position.X;
             int offsetY = currentBounds.Top - (int)_character.Position.Y;
-            
-            // Apply the same offsets to the new position
+
             return new Rectangle(
                 (int)position.X + offsetX,
                 (int)position.Y + offsetY,
@@ -257,51 +336,117 @@ namespace Hearthvale.GameCode.Entities.Components
             );
         }
 
-        private bool IsPositionBlocked(Rectangle bounds)
+        /// <summary>
+        /// Physics-based collision detection using pre-fetched candidates for performance.
+        /// This is the primary collision detection method.
+        /// </summary>
+        private bool IsPositionBlocked(Rectangle bounds, List<ICollisionActor> candidates = null)
         {
-            return CheckWallCollision(bounds) || CheckObstacleCollision(bounds);
-        }
-
-        public bool CheckWallCollision(Rectangle bounds)
-        {
-            if (Tilemap == null || TilesetManager.Instance.WallTileset == null)
-                return false;
-
-            int leftTile = bounds.Left / (int)Tilemap.TileWidth;
-            int rightTile = (bounds.Right - 1) / (int)Tilemap.TileWidth;
-            int topTile = bounds.Top / (int)Tilemap.TileHeight;
-            int bottomTile = (bounds.Bottom - 1) / (int)Tilemap.TileHeight;
-
-            for (int col = leftTile; col <= rightTile; col++)
+            // Primary physics-based collision detection
+            if (_collisionWorld != null)
             {
-                for (int row = topTile; row <= bottomTile; row++)
+                var testCandidates = candidates;
+                if (testCandidates == null)
                 {
-                    if (IsValidTileCoordinate(col, row))
+                    var rectF = new RectangleF(bounds.X, bounds.Y, bounds.Width, bounds.Height);
+                    testCandidates = _collisionWorld.GetActorsInBounds(rectF).ToList();
+                }
+
+                foreach (var actor in testCandidates)
+                {
+                    // Ignore self
+                    if (IsOwnCollisionActor(actor))
+                        continue;
+
+                    // Check for blocking actors
+                    if (IsBlockingActor(actor))
                     {
-                        var tileTileset = Tilemap.GetTileset(col, row);
-                        var tileId = Tilemap.GetTileId(col, row);
-                        if (tileTileset == TilesetManager.Instance.WallTileset &&
-                            AutotileMapper.IsWallTile(tileId))
-                        {
+                        if (actor.Bounds.BoundingRectangle.Intersects(bounds))
                             return true;
-                        }
                     }
                 }
+            }
+
+            // Fallback: Legacy obstacle collision for backwards compatibility
+            return CheckLegacyObstacleCollision(bounds);
+        }
+
+        /// <summary>
+        /// Determines if the collision actor belongs to this character (to avoid self-collision)
+        /// </summary>
+        private bool IsOwnCollisionActor(ICollisionActor actor)
+        {
+            return (actor is PlayerCollisionActor pca && ReferenceEquals(pca.Player, _character)) ||
+                   (actor is NpcCollisionActor nca && ReferenceEquals(nca.Npc, _character));
+        }
+
+        /// <summary>
+        /// Determines if the collision actor should block movement
+        /// </summary>
+        private bool IsBlockingActor(ICollisionActor actor)
+        {
+            return actor is WallCollisionActor || 
+                   actor is ChestCollisionActor ||
+                   actor is PlayerCollisionActor || 
+                   actor is NpcCollisionActor;
+        }
+
+        /// <summary>
+        /// Legacy obstacle collision checking for backwards compatibility.
+        /// This should eventually be fully replaced by physics collision.
+        /// </summary>
+        [Obsolete("Use physics collision system instead of legacy obstacle checking")]
+        private bool CheckLegacyObstacleCollision(Rectangle bounds)
+        {
+            var obstacles = GetLegacyObstacleRectangles();
+            if (obstacles == null) return false;
+
+            foreach (var obstacle in obstacles)
+            {
+                if (bounds.Intersects(obstacle))
+                    return true;
             }
             return false;
         }
 
-        private bool IsValidTileCoordinate(int col, int row)
+        /// <summary>
+        /// Validates that the collision system is properly initialized
+        /// </summary>
+        public bool IsCollisionSystemReady()
         {
-            return col >= 0 && col < Tilemap.Columns && row >= 0 && row < Tilemap.Rows;
+            if (_collisionWorld == null)
+            {
+                //Log.Warn(LogArea., "CollisionWorld not set on CharacterCollisionComponent. Call SetCollisionWorld() during initialization.");
+                return false;
+            }
+            return true;
         }
 
-        private bool CheckObstacleCollision(Rectangle bounds)
+        /// <summary>
+        /// Gets debug information about the current collision state
+        /// </summary>
+        public string GetCollisionDebugInfo()
         {
-            var obstacles = _character.GetObstacleRectangles();
-            if (obstacles == null) return false;
-
-            return obstacles.Any(obstacle => bounds.Intersects(obstacle));
+            var info = new System.Text.StringBuilder();
+            info.AppendLine($"Collision System Ready: {IsCollisionSystemReady()}");
+            info.AppendLine($"Knocked Back: {IsKnockedBack}");
+            
+            if (_collisionWorld != null)
+            {
+                var actorCount = _collisionWorld.Actors.Count();
+                info.AppendLine($"Total Collision Actors: {actorCount}");
+                
+                var wallActors = _collisionWorld.Actors.OfType<WallCollisionActor>().Count();
+                var chestActors = _collisionWorld.Actors.OfType<ChestCollisionActor>().Count();
+                var characterActors = _collisionWorld.Actors.OfType<PlayerCollisionActor>().Count() + 
+                                     _collisionWorld.Actors.OfType<NpcCollisionActor>().Count();
+                
+                info.AppendLine($"Wall Actors: {wallActors}");
+                info.AppendLine($"Chest Actors: {chestActors}");
+                info.AppendLine($"Character Actors: {characterActors}");
+            }
+            
+            return info.ToString();
         }
     }
 }

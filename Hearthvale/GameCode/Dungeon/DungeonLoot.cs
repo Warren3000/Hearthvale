@@ -249,7 +249,7 @@ public class DungeonLoot : IDungeonElement
         var tight = ComputeTightWorldBounds();
         if (force || tight != _lastTightBounds)
         {
-            _collisionActor.UpdateFrom(tight);
+            _collisionActor.SyncFromLoot();
             _lastTightBounds = tight;
         }
     }

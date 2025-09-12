@@ -14,18 +14,18 @@ namespace Hearthvale.GameCode.Managers
     public class NpcSpawnValidator
     {
         private readonly Rectangle _bounds;
-        private readonly CollisionWorldManager _collisionManager;
+        private readonly CollisionWorld _collisionWorld; // Changed from CollisionWorldManager
         private readonly float _defaultMinDistanceFromPlayer;
         private readonly float _defaultMinDistanceBetweenNpcs;
 
         public NpcSpawnValidator(
             Rectangle bounds,
-            CollisionWorldManager collisionManager,
+            CollisionWorld collisionWorld, // Changed parameter type
             float defaultMinDistanceFromPlayer = 48f,
             float defaultMinDistanceBetweenNpcs = 32f)
         {
             _bounds = bounds;
-            _collisionManager = collisionManager;
+            _collisionWorld = collisionWorld; // Updated assignment
             _defaultMinDistanceFromPlayer = defaultMinDistanceFromPlayer;
             _defaultMinDistanceBetweenNpcs = defaultMinDistanceBetweenNpcs;
         }
@@ -65,13 +65,30 @@ namespace Hearthvale.GameCode.Managers
                 }
             }
 
-            // Rest of the validation logic remains the same
+            // Rest of the validation logic
             var validPosition = GetValidSpawnPosition(position);
             if (validPosition != position)
                 position = validPosition;
 
             var npcBounds = CreateNpcBounds(position);
-            return !_collisionManager.IsPositionBlocked(npcBounds);
+            
+            // Use CollisionWorld instead of CollisionWorldManager
+            if (_collisionWorld != null)
+            {
+                var candidates = _collisionWorld.GetActorsInBounds(npcBounds);
+                foreach (var actor in candidates)
+                {
+                    // Check for blocking actors (walls, chests, other characters)
+                    if (actor is WallCollisionActor || actor is ChestCollisionActor ||
+                        actor is PlayerCollisionActor || actor is NpcCollisionActor)
+                    {
+                        if (actor.Bounds.BoundingRectangle.Intersects(new Rectangle((int)npcBounds.X, (int)npcBounds.Y, (int)npcBounds.Width, (int)npcBounds.Height)))
+                            return false;
+                    }
+                }
+            }
+            
+            return true;
         }
 
         public Vector2 GetValidSpawnPosition(Vector2 position)

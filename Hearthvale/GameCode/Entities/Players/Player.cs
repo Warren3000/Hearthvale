@@ -1,18 +1,17 @@
-﻿using Hearthvale.GameCode.Entities;
+﻿using Hearthvale.GameCode.Collision;
+using Hearthvale.GameCode.Entities;
 using Hearthvale.GameCode.Entities.NPCs;
 using Hearthvale.GameCode.Entities.Players.Components;
-using Hearthvale.GameCode.Managers;
 using Hearthvale.GameCode.Utils;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
-using MonoGame.Extended.Animations;
 using MonoGameLibrary.Graphics;
 using System.Collections.Generic;
 using System.Linq;
 using System;
 using Hearthvale.GameCode.Entities.Components;
-using MonoGame.Extended.Collisions;
+using MonoGame.Extended;
 
 namespace Hearthvale.GameCode.Entities.Players
 {
@@ -122,9 +121,8 @@ namespace Hearthvale.GameCode.Entities.Players
             // Always advance animation frames
             AnimationComponent.Sprite.Update(gameTime);
 
-            // Set sprite drawing position but DON'T change character logical position
-            Vector2 contentAdjustedPosition = AnimationComponent.Sprite.GetContentPosition(this.Position);
-            AnimationComponent.Sprite.Position = contentAdjustedPosition; // Only set sprite position
+            // New atlas: sprites top-left aligned; draw sprite directly at logical position
+            AnimationComponent.Sprite.Position = this.Position;
             AnimationComponent.Sprite.Effects = FacingRight ? SpriteEffects.None : SpriteEffects.FlipHorizontally;
 
             Log.VerboseThrottled(LogArea.Player,
@@ -187,7 +185,8 @@ namespace Hearthvale.GameCode.Entities.Players
             //    }
             //}
 
-            bool moved = CollisionComponent.TryMove(candidate, npcs);
+            // Use physics collision (walls, chests, characters) without injecting legacy obstacle list
+            bool moved = CollisionComponent.TryMove(candidate, null);
             if (!moved)
             {
                 Log.Verbose(LogArea.Player, "[Player.Move] Movement blocked by collision (wall slide).");

@@ -1,6 +1,10 @@
 ﻿using Microsoft.Xna.Framework.Graphics;
 using MonoGameLibrary.Graphics;
 using System.Collections.Generic;
+using Hearthvale.GameCode.Collision;
+using Hearthvale.GameCode.Utils;
+using MonoGame.Extended;
+using Microsoft.Xna.Framework;
 
 namespace Hearthvale.GameCode.Managers
 {
@@ -24,6 +28,7 @@ namespace Hearthvale.GameCode.Managers
         { 
             _tilesets = new Dictionary<string, Tileset>();
             _layerOrder = new List<string>();
+            _wallCollisionActors = new List<WallCollisionActor>();
         }
         
         public static void Initialize()
@@ -36,6 +41,10 @@ namespace Hearthvale.GameCode.Managers
         private Tilemap _tilemap;
         private Dictionary<string, Tileset> _tilesets;
         private List<string> _layerOrder;
+        
+        // Physics collision integration
+        private List<WallCollisionActor> _wallCollisionActors;
+        private CollisionWorld _collisionWorld;
 
         /// <summary>
         /// The current wall tileset.
@@ -46,6 +55,7 @@ namespace Hearthvale.GameCode.Managers
         /// The current floor tileset.
         /// </summary>
         public Tileset FloorTileset => _floorTileset;
+        
         public Tilemap Tilemap => _tilemap;
 
         /// <summary>
@@ -64,7 +74,128 @@ namespace Hearthvale.GameCode.Managers
         public void SetTilemap(Tilemap tilemap)
         {
             _tilemap = tilemap;
+            
+            // If we have a collision world, initialize collision for the new tilemap
+            if (_collisionWorld != null)
+            {
+                InitializePhysicsCollision(_collisionWorld);
+            }
         }
+
+        /// <summary>
+        /// Initialize physics-based collision actors for wall tiles in the current tilemap.
+        /// This replaces the legacy tile-based collision checking.
+        /// </summary>
+        public void InitializePhysicsCollision(CollisionWorld collisionWorld)
+        {
+            _collisionWorld = collisionWorld;
+            
+            // Clear existing wall collision actors
+            ClearWallCollisionActors();
+            
+            if (_tilemap == null || _wallTileset == null)
+            {
+                return;
+            }
+
+            // Convert wall tiles to collision actors
+            // Use run-length encoding to create fewer, larger collision rectangles for better performance
+            var wallRectangles = ExtractWallRectangles();
+            
+            foreach (var rect in wallRectangles)
+            {
+                var rectF = new RectangleF(rect.X, rect.Y, rect.Width, rect.Height);
+                var wallActor = new WallCollisionActor(rectF); // Fixed: pass bounds to constructor
+                
+                _wallCollisionActors.Add(wallActor);
+                _collisionWorld.AddActor(wallActor);
+            }
+        }
+
+        /// <summary>
+        /// Extracts wall collision rectangles using run-length encoding for better performance.
+        /// This creates fewer, larger rectangles instead of one per tile.
+        /// </summary>
+        private List<Rectangle> ExtractWallRectangles()
+        {
+            var rectangles = new List<Rectangle>();
+            
+            if (_tilemap == null || _wallTileset == null)
+                return rectangles;
+
+            int rows = _tilemap.Rows;
+            int cols = _tilemap.Columns;
+            float tileWidth = _tilemap.TileWidth;
+            float tileHeight = _tilemap.TileHeight;
+
+            // Process each row to find horizontal runs of wall tiles
+            for (int row = 0; row < rows; row++)
+            {
+                int runStart = -1;
+                
+                for (int col = 0; col <= cols; col++) // Note: <= to handle end of row
+                {
+                    bool isWall = col < cols && IsWallTile(col, row);
+                    
+                    if (isWall)
+                    {
+                        // Start of a new run
+                        if (runStart == -1)
+                            runStart = col;
+                    }
+                    else if (runStart != -1)
+                    {
+                        // End of a run, create rectangle
+                        int runLength = col - runStart;
+                        var rect = new Rectangle(
+                            (int)(runStart * tileWidth),
+                            (int)(row * tileHeight),
+                            (int)(runLength * tileWidth),
+                            (int)tileHeight
+                        );
+                        rectangles.Add(rect);
+                        runStart = -1;
+                    }
+                }
+            }
+
+            return rectangles;
+        }
+
+        /// <summary>
+        /// Determines if the tile at the given coordinates is a wall tile.
+        /// </summary>
+        private bool IsWallTile(int col, int row)
+        {
+            if (col < 0 || col >= _tilemap.Columns || row < 0 || row >= _tilemap.Rows)
+                return false;
+
+            var tileTileset = _tilemap.GetTileset(col, row);
+            var tileId = _tilemap.GetTileId(col, row);
+            
+            return tileTileset == _wallTileset && AutotileMapper.IsWallTile(tileId);
+        }
+
+        /// <summary>
+        /// Clears all wall collision actors from the collision world.
+        /// </summary>
+        private void ClearWallCollisionActors()
+        {
+            if (_collisionWorld != null)
+            {
+                foreach (var actor in _wallCollisionActors)
+                {
+                    _collisionWorld.RemoveActor(actor);
+                }
+            }
+            
+            _wallCollisionActors.Clear();
+        }
+
+        /// <summary>
+        /// Gets all wall collision actors for debugging purposes.
+        /// </summary>
+        public IReadOnlyList<WallCollisionActor> GetWallCollisionActors() => _wallCollisionActors.AsReadOnly();
 
         /// <summary>
         /// Register a tileset with a specific name and layer order.
@@ -126,5 +257,31 @@ namespace Hearthvale.GameCode.Managers
                 return Instance.FloorTileset;
             return null;
         }
+
+        /// <summary>
+        /// Legacy method for backwards compatibility.
+        /// Returns true if the tile at the given world coordinates is a wall.
+        /// Note: This is deprecated - use physics collision system instead.
+        /// </summary>
+        [System.Obsolete("Use physics collision system instead of direct tile checking")]
+        public bool IsWallAt(float worldX, float worldY)
+        {
+            if (_tilemap == null) return false;
+
+            int col = (int)(worldX / _tilemap.TileWidth);
+            int row = (int)(worldY / _tilemap.TileHeight);
+            
+            return IsWallTile(col, row);
+        }
+
+        /// <summary>
+        /// Cleanup method to properly dispose of collision actors.
+        /// </summary>
+        public void Cleanup()
+        {
+            ClearWallCollisionActors();
+            _collisionWorld = null;
+        }
     }
+
 }

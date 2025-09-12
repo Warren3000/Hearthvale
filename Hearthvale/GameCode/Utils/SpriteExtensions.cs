@@ -25,16 +25,9 @@ namespace Hearthvale.GameCode.Utils
         /// <summary>
         /// Gets the position to render a sprite, adjusted for content bounds
         /// </summary>
+        [System.Obsolete("Atlas now top-left aligned; use logical position directly.")]
         public static Vector2 GetContentPosition(this AnimatedSprite sprite, Vector2 logicalPosition)
-        {
-            if (sprite?.Region?.Texture == null)
-                return logicalPosition;
-                
-            Rectangle contentBounds = sprite.GetContentBounds();
-            return new Vector2(
-                logicalPosition.X - contentBounds.X, 
-                logicalPosition.Y - contentBounds.Y);
-        }
+            => logicalPosition;
         
         ///// <summary>
         ///// Gets tight sprite bounds for collision detection
