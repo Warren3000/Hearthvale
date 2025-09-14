@@ -71,36 +71,22 @@ namespace Hearthvale.GameCode.Managers
 
             try
             {
-                // Check for combined Idle+Walk animation first
-                string combinedKey = $"{animationPrefix}_Idle+Walk";
-                if (_heroAtlas.HasAnimation(combinedKey))
+                // Add all 4-directional idle and run animations
+                string[] animNames = new[]
                 {
-                    var combinedAnim = _heroAtlas.GetAnimation(combinedKey);
-                    animations["Idle"] = combinedAnim;
-                    animations["Walk"] = combinedAnim;
-                }
-                else
+                    "Idle_Down", "Idle_Up", "Idle_Side",
+                    "Run_Down", "Run_Up", "Run_Side"
+                };
+                foreach (var anim in animNames)
                 {
-                    // Try to get individual animations
-                    string idleKey = $"{animationPrefix}_Idle";
-                    string walkKey = $"{animationPrefix}_Walk";
-
-                    if (_heroAtlas.HasAnimation(idleKey))
+                    string key = $"{animationPrefix}_{anim}";
+                    if (_heroAtlas.HasAnimation(key))
                     {
-                        animations["Idle"] = _heroAtlas.GetAnimation(idleKey);
+                        animations[anim] = _heroAtlas.GetAnimation(key);
                     }
                     else
                     {
-                        System.Diagnostics.Debug.WriteLine($"Warning: Missing Idle animation for {animationPrefix}");
-                    }
-
-                    if (_heroAtlas.HasAnimation(walkKey))
-                    {
-                        animations["Walk"] = _heroAtlas.GetAnimation(walkKey);
-                    }
-                    else
-                    {
-                        System.Diagnostics.Debug.WriteLine($"Warning: Missing Walk animation for {animationPrefix}");
+                        System.Diagnostics.Debug.WriteLine($"Warning: Missing animation {key}");
                     }
                 }
 

@@ -43,6 +43,9 @@ public class DebugManager
 
     // NEW: show dungeon elements’ collision (e.g., chest tight/collision bounds)
     public bool ShowDungeonCollisionDebug { get; set; } = false;
+    
+    // Show collision bounds debug overlay (walls, chests, dungeon entities)
+    public bool ShowCollisionBounds { get; set; } = false;
     #endregion
 
     #region Performance and Caching
@@ -231,7 +234,7 @@ public class DebugManager
     /// <summary>
     /// Main debug draw method - draws all enabled debug visualizations
     /// </summary>
-    public void Draw(SpriteBatch spriteBatch, Player player, IEnumerable<NPC> npcs, IEnumerable<IDungeonElement> elements, Matrix viewMatrix, SpriteFont debugFont = null)
+    public void Draw(SpriteBatch spriteBatch, Player player, IEnumerable<NPC> npcs, IEnumerable<IDungeonElement> elements, Matrix viewMatrix, SpriteFont debugFont = null, IEnumerable<Rectangle> wallRects = null)
     {
         if (!DebugDrawEnabled) return;
 
@@ -274,6 +277,11 @@ public class DebugManager
         if (ShowUIDebugGrid)
         {
             DrawUIDebugGrid(spriteBatch, Core.GraphicsDevice.Viewport, 40, 40, Color.Black * 0.25f, debugFont);
+        }
+
+        if (ShowCollisionBounds && (wallRects != null || elements != null))
+        {
+            DrawCollisionBounds(spriteBatch, wallRects, elements, debugFont);
         }
     }
 
@@ -984,6 +992,19 @@ public class DebugManager
         // Bottom
         spriteBatch.Draw(_whitePixel, new Rectangle(rect.X, rect.Bottom - th, rect.Width, th), color);
     }
+
+    private void DrawRectWithDepth(SpriteBatch spriteBatch, Rectangle rect, Color color, float thickness = 1f, float layerDepth = 0f)
+    {
+        int th = (int)Math.Ceiling(thickness);
+        // Top
+        spriteBatch.Draw(_whitePixel, new Rectangle(rect.X, rect.Y, rect.Width, th), null, color, 0f, Vector2.Zero, SpriteEffects.None, layerDepth);
+        // Left
+        spriteBatch.Draw(_whitePixel, new Rectangle(rect.X, rect.Y, th, rect.Height), null, color, 0f, Vector2.Zero, SpriteEffects.None, layerDepth);
+        // Right
+        spriteBatch.Draw(_whitePixel, new Rectangle(rect.Right - th, rect.Y, th, rect.Height), null, color, 0f, Vector2.Zero, SpriteEffects.None, layerDepth);
+        // Bottom
+        spriteBatch.Draw(_whitePixel, new Rectangle(rect.X, rect.Bottom - th, rect.Width, th), null, color, 0f, Vector2.Zero, SpriteEffects.None, layerDepth);
+    }
     
     private void DrawRectScreen(SpriteBatch spriteBatch, Rectangle rect, Color color)
     {
@@ -1027,6 +1048,101 @@ public class DebugManager
         var scale = radius * 2f; // Diameter
         var origin = new Vector2(0.5f, 0.5f); // Center of the pixel
         spriteBatch.Draw(texture, center, null, color, 0f, origin, scale, SpriteEffects.None, 0f);
+    }
+
+    /// <summary>
+    /// Draws collision bounds debug overlay for walls, chests, and dungeon entities
+    /// </summary>
+    public void DrawCollisionBounds(SpriteBatch spriteBatch, IEnumerable<Rectangle> wallRects, IEnumerable<IDungeonElement> dungeonElements, SpriteFont debugFont)
+    {
+        System.Diagnostics.Debug.WriteLine($"DrawCollisionBounds called");
+        
+        float layerDepth = 0.9f; // High layer depth to render on top
+        int boundsCount = 0;
+        
+        // Draw wall collision rectangles in blue
+        if (wallRects != null)
+        {
+            foreach (var wallRect in wallRects)
+            {
+                DrawRectWithDepth(spriteBatch, wallRect, Color.Blue * 0.7f, 2f, layerDepth);
+                boundsCount++;
+            }
+        }
+        
+        // Draw dungeon element bounds in different colors
+        if (dungeonElements != null)
+        {
+            foreach (var element in dungeonElements)
+            {
+                var boundsProperty = element.GetType().GetProperty("Bounds");
+                if (boundsProperty != null)
+                {
+                    var bounds = (Rectangle)boundsProperty.GetValue(element);
+                    
+                    // Different colors for different element types
+                    Color elementColor = Color.Red * 0.7f; // Default red
+                    
+                    if (element.GetType().Name.Contains("Loot") || element.GetType().Name.Contains("Chest"))
+                    {
+                        elementColor = Color.Yellow * 0.7f; // Yellow for chests/loot
+                    }
+                    else if (element.GetType().Name.Contains("Switch"))
+                    {
+                        elementColor = Color.Green * 0.7f; // Green for switches
+                    }
+                    else if (element.GetType().Name.Contains("Trap"))
+                    {
+                        elementColor = Color.Purple * 0.7f; // Purple for traps
+                    }
+                    
+                    DrawRectWithDepth(spriteBatch, bounds, elementColor, 2f, layerDepth);
+                    boundsCount++;
+                    
+                    // Draw element type label if font is available
+                    if (debugFont != null)
+                    {
+                        string elementType = element.GetType().Name;
+                        Vector2 labelPosition = new Vector2(bounds.X + 2, bounds.Y + 2);
+                        
+                        // Very small text scale (1/4 of original size) with opacity
+                        float textScale = 0.175f; // 0.7f / 4 = 0.175f for 1/4 size
+                        Color textColor = Color.White * 0.8f; // Add opacity
+                        Color bgColor = Color.Black * 0.6f; // Background with opacity
+                        
+                        // Draw text background
+                        Vector2 textSize = debugFont.MeasureString(elementType) * textScale;
+                        Rectangle textBg = new Rectangle((int)labelPosition.X - 1, (int)labelPosition.Y - 1, (int)textSize.X + 2, (int)textSize.Y + 2);
+                        spriteBatch.Draw(_whitePixel, textBg, null, bgColor, 0f, Vector2.Zero, SpriteEffects.None, layerDepth);
+                        
+                        // Draw text
+                        spriteBatch.DrawString(debugFont, elementType, labelPosition, textColor, 0f, Vector2.Zero, textScale, SpriteEffects.None, layerDepth);
+                    }
+                }
+            }
+        }
+        
+        // Draw legend/info text if font is available
+        if (debugFont != null && boundsCount > 0)
+        {
+            string legendText = $"Collision Bounds ({boundsCount} objects)\nBlue: Walls | Yellow: Chests | Green: Switches | Purple: Traps | Red: Other";
+            Vector2 legendPosition = new Vector2(10, 10);
+            
+            // Smaller legend text with opacity
+            float legendScale = 0.2f; // 0.8f / 4 = 0.2f for 1/4 size
+            Color legendTextColor = Color.White * 0.9f; // Slight opacity for readability
+            Color legendBgColor = Color.Black * 0.7f; // Background with opacity
+            
+            // Draw legend background
+            Vector2 legendSize = debugFont.MeasureString(legendText) * legendScale;
+            Rectangle legendBg = new Rectangle((int)legendPosition.X - 5, (int)legendPosition.Y - 2, (int)legendSize.X + 10, (int)legendSize.Y + 4);
+            spriteBatch.Draw(_whitePixel, legendBg, null, legendBgColor, 0f, Vector2.Zero, SpriteEffects.None, layerDepth);
+            
+            // Draw legend text
+            spriteBatch.DrawString(debugFont, legendText, legendPosition, legendTextColor, 0f, Vector2.Zero, legendScale, SpriteEffects.None, layerDepth);
+        }
+        
+        System.Diagnostics.Debug.WriteLine($"Drew {boundsCount} collision bounds");
     }
     #endregion
 }

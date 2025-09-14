@@ -32,9 +32,6 @@ namespace Hearthvale.GameCode.Entities.Players
         // Track last applied movement state to avoid resetting animation each frame
         private bool _wasMoving;
 
-        // Cache npcs for obstacle filtering during knockback (no weapon shapes will be used)
-        private IEnumerable<NPC> _currentNpcsForObstacles;
-
         public Player(TextureAtlas atlas, Vector2 position, SoundEffect hitSound, SoundEffect defeatSound, SoundEffect playerAttackSound, float movementSpeed)
         {
             // Initialize components
@@ -42,13 +39,21 @@ namespace Hearthvale.GameCode.Entities.Players
 
             _atlas = atlas;
 
-            var idleAnim = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Mage_Idle"), 2.0f); // 2x slower
-            var walkAnim = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Mage_Walk"), 2.0f);
+            // Add all 4-directional idle and run animations
+            var idleDown = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Idle_Down"), 2.0f);
+            var idleUp = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Idle_Up"), 2.0f);
+            var idleSide = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Idle_Side"), 2.0f);
+            var runDown = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Run_Down"), 2.0f);
+            var runUp = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Run_Up"), 2.0f);
+            var runSide = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Run_Side"), 2.0f);
 
-            // Set up AnimatedSprite and AnimationComponent
-            this.AnimationComponent.SetSprite(new AnimatedSprite(idleAnim));
-            this.AnimationComponent.AddAnimation("Mage_Idle", idleAnim);
-            this.AnimationComponent.AddAnimation("Mage_Walk", walkAnim);
+            this.AnimationComponent.SetSprite(new AnimatedSprite(idleDown));
+            this.AnimationComponent.AddAnimation("Idle_Down", idleDown);
+            this.AnimationComponent.AddAnimation("Idle_Up", idleUp);
+            this.AnimationComponent.AddAnimation("Idle_Side", idleSide);
+            this.AnimationComponent.AddAnimation("Run_Down", runDown);
+            this.AnimationComponent.AddAnimation("Run_Up", runUp);
+            this.AnimationComponent.AddAnimation("Run_Side", runSide);
 
             this.MovementComponent.SetPosition(position);
             this.MovementComponent.SetMovementSpeed(movementSpeed);
@@ -111,12 +116,9 @@ namespace Hearthvale.GameCode.Entities.Players
             this.AnimationComponent.Update((float)gameTime.ElapsedGameTime.TotalSeconds);
             _combatController.Update(gameTime, npcs);
 
-            // Apply animation only when movement state changes (prevents constant resets)
-            if (_movingThisFrame != _wasMoving)
-            {
-                AnimationComponent.UpdateAnimation(_movingThisFrame);
-                _wasMoving = _movingThisFrame;
-            }
+            // Always update animation - the CharacterAnimationComponent handles optimization internally
+            AnimationComponent.UpdateAnimation(_movingThisFrame);
+            _wasMoving = _movingThisFrame;
 
             // Always advance animation frames
             AnimationComponent.Sprite.Update(gameTime);
@@ -206,26 +208,6 @@ namespace Hearthvale.GameCode.Entities.Players
         protected override Vector2 GetAttackDirection()
         {
             return MovementComponent.FacingDirection.ToVector();
-        }
-
-        public void UpdateObstacles(IEnumerable<Rectangle> obstacleRects, IEnumerable<NPC> npcs)
-        {
-            CollisionComponent.UpdateObstacles(obstacleRects, npcs);
-            _currentNpcsForObstacles = npcs;
-
-            if (obstacleRects != null || (npcs != null && npcs.Any()))
-            {
-                int staticCount = obstacleRects?.Count() ?? 0;
-                int npcCount = npcs?.Count(n => !n.IsDefeated) ?? 0;
-                Log.VerboseThrottled(LogArea.Player, $"[Player] Obstacles updated: static={staticCount}, npcs={npcCount}", TimeSpan.FromMilliseconds(500));
-            }
-        }
-
-        public override IEnumerable<Rectangle> GetObstacleRectangles()
-        {
-            // Only return character body for collision detection
-            var baseObstacles = _collisionComponent.GetObstacleRectangles() ?? Enumerable.Empty<Rectangle>();
-            return baseObstacles;
         }
 
         public override Rectangle Bounds 

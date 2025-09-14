@@ -1,0 +1,28 @@
+{
+  "spritesheetPath": "C:\\Users\\Warren\\source\\repos\\Hearthvale\\Hearthvale\\Content\\images\\sprites\\Character.png",
+  "outputPath": "C:\\Users\\Warren\\source\\repos\\Hearthvale\\Hearthvale\\Content\\images\\xml\\test.xml",
+  "texturePath": "Character.png",
+  "gridWidth": 32,
+  "gridHeight": 32,
+  "namingPattern": "Sprite_{row}_{col}",
+  "animations": [
+    {
+      "name": "Idle_Down",
+      "frameNames": [
+        "Idle_Down_1",
+        "Idle_Down_2",
+        "Idle_Down_3",
+        "Idle_Down_4",
+        "Idle_Down_5",
+        "Idle_Down_6"
+      ],
+      "delayMs": 100,
+      "startFrame": 0,
+      "frameCount": 6,
+      "pattern": ""
+    }
+  ],
+  "trimTransparency": true,
+  "transparencyThreshold": 0,
+  "isGridBased": true
+}

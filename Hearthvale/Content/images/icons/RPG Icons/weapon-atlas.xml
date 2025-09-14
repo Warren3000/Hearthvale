@@ -1,5 +1,5 @@
 ﻿<TextureAtlas>
-  <Texture>images/RPG Icons/weapons</Texture>
+  <Texture>images/icons/RPG Icons/weapons</Texture>
   <Regions>
     <!--Dagger-->
     <Region name="Dagger-Copper" x="0" y="0" width="16" height="16" />

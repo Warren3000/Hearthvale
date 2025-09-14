@@ -7,11 +7,21 @@ namespace Hearthvale.GameCode.Collision
     /// </summary>
     public class WallCollisionActor : ICollisionActor
     {
-        public IShapeF Bounds { get; set; }
+        private readonly RectangleF _staticBounds;
+        
+        public IShapeF Bounds 
+        { 
+            get => _staticBounds;
+            set 
+            {
+                // Ignore physics system bounds updates for walls - they should remain static
+                // This ensures walls maintain exact tile alignment
+            }
+        }
 
         public WallCollisionActor(RectangleF bounds)
         {
-            Bounds = bounds;
+            _staticBounds = bounds;
         }
 
         public void OnCollision(CollisionEventArgs collisionInfo)
@@ -22,7 +32,7 @@ namespace Hearthvale.GameCode.Collision
 
         public RectangleF CalculateInitialBounds()
         {
-            return Bounds?.BoundingRectangle ?? RectangleF.Empty;
+            return _staticBounds;
         }
     }
 }

@@ -12,6 +12,9 @@ namespace Hearthvale.GameCode.Entities.Components
     /// </summary>
     public class CharacterAnimationComponent
     {
+        // Track last animated direction and movement state
+        private CardinalDirection? _lastAnimatedDirection = null;
+        private bool? _lastWasMoving = null;
         private readonly Character _character;
         private AnimatedSprite _sprite;
         private string _currentAnimationName;
@@ -117,20 +120,37 @@ namespace Hearthvale.GameCode.Entities.Components
         {
             // Get current cardinal direction from movement component
             var direction = _character.MovementComponent.FacingDirection;
+            string animationName = null;
 
-            string animationName = isMoving ? "Mage_Walk" : "Mage_Idle";
-
-            // Set sprite effects based on facing direction
-            if (direction == CardinalDirection.West)
+            // Only update animation if direction or movement state changed
+            if (_lastAnimatedDirection != direction || _lastWasMoving != isMoving)
             {
-                this.Sprite.Effects = SpriteEffects.FlipHorizontally;
-            }
-            else
-            {
-                this.Sprite.Effects = SpriteEffects.None;
-            }
+                switch (direction)
+                {
+                    case CardinalDirection.North:
+                        animationName = isMoving ? "Run_Up" : "Idle_Up";
+                        break;
+                    case CardinalDirection.South:
+                        animationName = isMoving ? "Run_Down" : "Idle_Down";
+                        break;
+                    case CardinalDirection.East:
+                        animationName = isMoving ? "Run_Side" : "Idle_Side";
+                        this.Sprite.Effects = SpriteEffects.None;
+                        break;
+                    case CardinalDirection.West:
+                        animationName = isMoving ? "Run_Side" : "Idle_Side";
+                        this.Sprite.Effects = SpriteEffects.FlipHorizontally;
+                        break;
+                    default:
+                        animationName = isMoving ? "Run_Down" : "Idle_Down";
+                        this.Sprite.Effects = SpriteEffects.None;
+                        break;
+                }
 
-            SetAnimation(animationName);
+                SetAnimation(animationName);
+                _lastAnimatedDirection = direction;
+                _lastWasMoving = isMoving;
+            }
         }
     }
 }

@@ -1,0 +1,269 @@
+﻿<TextureAtlas>
+  <Texture>images/sprites/Character</Texture>
+
+  <Regions>
+  <!-- Idle Animations -->
+    <!--Idle Down No Hands-->
+    <Region name="Char_Idle_Down_NH_1" x="0" y="0" width="32" height="32" />
+    <Region name="Char_Idle_Down_NH_2" x="32" y="0" width="32" height="32" />
+    <Region name="Char_Idle_Down_NH_3" x="64" y="0" width="32" height="32" />
+    <Region name="Char_Idle_Down_NH_4" x="96" y="0" width="32" height="32" />
+    <Region name="Char_Idle_Down_NH_5" x="128" y="0" width="32" height="32" />
+    <Region name="Char_Idle_Down_NH_6" x="160" y="0" width="32" height="32" />
+    <!--Idle Down Hands-->
+    <Region name="Char_Idle_Down_1" x="0" y="32" width="32" height="32" />
+    <Region name="Char_Idle_Down_2" x="32" y="32" width="32" height="32" />
+    <Region name="Char_Idle_Down_3" x="64" y="32" width="32" height="32" />
+    <Region name="Char_Idle_Down_4" x="96" y="32" width="32" height="32" />
+    <Region name="Char_Idle_Down_5" x="128" y="32" width="32" height="32" />
+    <Region name="Char_Idle_Down_6" x="160" y="32" width="32" height="32" />
+    <!--Idle Side No Hands-->
+    <Region name="Char_Idle_Side_NH_1" x="0" y="64" width="32" height="32" />
+    <Region name="Char_Idle_Side_NH_2" x="32" y="64" width="32" height="32" />
+    <Region name="Char_Idle_Side_NH_3" x="64" y="64" width="32" height="32" />
+    <Region name="Char_Idle_Side_NH_4" x="96" y="64" width="32" height="32" />
+    <Region name="Char_Idle_Side_NH_5" x="128" y="64" width="32" height="32" />
+    <Region name="Char_Idle_Side_NH_6" x="160" y="64" width="32" height="32" />
+    <!--Idle Side Hands-->
+    <Region name="Char_Idle_Side_1" x="0" y="96" width="32" height="32" />
+    <Region name="Char_Idle_Side_2" x="32" y="96" width="32" height="32" />
+    <Region name="Char_Idle_Side_3" x="64" y="96" width="32" height="32" />
+    <Region name="Char_Idle_Side_4" x="96" y="96" width="32" height="32" />
+    <Region name="Char_Idle_Side_5" x="128" y="96" width="32" height="32" />
+    <Region name="Char_Idle_Side_6" x="160" y="96" width="32" height="32" />
+    <!--Idle Left No Hands-->
+    <Region name="Char_Idle_Left_NH_1" x="0" y="128" width="32" height="32" />
+    <Region name="Char_Idle_Left_NH_2" x="32" y="128" width="32" height="32" />
+    <Region name="Char_Idle_Left_NH_3" x="64" y="128" width="32" height="32" />
+    <Region name="Char_Idle_Left_NH_4" x="96" y="128" width="32" height="32" />
+    <Region name="Char_Idle_Left_NH" x="128" y="128" width="32" height="32" />
+    <Region name="Char_Idle_Left_NH_6" x="160" y="128" width="32" height="32" />
+    <!--Idle Left Hands-->
+    <Region name="Char_Idle_Left_1" x="0" y="160" width="32" height="32" />
+    <Region name="Char_Idle_Left_2" x="32" y="160" width="32" height="32" />
+    <Region name="Char_Idle_Left_3" x="64" y="160" width="32" height="32" />
+    <Region name="Char_Idle_Left_4" x="96" y="160" width="32" height="32" />
+    <Region name="Char_Idle_Left_5" x="128" y="160" width="32" height="32" />
+    <Region name="Char_Idle_Left_6" x="160" y="160" width="32" height="32" />
+    <!--Idle Up No Hands-->
+    <Region name="Char_Idle_Up_NH_1" x="0" y="192" width="32" height="32" />
+    <Region name="Char_Idle_Up_NH_2" x="32" y="192" width="32" height="32" />
+    <Region name="Char_Idle_Up_NH_3" x="64" y="192" width="32" height="32" />
+    <Region name="Char_Idle_Up_NH_4" x="96" y="192" width="32" height="32" />
+    <Region name="Char_Idle_Up_NH_5" x="128" y="192" width="32" height="32" />
+    <Region name="Char_Idle_Up_NH_6" x="160" y="192" width="32" height="32" />
+    <!--Idle Up Hands-->
+    <Region name="Char_Idle_Up_1" x="0" y="224" width="32" height="32" />
+    <Region name="Char_Idle_Up_2" x="32" y="224" width="32" height="32" />
+    <Region name="Char_Idle_Up_3" x="64" y="224" width="32" height="32" />
+    <Region name="Char_Idle_Up_4" x="96" y="224" width="32" height="32" />
+    <Region name="Char_Idle_Up_5" x="128" y="224" width="32" height="32" />
+    <Region name="Char_Idle_Up_6" x="160" y="224" width="32" height="32" />
+
+    <!-- Running Animations -->
+   <!--Run Down No Hands-->
+    <Region name="Char_Run_Down_NH_1" x="0" y="256" width="32" height="32" />
+    <Region name="Char_Run_Down_NH_2" x="32" y="256" width="32" height="32" />
+    <Region name="Char_Run_Down_NH_3" x="64" y="256" width="32" height="32" />
+    <Region name="Char_Run_Down_NH_4" x="96" y="256" width="32" height="32" />
+    <Region name="Char_Run_Down_NH_5" x="128" y="256" width="32" height="32" />
+    <Region name="Char_Run_Down_NH_6" x="160" y="256" width="32" height="32" />
+    <!--Run Down Hands-->
+    <Region name="Char_Run_Down_1" x="0" y="288" width="32" height="32" />
+    <Region name="Char_Run_Down_2" x="32" y="288" width="32" height="32" />
+    <Region name="Char_Run_Down_3" x="64" y="288" width="32" height="32" />
+    <Region name="Char_Run_Down_4" x="96" y="288" width="32" height="32" />
+    <Region name="Char_Run_Down_5" x="128" y="288" width="32" height="32" />
+    <Region name="Char_Run_Down_6" x="160" y="288" width="32" height="32" />
+    <!--Run Left Hands-->
+    <Region name="Char_Run_Left_1" x="0" y="320" width="32" height="32" />
+    <Region name="Char_Run_Left_2" x="32" y="320" width="32" height="32" />
+    <Region name="Char_Run_Left_3" x="64" y="320" width="32" height="32" />
+    <Region name="Char_Run_Left_4" x="96" y="320" width="32" height="32" />
+    <Region name="Char_Run_Left_5" x="128" y="320" width="32" height="32" />
+    <Region name="Char_Run_Left_6" x="160" y="320" width="32" height="32" />
+    <!--Run Left Hands NH-->
+    <Region name="Char_Run_Left_NH_1" x="0" y="352" width="32" height="32" />
+    <Region name="Char_Run_Left_NH_2" x="32" y="352" width="32" height="32" />
+    <Region name="Char_Run_Left_NH_3" x="64" y="352" width="32" height="32" />
+    <Region name="Char_Run_Left_NH_4" x="96" y="352" width="32" height="32" />
+    <Region name="Char_Run_Left_NH_5" x="128" y="352" width="32" height="32" />
+    <Region name="Char_Run_Left_NH_6" x="160" y="352" width="32" height="32" />
+    <!--Run Up No Hands-->
+    <Region name="Char_Run_Up_NH_1" x="0" y="384" width="32" height="32" />
+    <Region name="Char_Run_Up_NH_2" x="32" y="384" width="32" height="32" />
+    <Region name="Char_Run_Up_NH_3" x="64" y="384" width="32" height="32" />
+    <Region name="Char_Run_Up_NH_4" x="96" y="384" width="32" height="32" />
+    <Region name="Char_Run_Up_NH" x="128" y="384" width="32" height="32" />
+    <Region name="Char_Run_Up_NH_6" x="160" y="384" width="32" height="32" />
+    <!--Run Up Hands-->
+    <Region name="Char_Run_Up_1" x="0" y="416" width="32" height="32" />
+    <Region name="Char_Run_Up_2" x="32" y="416" width="32" height="32" />
+    <Region name="Char_Run_Up_3" x="64" y="416" width="32" height="32" />
+    <Region name="Char_Run_Up_4" x="96" y="416" width="32" height="32" />
+    <Region name="Char_Run_Up_5" x="128" y="416" width="32" height="32" />
+    <Region name="Char_Run_Up_6" x="160" y="416" width="32" height="32" />
+    <!--Run Side Hands-->
+    <Region name="Char_Run_Side_1" x="0" y="448" width="32" height="32" />
+    <Region name="Char_Run_Side_2" x="32" y="448" width="32" height="32" />
+    <Region name="Char_Run_Side_3" x="64" y="448" width="32" height="32" />
+    <Region name="Char_Run_Side_4" x="96" y="448" width="32" height="32" />
+    <Region name="Char_Run_Side_5" x="128" y="448" width="32" height="32" />
+    <Region name="Char_Run_Side_6" x="160" y="448" width="32" height="32" />
+    <!--Run Side No Hands-->
+    <Region name="Char_Run_Side_NH_1" x="0" y="480" width="32" height="32" />
+    <Region name="Char_Run_Side_NH_2" x="32" y="480" width="32" height="32" />
+    <Region name="Char_Run_Side_NH_3" x="64" y="480" width="32" height="32" />
+    <Region name="Char_Run_Side_NH_4" x="96" y="480" width="32" height="32" />
+    <Region name="Char_Run_Side_NH_5" x="128" y="480" width="32" height="32" />
+    <Region name="Char_Run_Side_NH_6" x="160" y="480" width="32" height="32" />
+
+  </Regions>
+
+  <Animations>
+    <!-- Idle Down No Hands -->
+    <Animation name="Idle_Down_NH" delay="100">
+      <Frame region="Char_Idle_Down_NH_1" />
+      <Frame region="Char_Idle_Down_NH_2" />
+      <Frame region="Char_Idle_Down_NH_3" />
+      <Frame region="Char_Idle_Down_NH_4" />
+      <Frame region="Char_Idle_Down_NH_5" />
+      <Frame region="Char_Idle_Down_NH_6" />
+    </Animation>
+    <!-- Idle Down Hands -->
+    <Animation name="Idle_Down" delay="100">
+      <Frame region="Char_Idle_Down_1" />
+      <Frame region="Char_Idle_Down_2" />
+      <Frame region="Char_Idle_Down_3" />
+      <Frame region="Char_Idle_Down_4" />
+      <Frame region="Char_Idle_Down_5" />
+      <Frame region="Char_Idle_Down_6" />
+    </Animation>
+    <!-- Idle Side No Hands -->
+    <Animation name="Idle_Side_NH" delay="100">
+      <Frame region="Char_Idle_Side_NH_1" />
+      <Frame region="Char_Idle_Side_NH_2" />
+      <Frame region="Char_Idle_Side_NH_3" />
+      <Frame region="Char_Idle_Side_NH_4" />
+      <Frame region="Char_Idle_Side_NH_5" />
+      <Frame region="Char_Idle_Side_NH_6" />
+    </Animation>
+    <!-- Idle Side Hands -->
+    <Animation name="Idle_Side" delay="100">
+      <Frame region="Char_Idle_Side_1" />
+      <Frame region="Char_Idle_Side_2" />
+      <Frame region="Char_Idle_Side_3" />
+      <Frame region="Char_Idle_Side_4" />
+      <Frame region="Char_Idle_Side_5" />
+      <Frame region="Char_Idle_Side_6" />
+    </Animation>
+    <!-- Idle Left No Hands -->
+    <Animation name="Idle_Left_NH" delay="100">
+      <Frame region="Char_Idle_Left_NH_1" />
+      <Frame region="Char_Idle_Left_NH_2" />
+      <Frame region="Char_Idle_Left_NH_3" />
+      <Frame region="Char_Idle_Left_NH_4" />
+      <Frame region="Char_Idle_Left_NH" />
+      <Frame region="Char_Idle_Left_NH_6" />
+    </Animation>
+    <!-- Idle Left Hands -->
+    <Animation name="Idle_Left" delay="100">
+      <Frame region="Char_Idle_Left_1" />
+      <Frame region="Char_Idle_Left_2" />
+      <Frame region="Char_Idle_Left_3" />
+      <Frame region="Char_Idle_Left_4" />
+      <Frame region="Char_Idle_Left_5" />
+      <Frame region="Char_Idle_Left_6" />
+    </Animation>
+    <!-- Idle Up No Hands -->
+    <Animation name="Idle_Up_NH" delay="100">
+      <Frame region="Char_Idle_Up_NH_1" />
+      <Frame region="Char_Idle_Up_NH_2" />
+      <Frame region="Char_Idle_Up_NH_3" />
+      <Frame region="Char_Idle_Up_NH_4" />
+      <Frame region="Char_Idle_Up_NH_5" />
+      <Frame region="Char_Idle_Up_NH_6" />
+    </Animation>
+    <!-- Idle Up Hands -->
+    <Animation name="Idle_Up" delay="100">
+      <Frame region="Char_Idle_Up_1" />
+      <Frame region="Char_Idle_Up_2" />
+      <Frame region="Char_Idle_Up_3" />
+      <Frame region="Char_Idle_Up_4" />
+      <Frame region="Char_Idle_Up_5" />
+      <Frame region="Char_Idle_Up_6" />
+    </Animation>
+    <!-- Run Down No Hands -->
+    <Animation name="Run_Down_NH" delay="80">
+      <Frame region="Char_Run_Down_NH_1" />
+      <Frame region="Char_Run_Down_NH_2" />
+      <Frame region="Char_Run_Down_NH_3" />
+      <Frame region="Char_Run_Down_NH_4" />
+      <Frame region="Char_Run_Down_NH_5" />
+      <Frame region="Char_Run_Down_NH_6" />
+    </Animation>
+    <!-- Run Down Hands -->
+    <Animation name="Run_Down" delay="80">
+      <Frame region="Char_Run_Down_1" />
+      <Frame region="Char_Run_Down_2" />
+      <Frame region="Char_Run_Down_3" />
+      <Frame region="Char_Run_Down_4" />
+      <Frame region="Char_Run_Down_5" />
+      <Frame region="Char_Run_Down_6" />
+    </Animation>
+    <!-- Run Left Hands -->
+    <Animation name="Run_Left" delay="80">
+      <Frame region="Char_Run_Left_1" />
+      <Frame region="Char_Run_Left_2" />
+      <Frame region="Char_Run_Left_3" />
+      <Frame region="Char_Run_Left_4" />
+      <Frame region="Char_Run_Left_5" />
+      <Frame region="Char_Run_Left_6" />
+    </Animation>
+    <!-- Run Left No Hands -->
+    <Animation name="Run_Left_NH" delay="80">
+      <Frame region="Char_Run_Left_NH_1" />
+      <Frame region="Char_Run_Left_NH_2" />
+      <Frame region="Char_Run_Left_NH_3" />
+      <Frame region="Char_Run_Left_NH_4" />
+      <Frame region="Char_Run_Left_NH_5" />
+      <Frame region="Char_Run_Left_NH_6" />
+    </Animation>
+    <!-- Run Up No Hands -->
+    <Animation name="Run_Up_NH" delay="80">
+      <Frame region="Char_Run_Up_NH_1" />
+      <Frame region="Char_Run_Up_NH_2" />
+      <Frame region="Char_Run_Up_NH_3" />
+      <Frame region="Char_Run_Up_NH_4" />
+      <Frame region="Char_Run_Up_NH" />
+      <Frame region="Char_Run_Up_NH_6" />
+    </Animation>
+    <!-- Run Up Hands -->
+    <Animation name="Run_Up" delay="80">
+      <Frame region="Char_Run_Up_1" />
+      <Frame region="Char_Run_Up_2" />
+      <Frame region="Char_Run_Up_3" />
+      <Frame region="Char_Run_Up_4" />
+      <Frame region="Char_Run_Up_5" />
+      <Frame region="Char_Run_Up_6" />
+    </Animation>
+    <!-- Run Side Hands -->
+    <Animation name="Run_Side" delay="80">
+      <Frame region="Char_Run_Side_1" />
+      <Frame region="Char_Run_Side_2" />
+      <Frame region="Char_Run_Side_3" />
+      <Frame region="Char_Run_Side_4" />
+      <Frame region="Char_Run_Side_5" />
+      <Frame region="Char_Run_Side_6" />
+    </Animation>
+    <!-- Run Side No Hands -->
+    <Animation name="Run_Side_NH" delay="80">
+      <Frame region="Char_Run_Side_NH_1" />
+      <Frame region="Char_Run_Side_NH_2" />
+      <Frame region="Char_Run_Side_NH_3" />
+      <Frame region="Char_Run_Side_NH_4" />
+      <Frame region="Char_Run_Side_NH_5" />
+      <Frame region="Char_Run_Side_NH_6" />
+    </Animation>
+  </Animations>
+</TextureAtlas>

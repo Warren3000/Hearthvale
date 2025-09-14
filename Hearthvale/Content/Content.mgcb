@@ -94,10 +94,7 @@
 /processorParam:TextureFormat=Compressed
 /build:fonts/DebugFont.spritefont
 
-#begin images/arrow-atlas.xml
-/copy:images/arrow-atlas.xml
-
-#begin images/ArrowSpriteSheet.png
+#begin images/atlases/ArrowSpriteSheet.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -107,12 +104,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:images/ArrowSpriteSheet.png
+/build:images/atlases/ArrowSpriteSheet.png
 
-#begin images/atlas-definition.xml
-/copy:images/atlas-definition.xml
-
-#begin images/atlas.png
+#begin images/atlases/atlas.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -122,9 +116,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:images/atlas.png
+/build:images/atlases/atlas.png
 
-#begin images/background-pattern.jpg
+#begin images/atlases/chests_v2.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -134,12 +128,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:images/background-pattern.jpg
+/build:images/atlases/chests_v2.png
 
-#begin images/chest-definition.xml
-/copy:images/chest-definition.xml
-
-#begin images/chests.png
+#begin images/atlases/chests.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -149,9 +140,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:images/chests.png
+/build:images/atlases/chests.png
 
-#begin images/chests_v2.png
+#begin images/atlases/NPCSpriteSheet.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -161,9 +152,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:images/chests_v2.png
+/build:images/atlases/NPCSpriteSheet.png
 
-#begin images/logo.png
+#begin images/atlases/WeaponsSpriteSheet.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -173,12 +164,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:images/logo.png
+/build:images/atlases/WeaponsSpriteSheet.png
 
-#begin images/npc-atlas.xml
-/copy:images/npc-atlas.xml
-
-#begin images/NPCSpriteSheet.png
+#begin images/backgrounds/background-pattern.jpg
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -188,9 +176,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:images/NPCSpriteSheet.png
+/build:images/backgrounds/background-pattern.jpg
 
-#begin images/RPG Icons/all-assets-preview.png
+#begin images/icons/logo.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -200,9 +188,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:images/RPG Icons/all-assets-preview.png
+/build:images/icons/logo.png
 
-#begin images/RPG Icons/armours.png
+#begin images/icons/RPG Icons/all-assets-preview.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -212,9 +200,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:images/RPG Icons/armours.png
+/build:images/icons/RPG Icons/all-assets-preview.png
 
-#begin images/RPG Icons/books.png
+#begin images/icons/RPG Icons/armours.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -224,9 +212,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:images/RPG Icons/books.png
+/build:images/icons/RPG Icons/armours.png
 
-#begin images/RPG Icons/consumables.png
+#begin images/icons/RPG Icons/books.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -236,9 +224,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:images/RPG Icons/consumables.png
+/build:images/icons/RPG Icons/books.png
 
-#begin images/RPG Icons/pixelquest16-july-2025-cave.png
+#begin images/icons/RPG Icons/consumables.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -248,9 +236,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:images/RPG Icons/pixelquest16-july-2025-cave.png
+/build:images/icons/RPG Icons/consumables.png
 
-#begin images/RPG Icons/potions.png
+#begin images/icons/RPG Icons/pixelquest16-july-2025-cave.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -260,12 +248,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:images/RPG Icons/potions.png
+/build:images/icons/RPG Icons/pixelquest16-july-2025-cave.png
 
-#begin images/RPG Icons/weapon-atlas.xml
-/copy:images/RPG Icons/weapon-atlas.xml
-
-#begin images/RPG Icons/weapons.png
+#begin images/icons/RPG Icons/potions.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -275,9 +260,12 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:images/RPG Icons/weapons.png
+/build:images/icons/RPG Icons/potions.png
 
-#begin images/Soldier.png
+#begin images/icons/RPG Icons/weapon-atlas.xml
+/copy:images/icons/RPG Icons/weapon-atlas.xml
+
+#begin images/icons/RPG Icons/weapons.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -287,15 +275,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:images/Soldier.png
+/build:images/icons/RPG Icons/weapons.png
 
-#begin images/tilemap-definition.xml
-/copy:images/tilemap-definition.xml
-
-#begin images/weapon-atlas.xml
-/copy:images/weapon-atlas.xml
-
-#begin images/WeaponsSpriteSheet.png
+#begin images/sprites/Character.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -305,7 +287,40 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:images/WeaponsSpriteSheet.png
+/build:images/sprites/Character.png;images/sprites/Character
+
+#begin images/sprites/Soldier.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:images/sprites/Soldier.png
+
+#begin images/xml/arrow-atlas.xml
+/copy:images/xml/arrow-atlas.xml
+
+#begin images/xml/atlas-definition.xml
+/copy:images/xml/atlas-definition.xml
+
+#begin images/xml/character-atlas.xml
+/copy:images/xml/character-atlas.xml
+
+#begin images/xml/chest-definition.xml
+/copy:images/xml/chest-definition.xml
+
+#begin images/xml/npc-atlas.xml
+/copy:images/xml/npc-atlas.xml
+
+#begin images/xml/tilemap-definition.xml
+/copy:images/xml/tilemap-definition.xml
+
+#begin images/xml/weapon-atlas.xml
+/copy:images/xml/weapon-atlas.xml
 
 #begin Levels/Level1.xml
 /copy:Levels/Level1.xml
@@ -356,14 +371,4 @@
 /importer:TiledMapTilesetImporter
 /processor:TiledMapTilesetProcessor
 /build:Tilesets/DampDungeons/Tiles/Dungeon.tsx;Tilesets/DampDungeons/Tiles/Dungeon
-
-#begin Tilesets/DampDungeons/Tiles/DungeonMap.tmx
-/importer:TiledMapImporter
-/processor:TiledMapProcessor
-/build:Tilesets/DampDungeons/Tiles/DungeonMap.tmx;Tilesets/DampDungeons/Tiles/DungeonMap
-
-#begin Tilesets/DampDungeons/Tiles/Player.tsx
-/importer:TiledMapTilesetImporter
-/processor:TiledMapTilesetProcessor
-/build:Tilesets/DampDungeons/Tiles/Player.tsx;Tilesets/DampDungeons/Tiles/Player
 

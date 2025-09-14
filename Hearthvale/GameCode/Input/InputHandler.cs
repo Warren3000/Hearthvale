@@ -258,6 +258,14 @@ namespace Hearthvale.GameCode.Input
                 return false;
             }
 
+            // Toggle Collision Bounds Debug
+            if (ProcessKeyPress(Keys.F7, keyboard))
+            {
+                DebugManager.Instance.ShowCollisionBounds = !DebugManager.Instance.ShowCollisionBounds;
+                System.Diagnostics.Debug.WriteLine($"F7 Pressed: ShowCollisionBounds = {DebugManager.Instance.ShowCollisionBounds}");
+                return false;
+            }
+
             // Advanced Debug Controls (Ctrl + key combinations)
             if (keyboard.IsKeyDown(Keys.LeftControl))
             {

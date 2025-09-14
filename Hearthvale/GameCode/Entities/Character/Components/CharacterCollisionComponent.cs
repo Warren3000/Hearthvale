@@ -26,10 +26,6 @@ namespace Hearthvale.GameCode.Entities.Components
         // Physics-based collision system
         private CollisionWorld _collisionWorld;
 
-        // Legacy obstacle system (kept for backwards compatibility during transition)
-        private IEnumerable<Rectangle> _currentObstacles;
-        private IEnumerable<NPC> _currentNpcs;
-
         public bool IsKnockedBack => _knockbackTimer > 0;
 
         public CharacterCollisionComponent(Character character)
@@ -51,16 +47,6 @@ namespace Hearthvale.GameCode.Entities.Components
         public Vector2 GetKnockbackVelocity()
         {
             return _knockbackVelocity;
-        }
-
-        /// <summary>
-        /// Legacy method for backwards compatibility. Consider migrating to physics-based collision.
-        /// </summary>
-        [Obsolete("Use physics collision system instead of manual obstacle tracking")]
-        public void UpdateObstacles(IEnumerable<Rectangle> obstacleRects, IEnumerable<NPC> npcs)
-        {
-            _currentObstacles = obstacleRects;
-            _currentNpcs = npcs;
         }
 
         public void UpdateKnockback(GameTime gameTime)
@@ -123,24 +109,7 @@ namespace Hearthvale.GameCode.Entities.Components
         /// </summary>
         public bool TryMove(Vector2 nextPosition, IEnumerable<Character> otherCharacters = null)
         {
-            // For backwards compatibility, temporarily override obstacles with other characters
-            if (otherCharacters != null)
-            {
-                var originalObstacles = GetLegacyObstacleRectangles();
-                SetTemporaryObstacles(otherCharacters.Select(c => c.Bounds));
-
-                bool success = TryMoveWithWallSliding(nextPosition);
-
-                SetTemporaryObstacles(originalObstacles);
-                return success;
-            }
-
             return TryMoveWithWallSliding(nextPosition);
-        }
-
-        private void SetTemporaryObstacles(IEnumerable<Rectangle> obstacles)
-        {
-            _currentObstacles = obstacles;
         }
 
         private bool TryMoveWithWallSliding(Vector2 nextPosition)
@@ -253,31 +222,6 @@ namespace Hearthvale.GameCode.Entities.Components
             return false;
         }
 
-        /// <summary>
-        /// Legacy obstacle support for backwards compatibility
-        /// </summary>
-        [Obsolete("Use physics collision system instead of manual obstacle tracking")]
-        public IEnumerable<Rectangle> GetObstacleRectangles()
-        {
-            return GetLegacyObstacleRectangles();
-        }
-
-        private IEnumerable<Rectangle> GetLegacyObstacleRectangles()
-        {
-            var obstacles = new List<Rectangle>();
-            
-            if (_currentObstacles != null)
-                obstacles.AddRange(_currentObstacles);
-
-            if (_currentNpcs != null)
-            {
-                foreach (var npc in _currentNpcs.Where(n => !n.IsDefeated))
-                    obstacles.Add(npc.Bounds);
-            }
-            
-            return obstacles;
-        }
-
         private bool FindSafePosition(Vector2 currentPos, Vector2 targetPos)
         {
             Vector2 direction = targetPos - currentPos;
@@ -323,17 +267,17 @@ namespace Hearthvale.GameCode.Entities.Components
 
         public Rectangle GetBoundsAtPosition(Vector2 position)
         {
+            // Use the same simple centering logic as the base Character.GetTightSpriteBounds method
+            // Get current bounds to determine size
             Rectangle currentBounds = _character.Bounds;
-
-            int offsetX = currentBounds.Left - (int)_character.Position.X;
-            int offsetY = currentBounds.Top - (int)_character.Position.Y;
-
-            return new Rectangle(
-                (int)position.X + offsetX,
-                (int)position.Y + offsetY,
-                currentBounds.Width,
-                currentBounds.Height
-            );
+            int width = currentBounds.Width;
+            int height = currentBounds.Height;
+            
+            // Center the bounds at the target position using the same logic as Character.GetTightSpriteBounds
+            int left = (int)Math.Round(position.X - width / 2f);
+            int top = (int)Math.Round(position.Y - height / 2f);
+            
+            return new Rectangle(left, top, width, height);
         }
 
         /// <summary>
@@ -342,7 +286,7 @@ namespace Hearthvale.GameCode.Entities.Components
         /// </summary>
         private bool IsPositionBlocked(Rectangle bounds, List<ICollisionActor> candidates = null)
         {
-            // Primary physics-based collision detection
+            // Physics-based collision detection
             if (_collisionWorld != null)
             {
                 var testCandidates = candidates;
@@ -367,8 +311,7 @@ namespace Hearthvale.GameCode.Entities.Components
                 }
             }
 
-            // Fallback: Legacy obstacle collision for backwards compatibility
-            return CheckLegacyObstacleCollision(bounds);
+            return false;
         }
 
         /// <summary>
@@ -389,24 +332,6 @@ namespace Hearthvale.GameCode.Entities.Components
                    actor is ChestCollisionActor ||
                    actor is PlayerCollisionActor || 
                    actor is NpcCollisionActor;
-        }
-
-        /// <summary>
-        /// Legacy obstacle collision checking for backwards compatibility.
-        /// This should eventually be fully replaced by physics collision.
-        /// </summary>
-        [Obsolete("Use physics collision system instead of legacy obstacle checking")]
-        private bool CheckLegacyObstacleCollision(Rectangle bounds)
-        {
-            var obstacles = GetLegacyObstacleRectangles();
-            if (obstacles == null) return false;
-
-            foreach (var obstacle in obstacles)
-            {
-                if (bounds.Intersects(obstacle))
-                    return true;
-            }
-            return false;
         }
 
         /// <summary>

@@ -16,6 +16,45 @@ namespace Hearthvale.GameCode.Entities;
 /// </summary>
 public abstract class Character : IDamageable, IMovable, IAnimatable, IDialog
 {
+    #region Bounds
+    /// <summary>
+    /// Returns a rectangle centered on the character's position, matching the sprite's size.
+    /// </summary>
+    public virtual Rectangle GetTightSpriteBounds()
+    {
+        // Calculate actual tight bounds around character pixels (not just remove padding)
+        int width = 12; // Tight character body width based on typical character sprites
+        int height = 12; // Tight character body height
+        
+        if (Sprite?.Region != null)
+        {
+            // For typical character sprites in a 32x32 or 16x16 region:
+            // - Character body is roughly 60-75% of the region width
+            // - Character body is roughly 60-75% of the region height minus padding
+            const int topPad = 1;
+            const int bottomPad = 1;
+            
+            // Calculate tight bounds based on typical character proportions
+            float characterWidthRatio = 0.7f;  // Character takes ~70% of sprite width
+            float characterHeightRatio = 0.7f; // Character takes ~70% of content height
+            
+            int contentHeight = Sprite.Region.Height - (topPad + bottomPad);
+            width = (int)(Sprite.Region.Width * characterWidthRatio);
+            height = (int)(contentHeight * characterHeightRatio);
+            
+            // Ensure minimum reasonable bounds
+            width = Math.Max(8, width);
+            height = Math.Max(8, height);
+        }
+        
+        // Center the tight bounding box on the character's position
+        // Use Math.Round to ensure pixel-perfect alignment and avoid gaps
+        int left = (int)Math.Round(Position.X - width / 2f);
+        int top = (int)Math.Round(Position.Y - height / 2f);
+        
+        return new Rectangle(left, top, width, height);
+    }
+    #endregion
     #region Fields
 
     // Components
@@ -26,9 +65,6 @@ public abstract class Character : IDamageable, IMovable, IAnimatable, IDialog
     protected CharacterAnimationComponent _animationComponent;
     protected CharacterRenderComponent _renderComponent;
     protected CharacterAIComponent _aiComponent;
-
-    // Cached obstacles for collision
-    private List<Rectangle> _cachedObstacles = new List<Rectangle>();
 
     #endregion
 
@@ -162,17 +198,29 @@ public abstract class Character : IDamageable, IMovable, IAnimatable, IDialog
         var opacity = GetRenderOpacity();
         if (opacity <= 0f)
             return; // Skip drawing if fully transparent
-            
-        _renderComponent?.Draw(spriteBatch);
+
+        // Draw the sprite centered on the character's position (blue cross)
+        if (Sprite != null)
+        {
+            // Use sprite analyzer logic: center the character in the content area
+            var origin = new Vector2(Sprite.Width / 2f, Sprite.Height / 2f - 1f); // -1 for top padding
+            spriteBatch.Draw(
+                Sprite.Region.Texture,
+                Position,
+                Sprite.Region.SourceRectangle,
+                Sprite.Color * opacity,
+                Sprite.Rotation,
+                origin,
+                Sprite.Scale,
+                Sprite.Effects,
+                Sprite.LayerDepth
+            );
+        }
+        else
+        {
+            _renderComponent?.Draw(spriteBatch);
+        }
     }
-
-    #endregion
-
-    #region Obstacles (Legacy)
-
-    // Legacy obstacle rectangle support retained temporarily while older systems migrate
-    public virtual IEnumerable<Rectangle> GetObstacleRectangles() => _cachedObstacles;
-    public void SetObstacleRectangles(IEnumerable<Rectangle> obstacles) => _cachedObstacles = obstacles.ToList();
 
     #endregion
 

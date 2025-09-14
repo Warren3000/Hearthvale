@@ -1,0 +1,100 @@
+<Project>
+  
+  <!-- Import this file in your project to enable automatic atlas generation -->
+  
+  <!-- Define properties for atlas generation -->
+  <PropertyGroup>
+    <AtlasGeneratorExe Condition="'$(AtlasGeneratorExe)' == ''">$(SolutionDir)AtlasGenerator\bin\$(Configuration)\net8.0\AtlasGenerator.exe</AtlasGeneratorExe>
+    <AtlasConfigDir Condition="'$(AtlasConfigDir)' == ''">$(ProjectDir)Content\atlas-configs\</AtlasConfigDir>
+    <GenerateAtlasesOnBuild Condition="'$(GenerateAtlasesOnBuild)' == ''">true</GenerateAtlasesOnBuild>
+  </PropertyGroup>
+
+  <!-- Define the atlas configuration items -->
+  <ItemGroup>
+    <AtlasConfig Include="$(AtlasConfigDir)*.json" Condition="Exists('$(AtlasConfigDir)')" />
+  </ItemGroup>
+
+  <!-- Target to build the AtlasGenerator tool -->
+  <Target Name="BuildAtlasGenerator" BeforeTargets="PrepareForBuild" Condition="'$(GenerateAtlasesOnBuild)' == 'true'">
+    <MSBuild Projects="$(SolutionDir)AtlasGenerator\AtlasGenerator.csproj" 
+             Properties="Configuration=$(Configuration);Platform=AnyCPU" 
+             Targets="Build" 
+             Condition="Exists('$(SolutionDir)AtlasGenerator\AtlasGenerator.csproj')" />
+  </Target>
+
+  <!-- Target to generate atlases from config files -->
+  <Target Name="GenerateAtlases" 
+          BeforeTargets="PrepareForBuild" 
+          DependsOnTargets="BuildAtlasGenerator"
+          Condition="'$(GenerateAtlasesOnBuild)' == 'true' AND '@(AtlasConfig)' != ''"
+          Inputs="@(AtlasConfig)"
+          Outputs="%(AtlasConfig.Identity).stamp">
+    
+    <Message Text="Generating texture atlases from configurations..." Importance="high" />
+    
+    <Exec Command="&quot;$(AtlasGeneratorExe)&quot; batch &quot;$(AtlasConfigDir)&quot;"
+          Condition="Exists('$(AtlasGeneratorExe)')"
+          ContinueOnError="false" />
+    
+    <!-- Create stamp files to track when configs were last processed -->
+    <Touch Files="%(AtlasConfig.Identity).stamp" AlwaysCreate="true" />
+    
+    <Message Text="Atlas generation complete." Importance="high" />
+  </Target>
+
+  <!-- Target to generate a single atlas -->
+  <Target Name="GenerateSingleAtlas">
+    <PropertyGroup>
+      <SpritesheetPath Condition="'$(SpritesheetPath)' == ''"></SpritesheetPath>
+      <AtlasOutputPath Condition="'$(AtlasOutputPath)' == ''"></AtlasOutputPath>
+      <TexturePath Condition="'$(TexturePath)' == ''"></TexturePath>
+      <GridSize Condition="'$(GridSize)' == ''">32x32</GridSize>
+      <AtlasPreset Condition="'$(AtlasPreset)' == ''"></AtlasPreset>
+    </PropertyGroup>
+    
+    <Error Text="SpritesheetPath is required for GenerateSingleAtlas target" 
+           Condition="'$(SpritesheetPath)' == ''" />
+    <Error Text="AtlasOutputPath is required for GenerateSingleAtlas target" 
+           Condition="'$(AtlasOutputPath)' == ''" />
+    <Error Text="TexturePath is required for GenerateSingleAtlas target" 
+           Condition="'$(TexturePath)' == ''" />
+    
+    <Exec Command="&quot;$(AtlasGeneratorExe)&quot; generate &quot;$(SpritesheetPath)&quot; &quot;$(AtlasOutputPath)&quot; &quot;$(TexturePath)&quot; --grid $(GridSize) --preset $(AtlasPreset)"
+          Condition="Exists('$(AtlasGeneratorExe)') AND '$(AtlasPreset)' != ''" />
+          
+    <Exec Command="&quot;$(AtlasGeneratorExe)&quot; generate &quot;$(SpritesheetPath)&quot; &quot;$(AtlasOutputPath)&quot; &quot;$(TexturePath)&quot; --grid $(GridSize)"
+          Condition="Exists('$(AtlasGeneratorExe)') AND '$(AtlasPreset)' == ''" />
+  </Target>
+
+  <!-- Target to create sample configuration files -->
+  <Target Name="CreateAtlasConfigs">
+    <PropertyGroup>
+      <ConfigType Condition="'$(ConfigType)' == ''">sample</ConfigType>
+    </PropertyGroup>
+    
+    <MakeDir Directories="$(AtlasConfigDir)" Condition="!Exists('$(AtlasConfigDir)')" />
+    
+    <Exec Command="&quot;$(AtlasGeneratorExe)&quot; config create &quot;$(AtlasConfigDir)character-atlas.json&quot; character"
+          Condition="Exists('$(AtlasGeneratorExe)')" />
+    <Exec Command="&quot;$(AtlasGeneratorExe)&quot; config create &quot;$(AtlasConfigDir)weapon-atlas.json&quot; weapon"
+          Condition="Exists('$(AtlasGeneratorExe)')" />
+    <Exec Command="&quot;$(AtlasGeneratorExe)&quot; config create &quot;$(AtlasConfigDir)sample-atlas.json&quot; sample"
+          Condition="Exists('$(AtlasGeneratorExe)')" />
+          
+    <Message Text="Sample atlas configurations created in $(AtlasConfigDir)" Importance="high" />
+  </Target>
+
+  <!-- Target to clean generated atlas files -->
+  <Target Name="CleanAtlases">
+    <ItemGroup>
+      <GeneratedAtlasFiles Include="$(ProjectDir)Content\images\xml\*-generated.xml" />
+      <AtlasStampFiles Include="$(AtlasConfigDir)*.json.stamp" />
+    </ItemGroup>
+    
+    <Delete Files="@(GeneratedAtlasFiles)" />
+    <Delete Files="@(AtlasStampFiles)" />
+    
+    <Message Text="Cleaned generated atlas files." Importance="high" />
+  </Target>
+
+</Project>

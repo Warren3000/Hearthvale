@@ -1,5 +1,5 @@
 ﻿<TextureAtlas>
-  <Texture>images/NPCSpriteSheet</Texture>
+  <Texture>images/atlases/NPCSpriteSheet</Texture>
 
   <Regions>
     <!--Merchant-->

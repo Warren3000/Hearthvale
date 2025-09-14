@@ -1,0 +1,305 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+
+namespace Hearthvale.AtlasGenerator
+{
+    /// <summary>
+    /// Console application for generating texture atlas XML files from spritesheets
+    /// </summary>
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            try
+            {
+                if (args.Length == 0)
+                {
+                    ShowHelp();
+                    return;
+                }
+
+                switch (args[0].ToLower())
+                {
+                    case "generate":
+                    case "gen":
+                        HandleGenerate(args.Skip(1).ToArray());
+                        break;
+
+                    case "config":
+                        HandleConfig(args.Skip(1).ToArray());
+                        break;
+
+                    case "batch":
+                        HandleBatch(args.Skip(1).ToArray());
+                        break;
+
+                    case "help":
+                    case "?":
+                    case "--help":
+                    case "-h":
+                        ShowHelp();
+                        break;
+
+                    default:
+                        Console.WriteLine($"Unknown command: {args[0]}");
+                        ShowHelp();
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error: {ex.Message}");
+                Environment.Exit(1);
+            }
+        }
+
+        static void HandleGenerate(string[] args)
+        {
+            if (args.Length < 3)
+            {
+                Console.WriteLine("Usage: AtlasGenerator generate <spritesheet> <output> <texture-path> [options]");
+                Console.WriteLine("Options:");
+                Console.WriteLine("  --config <config-file>     Use configuration file");
+                Console.WriteLine("  --grid <width>x<height>    Set grid size (e.g., 32x32)");
+                Console.WriteLine("  --pattern <pattern>        Set naming pattern (e.g., 'Sprite_{row}_{col}')");
+                Console.WriteLine("  --preset <preset-name>     Use preset configuration");
+                return;
+            }
+
+            string spritesheetPath = args[0];
+            string outputPath = args[1];
+            string texturePath = args[2];
+
+            // Parse additional options
+            var config = new Hearthvale.GameCode.Tools.AtlasGenerator.AtlasConfig
+            {
+                SpritesheetPath = spritesheetPath,
+                OutputPath = outputPath,
+                TexturePath = texturePath
+            };
+
+            // Apply defaults
+            config.GridWidth = 32;
+            config.GridHeight = 32;
+            config.NamingPattern = "Sprite_{row}_{col}";
+            config.IsGridBased = true;
+            config.TrimTransparency = true;
+            config.TransparencyThreshold = 0;
+
+            for (int i = 3; i < args.Length; i++)
+            {
+                switch (args[i].ToLower())
+                {
+                    case "--config":
+                        if (i + 1 < args.Length)
+                        {
+                            config = AtlasConfigManager.LoadConfig(args[++i]);
+                            config.SpritesheetPath = spritesheetPath;
+                            config.OutputPath = outputPath;
+                            config.TexturePath = texturePath;
+                        }
+                        break;
+
+                    case "--grid":
+                        if (i + 1 < args.Length)
+                        {
+                            var gridSize = args[++i].Split('x');
+                            if (gridSize.Length == 2 && int.TryParse(gridSize[0], out int width) && int.TryParse(gridSize[1], out int height))
+                            {
+                                config.GridWidth = width;
+                                config.GridHeight = height;
+                            }
+                        }
+                        break;
+
+                    case "--pattern":
+                        if (i + 1 < args.Length)
+                        {
+                            config.NamingPattern = args[++i];
+                        }
+                        break;
+
+                    case "--preset":
+                        if (i + 1 < args.Length)
+                        {
+                            var preset = GetPreset(args[++i]);
+                            if (preset != null)
+                            {
+                                config.GridWidth = preset.GridWidth;
+                                config.GridHeight = preset.GridHeight;
+                                config.NamingPattern = preset.NamingPattern;
+                                config.IsGridBased = preset.IsGridBased;
+                                config.TrimTransparency = preset.TrimTransparency;
+                                config.TransparencyThreshold = preset.TransparencyThreshold;
+                            }
+                        }
+                        break;
+
+                    case "--no-trim":
+                        config.TrimTransparency = false;
+                        break;
+
+                    case "--threshold":
+                        if (i + 1 < args.Length && int.TryParse(args[++i], out int threshold))
+                        {
+                            config.TransparencyThreshold = threshold;
+                        }
+                        break;
+                }
+            }
+
+            Console.WriteLine($"Generating atlas from: {spritesheetPath}");
+            Console.WriteLine($"Grid size: {config.GridWidth}x{config.GridHeight}");
+            Console.WriteLine($"Output: {outputPath}");
+
+            var xmlContent = AtlasGenerator.GenerateAtlas(config);
+            AtlasGenerator.SaveAtlas(config, xmlContent);
+
+            Console.WriteLine("Atlas generated successfully!");
+        }
+
+        static void HandleConfig(string[] args)
+        {
+            if (args.Length == 0)
+            {
+                Console.WriteLine("Usage: AtlasGenerator config <command>");
+                Console.WriteLine("Commands:");
+                Console.WriteLine("  create <config-file> <type>    Create sample configuration");
+                Console.WriteLine("  validate <config-file>         Validate configuration file");
+                Console.WriteLine("  list-presets                   List available presets");
+                return;
+            }
+
+            switch (args[0].ToLower())
+            {
+                case "create":
+                    if (args.Length < 3)
+                    {
+                        Console.WriteLine("Usage: AtlasGenerator config create <config-file> <type>");
+                        Console.WriteLine("Types: sample, character, weapon");
+                        return;
+                    }
+
+                    var configPath = args[1];
+                    var configType = args[2].ToLower();
+
+                    AtlasGenerator.AtlasConfig sampleConfig = configType switch
+                    {
+                        "character" => AtlasConfigManager.CreateCharacterConfig("", "", ""),
+                        "weapon" => AtlasConfigManager.CreateWeaponConfig("", "", ""),
+                        _ => AtlasConfigManager.CreateSampleConfig("", "", "")
+                    };
+
+                    AtlasConfigManager.SaveConfig(sampleConfig, configPath);
+                    Console.WriteLine($"Sample {configType} configuration created: {configPath}");
+                    break;
+
+                case "validate":
+                    if (args.Length < 2)
+                    {
+                        Console.WriteLine("Usage: AtlasGenerator config validate <config-file>");
+                        return;
+                    }
+
+                    try
+                    {
+                        var config = AtlasConfigManager.LoadConfig(args[1]);
+                        Console.WriteLine("Configuration is valid!");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Configuration validation failed: {ex.Message}");
+                    }
+                    break;
+
+                case "list-presets":
+                    Console.WriteLine("Available presets:");
+                    Console.WriteLine("  rpg-character-32  - 32x32 RPG character spritesheet");
+                    Console.WriteLine("  rpg-character-48  - 48x48 RPG character spritesheet");
+                    Console.WriteLine("  weapon-icons-64   - 64x64 weapon icon spritesheet");
+                    Console.WriteLine("  item-icons-32     - 32x32 item icon spritesheet");
+                    Console.WriteLine("  tileset-16        - 16x16 tileset spritesheet");
+                    break;
+            }
+        }
+
+        static void HandleBatch(string[] args)
+        {
+            if (args.Length < 1)
+            {
+                Console.WriteLine("Usage: AtlasGenerator batch <config-directory>");
+                return;
+            }
+
+            var configDirectory = args[0];
+            var configs = AtlasConfigManager.LoadBatchConfigs(configDirectory);
+
+            if (configs.Count == 0)
+            {
+                Console.WriteLine($"No valid configurations found in: {configDirectory}");
+                return;
+            }
+
+            Console.WriteLine($"Processing {configs.Count} configurations...");
+
+            int successful = 0;
+            int failed = 0;
+
+            foreach (var kvp in configs)
+            {
+                try
+                {
+                    Console.WriteLine($"Processing: {kvp.Key}");
+                    var xmlContent = AtlasGenerator.GenerateAtlas(kvp.Value);
+                    AtlasGenerator.SaveAtlas(kvp.Value, xmlContent);
+                    successful++;
+                    Console.WriteLine($"  ✓ Generated: {kvp.Value.OutputPath}");
+                }
+                catch (Exception ex)
+                {
+                    failed++;
+                    Console.WriteLine($"  ✗ Failed: {ex.Message}");
+                }
+            }
+
+            Console.WriteLine($"Batch processing complete: {successful} successful, {failed} failed");
+        }
+
+        static void ShowHelp()
+        {
+            Console.WriteLine("Hearthvale Atlas Generator");
+            Console.WriteLine("Automatically generates texture atlas XML files from spritesheets");
+            Console.WriteLine();
+            Console.WriteLine("Usage: AtlasGenerator <command> [options]");
+            Console.WriteLine();
+            Console.WriteLine("Commands:");
+            Console.WriteLine("  generate <spritesheet> <output> <texture-path>  Generate atlas from spritesheet");
+            Console.WriteLine("  config <sub-command>                            Configuration management");
+            Console.WriteLine("  batch <config-directory>                        Process multiple configurations");
+            Console.WriteLine("  help                                            Show this help");
+            Console.WriteLine();
+            Console.WriteLine("Examples:");
+            Console.WriteLine("  AtlasGenerator generate hero.png hero-atlas.xml images/sprites/hero");
+            Console.WriteLine("  AtlasGenerator generate hero.png hero-atlas.xml images/sprites/hero --grid 32x32");
+            Console.WriteLine("  AtlasGenerator generate hero.png hero-atlas.xml images/sprites/hero --preset rpg-character-32");
+            Console.WriteLine("  AtlasGenerator config create hero-config.json character");
+            Console.WriteLine("  AtlasGenerator batch ./atlas-configs/");
+        }
+
+        static AtlasGenerator.AtlasConfig? GetPreset(string presetName)
+        {
+            return presetName.ToLower() switch
+            {
+                "rpg-character-32" => AtlasPresets.RPGCharacter32x32,
+                "rpg-character-48" => AtlasPresets.RPGCharacter48x48,
+                "weapon-icons-64" => AtlasPresets.WeaponIcons64x64,
+                "item-icons-32" => AtlasPresets.ItemIcons32x32,
+                "tileset-16" => AtlasPresets.TileSet16x16,
+                "ui-elements" => AtlasPresets.UIElements,
+                _ => null
+            };
+        }
+    }
+}

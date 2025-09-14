@@ -86,10 +86,10 @@ namespace Hearthvale.Scenes
         }
         public override void LoadContent()
         {
-            _atlas = TextureAtlas.FromFile(Core.Content, "images/atlas-definition.xml");
-            _heroAtlas = TextureAtlas.FromFile(Core.Content, "images/npc-atlas.xml");
-            _weaponAtlas = TextureAtlas.FromFile(Core.Content, "images/RPG Icons/weapon-atlas.xml");
-            _arrowAtlas = TextureAtlas.FromFile(Core.Content, "images/arrow-atlas.xml");
+            _atlas = TextureAtlas.FromFile(Core.Content, "images/xml/atlas-definition.xml");
+            _heroAtlas = TextureAtlas.FromFile(Core.Content, "images/xml/character-atlas.xml");
+            _weaponAtlas = TextureAtlas.FromFile(Core.Content, "images/xml/weapon-atlas.xml");
+            _arrowAtlas = TextureAtlas.FromFile(Core.Content, "images/xml/arrow-atlas.xml");
 
             _bounceSoundEffect = Content.Load<SoundEffect>("audio/bounce");
             _collectSoundEffect = Content.Load<SoundEffect>("audio/collect");
@@ -160,6 +160,9 @@ namespace Hearthvale.Scenes
 
             // Create MapManager for CameraManager integration
             _mapManager = CreateMapManagerFromTilemap(_tilemap);
+            
+            // Debug output for world bounds
+            System.Diagnostics.Debug.WriteLine($"✅ MapManager created with RoomBounds: {_mapManager.RoomBounds}");
 
             // Gather dungeon element rectangles
             var dungeonRects = _dungeonManager.GetAllElements()
@@ -244,6 +247,7 @@ namespace Hearthvale.Scenes
                 ("F4", "Weapon"),
                 ("F5", "Tileset Viewer"),
                 ("F6", "Tile Coords"), // Add the new F6 key for tile coordinates
+                ("F7", "Collision Bounds"), // Add the new F7 key for collision bounds
                 // Add more as needed
             };
             _debugKeysBar = new DebugKeysBar(_font, GameUIManager.Instance.WhitePixel, debugKeys);
@@ -347,8 +351,8 @@ namespace Hearthvale.Scenes
     GameUIManager.Instance.DrawDungeonElementCollisionBoxes(Core.SpriteBatch, DungeonManager.Instance.GetAllElements(), CameraManager.Instance.GetViewMatrix());
     GameUIManager.Instance.DrawTileCoordinatesOverlay(Core.SpriteBatch, _tilemap);
     
-    // UPDATED: Pass the debug font to enable text rendering
-    DebugManager.Instance.Draw(Core.SpriteBatch, _player, _npcManager.Npcs, DungeonManager.Instance.GetAllElements(), CameraManager.Instance.GetViewMatrix(), _debugFont);
+    // UPDATED: Pass the debug font and wall rectangles for collision bounds debug overlay
+    DebugManager.Instance.Draw(Core.SpriteBatch, _player, _npcManager.Npcs, DungeonManager.Instance.GetAllElements(), CameraManager.Instance.GetViewMatrix(), _debugFont, allObstacles);
 }
 
 #if DEBUG
@@ -572,6 +576,9 @@ private void DebugDrawWeaponProbe()
         public override int MapHeightInPixels => _tilemap.Rows * (int)_tilemap.TileHeight;
         public override int TileWidth => (int)_tilemap.TileWidth;
         public override int TileHeight => (int)_tilemap.TileHeight;
+        
+        // Override RoomBounds to calculate from our tilemap
+        public new Rectangle RoomBounds => new Rectangle(0, 0, MapWidthInPixels, MapHeightInPixels);
 
         public override void Update(GameTime gameTime)
         {

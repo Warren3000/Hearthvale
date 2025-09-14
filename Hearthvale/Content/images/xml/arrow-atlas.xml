@@ -1,5 +1,5 @@
 ﻿<TextureAtlas>
-  <Texture>images/ArrowSpriteSheet</Texture>
+  <Texture>images/atlases/ArrowSpriteSheet</Texture>
   <Regions>
     <!--Arrow-Wooden-->
     <Region name="Arrow-Wooden-1" x="0" y="0" width="32" height="32" />

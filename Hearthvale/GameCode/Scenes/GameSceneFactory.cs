@@ -27,7 +27,7 @@ namespace Hearthvale.Scenes
         public static GameScene CreateGameScene()
         {
             // Load required assets
-            var atlas = TextureAtlas.FromFile(Core.Content, "images/atlas-definition.xml");
+            var atlas = TextureAtlas.FromFile(Core.Content, "images/xml/atlas-definition.xml");
             var font = Core.Content.Load<SpriteFont>("fonts/04B_30");
             var debugFont = Core.Content.Load<SpriteFont>("fonts/DebugFont");
             var uiSoundEffect = Core.Content.Load<SoundEffect>("audio/ui");

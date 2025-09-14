@@ -23,8 +23,8 @@ public sealed class AssetManagerSystem : IGameSystem
     public void Initialize()
     {
         ThemeSong    = _content.Load<Song>("audio/theme");
-        HeroAtlas    = TextureAtlas.FromFile(_content, "images/npc-atlas.xml");
-        DungeonAtlas = TextureAtlas.FromFile(_content, "images/chest-definition.xml");
+        HeroAtlas    = TextureAtlas.FromFile(_content, "images/xml/npc-atlas.xml");
+        DungeonAtlas = TextureAtlas.FromFile(_content, "images/xml/chest-definition.xml");
 
         // Animation names must exist in chest-definition.xml
         DungeonLootRenderer.Initialize(

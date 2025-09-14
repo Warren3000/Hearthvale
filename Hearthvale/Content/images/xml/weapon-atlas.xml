@@ -1,5 +1,5 @@
 ﻿<TextureAtlas>
-  <Texture>images/WeaponsSpriteSheet</Texture>
+  <Texture>images/atlases/WeaponsSpriteSheet</Texture>
   <Regions>
     <!--Dagger-->
     <Region name="Dagger" x="0" y="0" width="64" height="64" />

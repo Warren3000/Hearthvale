@@ -130,13 +130,13 @@ public class TitleScene : Scene
         _debugFont = Content.Load<SpriteFont>("fonts/DebugFont");
 
         // Load the background pattern texture.
-        _backgroundPattern = Content.Load<Texture2D>("images/background-pattern");
+        _backgroundPattern = Content.Load<Texture2D>("images/backgrounds/background-pattern");
 
         // Load the sound effect to play when ui actions occur.
         _uiSoundEffect = Core.Content.Load<SoundEffect>("audio/ui");
 
         // Load the texture atlas from the xml configuration file.
-        _atlas = TextureAtlas.FromFile(Core.Content, "images/atlas-definition.xml");
+        _atlas = TextureAtlas.FromFile(Core.Content, "images/xml/atlas-definition.xml");
 
         SingletonManager.InitializeForTitleScreen();
 

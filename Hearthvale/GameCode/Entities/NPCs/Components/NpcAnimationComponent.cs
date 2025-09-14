@@ -52,26 +52,49 @@ namespace Hearthvale.GameCode.Entities.NPCs.Components
                 return;
             }
 
+
             // Compute movement delta for animation
             _movingForAnim = Vector2.DistanceSquared(_owner.MovementComponent.Position, _lastAnimPosition) > 0.01f;
             _lastAnimPosition = _owner.MovementComponent.Position;
 
             // Determine animation based on current state
+            var direction = _owner.MovementComponent.FacingDirection;
+            string animName = null;
             if (_owner.IsAttacking)
             {
-                SetAnimationDirectionalSafe("Attack", "Idle");
+                SetAnimationDirectionalSafe("Attack", "Idle_Down");
             }
             else if (isStunned)
             {
-                SetAnimationDirectionalSafe("Hit", "Idle");
+                SetAnimationDirectionalSafe("Hit", "Idle_Down");
             }
             else
             {
-                // Let the MovementAnimationDriver handle idle/walk transitions
-                _animDriver.Tick(gameTime, _movingForAnim, isMoving =>
+                switch (direction)
                 {
-                    SetAnimationDirectionalSafe(isMoving ? "Walk" : "Idle", "Idle");
-                }, _baseAnimationComponent.Sprite);
+                    case Hearthvale.GameCode.Utils.CardinalDirection.North:
+                        animName = _movingForAnim ? "Run_Up" : "Idle_Up";
+                        break;
+                    case Hearthvale.GameCode.Utils.CardinalDirection.South:
+                        animName = _movingForAnim ? "Run_Down" : "Idle_Down";
+                        break;
+                    case Hearthvale.GameCode.Utils.CardinalDirection.East:
+                        animName = _movingForAnim ? "Run_Side" : "Idle_Side";
+                        if (_baseAnimationComponent.Sprite != null)
+                            _baseAnimationComponent.Sprite.Effects = Microsoft.Xna.Framework.Graphics.SpriteEffects.None;
+                        break;
+                    case Hearthvale.GameCode.Utils.CardinalDirection.West:
+                        animName = _movingForAnim ? "Run_Side" : "Idle_Side";
+                        if (_baseAnimationComponent.Sprite != null)
+                            _baseAnimationComponent.Sprite.Effects = Microsoft.Xna.Framework.Graphics.SpriteEffects.FlipHorizontally;
+                        break;
+                    default:
+                        animName = _movingForAnim ? "Run_Down" : "Idle_Down";
+                        if (_baseAnimationComponent.Sprite != null)
+                            _baseAnimationComponent.Sprite.Effects = Microsoft.Xna.Framework.Graphics.SpriteEffects.None;
+                        break;
+                }
+                SetAnimationDirectionalSafe(animName, "Idle_Down");
             }
 
             UpdateSpritePosition();
