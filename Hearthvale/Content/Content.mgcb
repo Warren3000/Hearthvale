@@ -16,6 +16,15 @@
 
 #---------------------------------- Content ---------------------------------#
 
+#begin atlas-configs/skeleton-npc.json
+/copy:atlas-configs/skeleton-npc.json
+
+#begin atlas-configs/goblin-npc.json
+/copy:atlas-configs/goblin-npc.json
+
+#begin atlas-configs/warrior-npc.json
+/copy:atlas-configs/warrior-npc.json
+
 #begin audio/bounce.wav
 /importer:WavImporter
 /processor:SoundEffectProcessor
@@ -289,7 +298,7 @@
 /processorParam:TextureFormat=Color
 /build:images/sprites/Character.png;images/sprites/Character
 
-#begin images/sprites/Soldier.png
+#begin images/sprites/GoblinBerserker.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -299,7 +308,31 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:images/sprites/Soldier.png
+/build:images/sprites/GoblinBerserker.png
+
+#begin images/sprites/Skeleton.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:images/sprites/Skeleton.png
+
+#begin images/sprites/Warrior.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:images/sprites/Warrior.png
 
 #begin images/xml/arrow-atlas.xml
 /copy:images/xml/arrow-atlas.xml
@@ -313,17 +346,32 @@
 #begin images/xml/chest-definition.xml
 /copy:images/xml/chest-definition.xml
 
+#begin images/xml/goblin_berserker-atlas.xml
+/copy:images/xml/goblin_berserker-atlas.xml
+
 #begin images/xml/npc-atlas.xml
 /copy:images/xml/npc-atlas.xml
 
+#begin images/xml/skeleton-atlas.xml
+/copy:images/xml/skeleton-atlas.xml
+
 #begin images/xml/tilemap-definition.xml
 /copy:images/xml/tilemap-definition.xml
+
+#begin images/xml/warrior-atlas.xml
+/copy:images/xml/warrior-atlas.xml
 
 #begin images/xml/weapon-atlas.xml
 /copy:images/xml/weapon-atlas.xml
 
 #begin Levels/Level1.xml
 /copy:Levels/Level1.xml
+
+#begin shaders/PostHorror.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:shaders/PostHorror.fx
 
 #begin Tilesets/DampDungeons/Tiles/Autotiles-Dungeon.xml
 /copy:Tilesets/DampDungeons/Tiles/Autotiles-Dungeon.xml

@@ -99,5 +99,16 @@ namespace Hearthvale.GameCode.Utils
 
             return inside;
         }
+
+        public static List<Vector2> CreateRectanglePolygon(Rectangle rect)
+        {
+            return new List<Vector2>
+            {
+                new Vector2(rect.Left, rect.Top),
+                new Vector2(rect.Right, rect.Top),
+                new Vector2(rect.Right, rect.Bottom),
+                new Vector2(rect.Left, rect.Bottom)
+            };
+        }
     }
 }

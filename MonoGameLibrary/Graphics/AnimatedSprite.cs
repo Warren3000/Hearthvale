@@ -12,6 +12,8 @@ public class AnimatedSprite : Sprite
     public Vector2 Position { get; set; }
     private Color? _originalColor = null;
     private double _flashTimer = 0;
+    public bool IsLooping { get; set; } = true;
+    public bool IsAnimationComplete { get; private set; }
 
     /// <summary>
     /// Gets or Sets the animation for this animated sprite.
@@ -21,8 +23,15 @@ public class AnimatedSprite : Sprite
         get => _animation;
         set
         {
-            _animation = value;
-            Region = _animation.Frames[0];
+            _animation = value ?? throw new ArgumentNullException(nameof(value));
+            _currentFrame = 0;
+            _elapsed = TimeSpan.Zero;
+            IsAnimationComplete = false;
+
+            if (_animation.Frames.Count > 0)
+            {
+                Region = _animation.Frames[0];
+            }
         }
     }
 
@@ -46,20 +55,39 @@ public class AnimatedSprite : Sprite
     /// <param name="gameTime">A snapshot of the game timing values provided by the framework.</param>
     public void Update(GameTime gameTime)
     {
+        if (_animation == null || _animation.Frames.Count == 0)
+        {
+            return;
+        }
+
+        if (!IsLooping && IsAnimationComplete)
+        {
+            return;
+        }
+
         _elapsed += gameTime.ElapsedGameTime;
 
-        if (_elapsed >= _animation.Delay)
+        while (_elapsed >= _animation.Delay)
         {
             _elapsed -= _animation.Delay;
             _currentFrame++;
 
             if (_currentFrame >= _animation.Frames.Count)
             {
-                _currentFrame = 0;
+                if (IsLooping)
+                {
+                    _currentFrame = 0;
+                }
+                else
+                {
+                    _currentFrame = _animation.Frames.Count - 1;
+                    IsAnimationComplete = true;
+                    break;
+                }
             }
-
-            Region = _animation.Frames[_currentFrame];
         }
+
+        Region = _animation.Frames[_currentFrame];
 
         // Handle flash timer
         if (_flashTimer > 0)

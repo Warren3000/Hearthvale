@@ -23,8 +23,6 @@ namespace Hearthvale.GameCode.Entities.Players
 
         private float _weaponOrbitRadius = 3f;
         public float WeaponOrbitRadius => _weaponOrbitRadius;
-
-        public bool IsAttacking { get; set; }
         public PlayerCombatComponent CombatController => _combatController;
 
         // Track whether movement input occurred this frame
@@ -42,19 +40,30 @@ namespace Hearthvale.GameCode.Entities.Players
             // Add all 4-directional idle and run animations
             var idleDown = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Idle_Down"), 2.0f);
             var idleUp = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Idle_Up"), 2.0f);
-            var idleSide = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Idle_Side"), 2.0f);
+            var idleRight = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Idle_Right"), 2.0f);
+            var idleLeft = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Idle_Left"), 2.0f);
             var runDown = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Run_Down"), 2.0f);
             var runUp = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Run_Up"), 2.0f);
-            var runSide = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Run_Side"), 2.0f);
+            var runRight = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Run_Right"), 2.0f);
+            var runLeft = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Run_Left"), 2.0f);
+            var attackDown = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Attack_01_Down"), 1.0f);
+            var attackUp = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Attack_01_Up"), 1.0f);
+            var attackRight = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Attack_01_Right"), 1.0f);
+            var attackLeft = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Attack_01_Left"), 1.0f);
 
             this.AnimationComponent.SetSprite(new AnimatedSprite(idleDown));
             this.AnimationComponent.AddAnimation("Idle_Down", idleDown);
             this.AnimationComponent.AddAnimation("Idle_Up", idleUp);
-            this.AnimationComponent.AddAnimation("Idle_Side", idleSide);
+            this.AnimationComponent.AddAnimation("Idle_Right", idleRight);
+            this.AnimationComponent.AddAnimation("Idle_Left", idleLeft);
             this.AnimationComponent.AddAnimation("Run_Down", runDown);
             this.AnimationComponent.AddAnimation("Run_Up", runUp);
-            this.AnimationComponent.AddAnimation("Run_Side", runSide);
-
+            this.AnimationComponent.AddAnimation("Run_Right", runRight);
+            this.AnimationComponent.AddAnimation("Run_Left", runLeft);
+            this.AnimationComponent.AddAnimation("Attack_01_Down", attackDown);
+            this.AnimationComponent.AddAnimation("Attack_01_Up", attackUp);
+            this.AnimationComponent.AddAnimation("Attack_01_Right", attackRight);
+            this.AnimationComponent.AddAnimation("Attack_01_Left", attackLeft);
             this.MovementComponent.SetPosition(position);
             this.MovementComponent.SetMovementSpeed(movementSpeed);
             this.MovementComponent.FacingRight = true;
@@ -125,7 +134,6 @@ namespace Hearthvale.GameCode.Entities.Players
 
             // New atlas: sprites top-left aligned; draw sprite directly at logical position
             AnimationComponent.Sprite.Position = this.Position;
-            AnimationComponent.Sprite.Effects = FacingRight ? SpriteEffects.None : SpriteEffects.FlipHorizontally;
 
             Log.VerboseThrottled(LogArea.Player,
                 $"[Player] Pos={Position} SpritePos={AnimationComponent.Sprite.Position} FacingRight={MovementComponent.FacingRight}",

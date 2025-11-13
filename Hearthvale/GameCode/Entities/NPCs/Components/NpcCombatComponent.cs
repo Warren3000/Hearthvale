@@ -2,7 +2,6 @@
 using Hearthvale.GameCode.Entities.NPCs;
 using Hearthvale.GameCode.Utils;
 using Microsoft.Xna.Framework;
-using System;
 
 namespace Hearthvale.GameCode.Entities.Components
 {
@@ -52,13 +51,14 @@ namespace Hearthvale.GameCode.Entities.Components
             if (!_owner.IsAttacking || _hasHitPlayerThisSwing || _owner.EquippedWeapon?.IsSlashing != true)
                 return false;
 
-            // Use combat-specific attack area (only active during swing)
-            Rectangle attackArea = _owner.WeaponComponent.GetAttackArea();
+            var weaponPolygon = _owner.WeaponComponent.GetCombatHitPolygon();
+            if (weaponPolygon.Count == 0)
+                return false;
 
-            // Use player's combat bounds (tight sprite bounds)
-            Rectangle playerBounds = player.GetCombatBounds();
+            var playerBounds = player.GetCombatBounds();
+            var playerPolygon = PolygonIntersection.CreateRectanglePolygon(playerBounds);
 
-            if (attackArea.Intersects(playerBounds))
+            if (PolygonIntersection.DoPolygonsIntersect(weaponPolygon, playerPolygon))
             {
                 _hasHitPlayerThisSwing = true;
                 return true;

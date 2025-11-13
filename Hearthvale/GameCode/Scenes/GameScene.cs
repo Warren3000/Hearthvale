@@ -1,4 +1,5 @@
 ﻿using Hearthvale.GameCode.Data;
+using Hearthvale.GameCode.Data.Atlases;
 using Hearthvale.GameCode.Entities;
 using Hearthvale.GameCode.Entities.Interfaces;
 using Hearthvale.GameCode.Entities.NPCs;
@@ -47,10 +48,11 @@ namespace Hearthvale.Scenes
         private SpriteFont _font;
         private SpriteFont _debugFont;
 
-        private TextureAtlas _atlas;
         private TextureAtlas _heroAtlas;
+        private TextureAtlas _npcAtlas;
         private TextureAtlas _weaponAtlas;
         private TextureAtlas _arrowAtlas;
+        private INpcAtlasCatalog _npcAtlasCatalog;
 
         private Viewport _viewport;
 
@@ -86,10 +88,15 @@ namespace Hearthvale.Scenes
         }
         public override void LoadContent()
         {
-            _atlas = TextureAtlas.FromFile(Core.Content, "images/xml/atlas-definition.xml");
-            _heroAtlas = TextureAtlas.FromFile(Core.Content, "images/xml/character-atlas.xml");
+            _heroAtlas = TextureAtlas.FromFile(Core.Content, "images/xml/warrior-atlas.xml");
+            _npcAtlas = TextureAtlas.FromFile(Core.Content, "images/xml/skeleton-atlas.xml");
             _weaponAtlas = TextureAtlas.FromFile(Core.Content, "images/xml/weapon-atlas.xml");
             _arrowAtlas = TextureAtlas.FromFile(Core.Content, "images/xml/arrow-atlas.xml");
+
+            _npcAtlasCatalog = new ManifestNpcAtlasCatalog(Core.Content);
+            _npcAtlasCatalog.LoadManifest("atlas-configs/skeleton-npc.json");
+            _npcAtlasCatalog.LoadManifest("atlas-configs/goblin-npc.json");
+            _npcAtlasCatalog.LoadManifest("atlas-configs/warrior-npc.json");
 
             _bounceSoundEffect = Content.Load<SoundEffect>("audio/bounce");
             _collectSoundEffect = Content.Load<SoundEffect>("audio/collect");
@@ -184,7 +191,15 @@ namespace Hearthvale.Scenes
 
             // Initialize managers (weapon first, then NPC which creates wall colliders)
             _weaponManager = new WeaponManager(_heroAtlas, _weaponAtlas, dungeonBounds, new List<NPC>());
-            _npcManager = new NpcManager(_heroAtlas, dungeonBounds, _tilemap, _weaponManager, _weaponAtlas, _arrowAtlas);
+            _npcManager = new NpcManager(
+                _heroAtlas,
+                dungeonBounds,
+                _tilemap,
+                _weaponManager,
+                _npcAtlasCatalog,
+                _npcAtlas,
+                _weaponAtlas,
+                _arrowAtlas);
 
             // Register player with physics collision system so walls/chests block movement
             _npcManager.RegisterPlayer(_player);
@@ -204,8 +219,8 @@ namespace Hearthvale.Scenes
                 movement => _player.Move(
                     movement,
                     new Rectangle(0, 0, _tilemap.Columns * (int)_tilemap.TileWidth, _tilemap.Rows * (int)_tilemap.TileHeight),
-                    _player.Bounds.Width,  // Use Bounds instead of Sprite
-                    _player.Bounds.Height, // Use Bounds instead of Sprite
+                    _player.Bounds.Width,  
+                    _player.Bounds.Height, 
                     _npcManager.Npcs,
                     allObstacles ?? new List<Rectangle>()
                 ),
@@ -246,8 +261,8 @@ namespace Hearthvale.Scenes
                 ("F3", "AI"),
                 ("F4", "Weapon"),
                 ("F5", "Tileset Viewer"),
-                ("F6", "Tile Coords"), // Add the new F6 key for tile coordinates
-                ("F7", "Collision Bounds"), // Add the new F7 key for collision bounds
+                ("F6", "Tile Coords"), 
+                ("F7", "Collision Bounds"), 
                 // Add more as needed
             };
             _debugKeysBar = new DebugKeysBar(_font, GameUIManager.Instance.WhitePixel, debugKeys);

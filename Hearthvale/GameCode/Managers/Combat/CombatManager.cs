@@ -1,6 +1,7 @@
 using Hearthvale.GameCode.Entities;
 using Hearthvale.GameCode.Entities.NPCs;
 using Hearthvale.GameCode.Data;
+using Hearthvale.GameCode.Utils;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
@@ -127,11 +128,14 @@ public class CombatManager
         {
             if (npc.IsAttacking)
             {
-                // Use Character base class GetAttackArea() method
-                var attackArea = npc.WeaponComponent?.GetAttackArea() ?? Rectangle.Empty;
-                if (attackArea != Rectangle.Empty && attackArea.Intersects(_player.Bounds))
+                var weaponPolygon = npc.WeaponComponent?.GetCombatHitPolygon();
+                if (weaponPolygon != null && weaponPolygon.Count > 0)
                 {
-                    TryDamagePlayer(npc.AttackPower, npc.Position);
+                    var playerPolygon = PolygonIntersection.CreateRectanglePolygon(_player.GetCombatBounds());
+                    if (PolygonIntersection.DoPolygonsIntersect(weaponPolygon, playerPolygon))
+                    {
+                        TryDamagePlayer(npc.AttackPower, npc.Position);
+                    }
                 }
             }
         }
@@ -401,7 +405,7 @@ public class CombatManager
                     (float)(new Random().NextDouble() - 0.5) * 15,
                     (float)(new Random().NextDouble() - 0.5) * 15
                 );
-                _effectsManager.ShowCombatText(projectile.Position + sparkOffset, "•", response.EffectColor);
+                _effectsManager.ShowCombatText(projectile.Position + sparkOffset, "ï¿½", response.EffectColor);
             }
         }
 

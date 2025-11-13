@@ -14,9 +14,11 @@ namespace Hearthvale.GameCode.Managers
     public class NpcSpawnValidator
     {
         private readonly Rectangle _bounds;
-        private readonly CollisionWorld _collisionWorld; // Changed from CollisionWorldManager
+        private readonly CollisionWorld _collisionWorld;
         private readonly float _defaultMinDistanceFromPlayer;
         private readonly float _defaultMinDistanceBetweenNpcs;
+        private const float SpawnBoundsHalfWidth = 6f;
+        private const float SpawnBoundsHalfHeight = 6f;
 
         public NpcSpawnValidator(
             Rectangle bounds,
@@ -48,7 +50,7 @@ namespace Hearthvale.GameCode.Managers
             if (player != null)
             {
                 Vector2 playerCenter = new Vector2(player.Bounds.Center.X, player.Bounds.Center.Y);
-                Vector2 spawnCenter = new Vector2(position.X + 16, position.Y + 16); // Assume 32x32 NPC
+                Vector2 spawnCenter = GetSpawnCenter(position);
                 if (Vector2.Distance(spawnCenter, playerCenter) < minDistanceFromPlayer.Value)
                     return false;
             }
@@ -56,7 +58,7 @@ namespace Hearthvale.GameCode.Managers
             // Check distance from other NPCs using Bounds center
             if (existingNpcs != null)
             {
-                Vector2 spawnCenter = new Vector2(position.X + 16, position.Y + 16);
+                Vector2 spawnCenter = GetSpawnCenter(position);
                 foreach (var npc in existingNpcs)
                 {
                     Vector2 npcCenter = new Vector2(npc.Bounds.Center.X, npc.Bounds.Center.Y);
@@ -82,7 +84,7 @@ namespace Hearthvale.GameCode.Managers
                     if (actor is WallCollisionActor || actor is ChestCollisionActor ||
                         actor is PlayerCollisionActor || actor is NpcCollisionActor)
                     {
-                        if (actor.Bounds.BoundingRectangle.Intersects(new Rectangle((int)npcBounds.X, (int)npcBounds.Y, (int)npcBounds.Width, (int)npcBounds.Height)))
+                        if (actor.Bounds.BoundingRectangle.Intersects(npcBounds))
                             return false;
                     }
                 }
@@ -93,14 +95,20 @@ namespace Hearthvale.GameCode.Managers
 
         public Vector2 GetValidSpawnPosition(Vector2 position)
         {
-            float clampedX = MathHelper.Clamp(position.X, _bounds.Left, _bounds.Right - 32);
-            float clampedY = MathHelper.Clamp(position.Y, _bounds.Top, _bounds.Bottom - 32);
+            float clampedX = MathHelper.Clamp(position.X, _bounds.Left + SpawnBoundsHalfWidth, _bounds.Right - SpawnBoundsHalfWidth);
+            float clampedY = MathHelper.Clamp(position.Y, _bounds.Top + SpawnBoundsHalfHeight, _bounds.Bottom - SpawnBoundsHalfHeight);
             return new Vector2(clampedX, clampedY);
         }
 
         public RectangleF CreateNpcBounds(Vector2 position)
         {
-            return new RectangleF(position.X + 8, position.Y + 16, 16, 16);
+            float left = position.X - SpawnBoundsHalfWidth;
+            float top = position.Y - SpawnBoundsHalfHeight;
+            float width = SpawnBoundsHalfWidth * 2f;
+            float height = SpawnBoundsHalfHeight * 2f;
+            return new RectangleF(left, top, width, height);
         }
+
+        private static Vector2 GetSpawnCenter(Vector2 position) => position;
     }
 }

@@ -65,6 +65,11 @@ public class TextureAtlas
         return _regions[name];
     }
 
+    public bool TryGetRegion(string name, out TextureRegion region)
+    {
+        return _regions.TryGetValue(name, out region);
+    }
+
     /// <summary>
     /// Removes the region from this texture atlas with the specified name.
     /// </summary>
@@ -228,8 +233,18 @@ public class TextureAtlas
                         {
                             foreach (var frameElement in frameElements)
                             {
-                                string regionName = frameElement.Attribute("region").Value;
-                                TextureRegion region = atlas.GetRegion(regionName);
+                                string regionName = frameElement.Attribute("region")?.Value;
+                                if (string.IsNullOrWhiteSpace(regionName))
+                                {
+                                    continue;
+                                }
+
+                                if (!atlas.TryGetRegion(regionName, out var region))
+                                {
+                                    System.Diagnostics.Debug.WriteLine($"TextureAtlas Warning: Missing region '{regionName}' referenced by animation '{name}' in '{fileName}'.");
+                                    continue;
+                                }
+
                                 frames.Add(region);
                             }
                         }

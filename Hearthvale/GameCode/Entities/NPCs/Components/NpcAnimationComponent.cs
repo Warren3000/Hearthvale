@@ -1,5 +1,6 @@
 ﻿using Hearthvale.GameCode.Entities.Animations;
 using Hearthvale.GameCode.Entities.Components;
+using Hearthvale.GameCode.Utils;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGameLibrary.Graphics;
@@ -62,39 +63,33 @@ namespace Hearthvale.GameCode.Entities.NPCs.Components
             string animName = null;
             if (_owner.IsAttacking)
             {
-                SetAnimationDirectionalSafe("Attack", "Idle_Down");
+                PlayDirectionalAnimation("Attack", direction);
             }
             else if (isStunned)
             {
-                SetAnimationDirectionalSafe("Hit", "Idle_Down");
+                PlayDirectionalAnimation("Hit", direction);
             }
             else
             {
                 switch (direction)
                 {
-                    case Hearthvale.GameCode.Utils.CardinalDirection.North:
+                    case CardinalDirection.North:
                         animName = _movingForAnim ? "Run_Up" : "Idle_Up";
                         break;
-                    case Hearthvale.GameCode.Utils.CardinalDirection.South:
+                    case CardinalDirection.South:
                         animName = _movingForAnim ? "Run_Down" : "Idle_Down";
                         break;
-                    case Hearthvale.GameCode.Utils.CardinalDirection.East:
-                        animName = _movingForAnim ? "Run_Side" : "Idle_Side";
-                        if (_baseAnimationComponent.Sprite != null)
-                            _baseAnimationComponent.Sprite.Effects = Microsoft.Xna.Framework.Graphics.SpriteEffects.None;
+                    case CardinalDirection.East:
+                        animName = _movingForAnim ? "Run_Right" : "Idle_Right";
                         break;
-                    case Hearthvale.GameCode.Utils.CardinalDirection.West:
-                        animName = _movingForAnim ? "Run_Side" : "Idle_Side";
-                        if (_baseAnimationComponent.Sprite != null)
-                            _baseAnimationComponent.Sprite.Effects = Microsoft.Xna.Framework.Graphics.SpriteEffects.FlipHorizontally;
+                    case CardinalDirection.West:
+                        animName = _movingForAnim ? "Run_Left" : "Idle_Left";
                         break;
                     default:
                         animName = _movingForAnim ? "Run_Down" : "Idle_Down";
-                        if (_baseAnimationComponent.Sprite != null)
-                            _baseAnimationComponent.Sprite.Effects = Microsoft.Xna.Framework.Graphics.SpriteEffects.None;
                         break;
                 }
-                SetAnimationDirectionalSafe(animName, "Idle_Down");
+                SetAnimationDirectionalSafe(animName, ComposeDirectionalName("Idle", direction));
             }
 
             UpdateSpritePosition();
@@ -136,11 +131,20 @@ namespace Hearthvale.GameCode.Entities.NPCs.Components
             if (_baseAnimationComponent.Sprite != null)
             {
                 _baseAnimationComponent.Sprite.Position = _owner.Position;
+            }
+        }
 
-                // Apply sprite effects for facing direction
-                _baseAnimationComponent.Sprite.Effects = _owner.FacingRight
-                    ? SpriteEffects.None
-                    : SpriteEffects.FlipHorizontally;
+        private void PlayDirectionalAnimation(string baseName, CardinalDirection direction)
+        {
+            string primary = ComposeDirectionalName(baseName, direction);
+            string directionalFallback = ComposeDirectionalName("Idle", direction);
+            SetAnimationDirectionalSafe(primary, directionalFallback);
+
+            if (_baseAnimationComponent?.Sprite != null)
+            {
+                string currentName = _baseAnimationComponent.CurrentAnimationName;
+                bool shouldLoop = string.IsNullOrEmpty(currentName) || !currentName.Contains("Attack", StringComparison.OrdinalIgnoreCase);
+                _baseAnimationComponent.Sprite.IsLooping = shouldLoop;
             }
         }
 
@@ -149,21 +153,41 @@ namespace Hearthvale.GameCode.Entities.NPCs.Components
         /// </summary>
         private void SetAnimationDirectionalSafe(string primaryAnimation, string fallbackAnimation)
         {
-            if (_baseAnimationComponent != null)
+            if (_baseAnimationComponent == null)
             {
-                // Try to set the primary animation first
-                string currentAnim = _baseAnimationComponent.Sprite?.Animation?.ToString() ?? "";
-                _baseAnimationComponent.SetAnimation(primaryAnimation);
-
-                // Check if the animation actually changed (meaning it exists)
-                string newAnim = _baseAnimationComponent.Sprite?.Animation?.ToString() ?? "";
-
-                // If animation didn't change and we're not already on the primary, try fallback
-                if (currentAnim == newAnim && currentAnim != primaryAnimation)
-                {
-                    _baseAnimationComponent.SetAnimation(fallbackAnimation);
-                }
+                return;
             }
+
+            if (!string.IsNullOrWhiteSpace(primaryAnimation) && _baseAnimationComponent.SetAnimation(primaryAnimation))
+            {
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(fallbackAnimation) && !string.Equals(primaryAnimation, fallbackAnimation, StringComparison.OrdinalIgnoreCase) && _baseAnimationComponent.SetAnimation(fallbackAnimation))
+            {
+                return;
+            }
+
+            _baseAnimationComponent.SetAnimation("Idle_Down");
+        }
+
+        private static string ComposeDirectionalName(string baseName, CardinalDirection direction)
+        {
+            if (string.IsNullOrWhiteSpace(baseName))
+            {
+                return baseName;
+            }
+
+            string suffix = direction switch
+            {
+                CardinalDirection.North => "Up",
+                CardinalDirection.East => "Right",
+                CardinalDirection.South => "Down",
+                CardinalDirection.West => "Left",
+                _ => "Down"
+            };
+
+            return $"{baseName}_{suffix}";
         }
     }
 }

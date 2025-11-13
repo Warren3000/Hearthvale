@@ -1,0 +1,43 @@
+{
+  "npcs": [
+    {
+      "id": "skeleton_grunt",
+      "displayName": "Skeleton Grunt",
+      "textureAtlas": "images/xml/skeleton-atlas.xml",
+      "animations": {
+        "idle_down": { "framePattern": "Skeleton_Idle_Down_*", "fps": 10, "loop": true },
+        "idle_left": { "framePattern": "Skeleton_Idle_Left_*", "fps": 10, "loop": true },
+        "idle_right": { "framePattern": "Skeleton_Idle_Right_*", "fps": 10, "loop": true },
+        "idle_up": { "framePattern": "Skeleton_Idle_Up_*", "fps": 10, "loop": true },
+        "run_down": { "framePattern": "Skeleton_Run_Down_*", "fps": 12.5, "loop": true },
+        "run_left": { "framePattern": "Skeleton_Run_Left_*", "fps": 12.5, "loop": true },
+        "run_right": { "framePattern": "Skeleton_Run_Right_*", "fps": 12.5, "loop": true },
+        "run_up": { "framePattern": "Skeleton_Run_Up_*", "fps": 12.5, "loop": true },
+        "jump_down": { "framePattern": "Skeleton_Jump_Down_*", "fps": 10, "loop": false },
+        "jump_left": { "framePattern": "Skeleton_Jump_Left_*", "fps": 10, "loop": false },
+        "jump_right": { "framePattern": "Skeleton_Jump_Right_*", "fps": 10, "loop": false },
+        "jump_up": { "framePattern": "Skeleton_Jump_Up_*", "fps": 10, "loop": false },
+        "land_down": { "framePattern": "Skeleton_Land_Down_*", "fps": 10, "loop": false },
+        "land_left": { "framePattern": "Skeleton_Land_Left_*", "fps": 10, "loop": false },
+        "land_right": { "framePattern": "Skeleton_Land_Right_*", "fps": 10, "loop": false },
+        "land_up": { "framePattern": "Skeleton_Land_Up_*", "fps": 10, "loop": false },
+        "attack_down": { "framePattern": "Skeleton_Attack_Down_*", "fps": 12.5, "loop": false },
+        "attack_left": { "framePattern": "Skeleton_Attack_Left_*", "fps": 12.5, "loop": false },
+        "attack_right": { "framePattern": "Skeleton_Attack_Right_*", "fps": 12.5, "loop": false },
+        "attack_up": { "framePattern": "Skeleton_Attack_Up_*", "fps": 12.5, "loop": false },
+        "hurt_down": { "framePattern": "Skeleton_Hurt_Down_*", "fps": 10, "loop": true },
+        "hurt_left": { "framePattern": "Skeleton_Hurt_Left_*", "fps": 10, "loop": true },
+        "hurt_right": { "framePattern": "Skeleton_Hurt_Right_*", "fps": 10, "loop": true },
+        "hurt_up": { "framePattern": "Skeleton_Hurt_Up_*", "fps": 10, "loop": true },
+        "death_down": { "framePattern": "Skeleton_Death_Down_*", "fps": 10, "loop": false },
+        "death_left": { "framePattern": "Skeleton_Death_Left_*", "fps": 10, "loop": false },
+        "death_right": { "framePattern": "Skeleton_Death_Right_*", "fps": 10, "loop": false },
+        "death_up": { "framePattern": "Skeleton_Death_Up_*", "fps": 10, "loop": false }
+      },
+      "collision": {
+        "hitbox": { "x": 10, "y": 12, "width": 28, "height": 34 },
+        "projectileOrigin": { "x": 24, "y": 18 }
+      }
+    }
+  ]
+}

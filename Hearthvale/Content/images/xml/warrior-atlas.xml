@@ -1,0 +1,593 @@
+﻿<TextureAtlas>
+  <Texture>images/sprites/Warrior</Texture>
+
+  <Regions>
+  <!--Down-->
+    <!--Idle_Down-->
+    <Region name="Idle_Down_1" x="32" y="32" width="48" height="48" />
+    <Region name="Idle_Down_2" x="80" y="32" width="48" height="48" />
+    <Region name="Idle_Down_3" x="128" y="32" width="48" height="48" />
+    <Region name="Idle_Down_4" x="176" y="32" width="48" height="48" />
+    <Region name="Idle_Down_5" x="224" y="32" width="48" height="48" />
+    <!--Run_Down-->
+    <Region name="Run_Down_1" x="32" y="80" width="48" height="48" />
+    <Region name="Run_Down_2" x="80" y="80" width="48" height="48" />
+    <Region name="Run_Down_3" x="128" y="80" width="48" height="48" />
+    <Region name="Run_Down_4" x="176" y="80" width="48" height="48" />
+    <Region name="Run_Down_5" x="224" y="80" width="48" height="48" />
+    <Region name="Run_Down_6" x="272" y="80" width="48" height="48" />
+    <Region name="Run_Down_7" x="320" y="80" width="48" height="48" />
+    <Region name="Run_Down_8" x="368" y="80" width="48" height="48" />
+    <!--Jump_Down-->
+    <Region name="Jump_Down_1" x="32" y="128" width="48" height="48" />
+    <Region name="Jump_Down_2" x="80" y="128" width="48" height="48" />
+    <Region name="Jump_Down_3" x="128" y="128" width="48" height="48" />
+    <Region name="Jump_Down_4" x="176" y="128" width="48" height="48" />
+    <Region name="Jump_Down_5" x="224" y="128" width="48" height="48" />
+    <!--Land_Down-->
+    <Region name="Land_Down_1" x="32" y="176" width="48" height="48" />
+    <Region name="Land_Down_2" x="80" y="176" width="48" height="48" />
+    <Region name="Land_Down_3" x="128" y="176" width="48" height="48" />
+    <Region name="Land_Down_4" x="176" y="176" width="48" height="48" />
+    <Region name="Land_Down_5" x="224" y="176" width="48" height="48" />
+    <!--Attack_Down-->
+    <Region name="Attack_01_Down_1" x="32" y="224" width="48" height="48" />
+    <Region name="Attack_01_Down_2" x="80" y="224" width="48" height="48" />
+    <Region name="Attack_01_Down_3" x="128" y="224" width="48" height="48" />
+    <Region name="Attack_01_Down_4" x="176" y="224" width="48" height="48" />
+    <Region name="Attack_01_Down_5" x="224" y="224" width="48" height="48" />
+    <Region name="Attack_01_Down_6" x="272" y="224" width="48" height="48" />
+    <!--Hurt_Down-->
+    <Region name="Hurt_Down_1" x="32" y="272" width="48" height="48" />
+    <Region name="Hurt_Down_2" x="80" y="272" width="48" height="48" />
+    <Region name="Hurt_Down_3" x="128" y="272" width="48" height="48" />
+    <Region name="Hurt_Down_4" x="176" y="272" width="48" height="48" />
+    <!--Death_Down-->
+    <Region name="Death_Down_1" x="32" y="320" width="48" height="48" />
+    <Region name="Death_Down_2" x="80" y="320" width="48" height="48" />
+    <Region name="Death_Down_3" x="128" y="320" width="48" height="48" />
+    <Region name="Death_Down_4" x="176" y="320" width="48" height="48" />
+    <Region name="Death_Down_5" x="224" y="320" width="48" height="48" />
+  <!--End Down-->
+
+  <!--Left-->
+    <!--Idle_Left-->
+    <Region name="Idle_Left_1" x="32" y="368" width="48" height="48" />
+    <Region name="Idle_Left_2" x="80" y="368" width="48" height="48" />
+    <Region name="Idle_Left_3" x="128" y="368" width="48" height="48" />
+    <Region name="Idle_Left_4" x="176" y="368" width="48" height="48" />
+    <Region name="Idle_Left_5" x="224" y="368" width="48" height="48" />
+    <!--Run_Left-->
+    <Region name="Run_Left_1" x="32" y="416" width="48" height="48" />
+    <Region name="Run_Left_2" x="80" y="416" width="48" height="48" />
+    <Region name="Run_Left_3" x="128" y="416" width="48" height="48" />
+    <Region name="Run_Left_4" x="176" y="416" width="48" height="48" />
+    <Region name="Run_Left_5" x="224" y="416" width="48" height="48" />
+    <Region name="Run_Left_6" x="272" y="416" width="48" height="48" />
+    <Region name="Run_Left_7" x="320" y="416" width="48" height="48" />
+    <Region name="Run_Left_8" x="368" y="416" width="48" height="48" />
+    <!--Jump_Left-->
+    <Region name="Jump_Left_1" x="32" y="464" width="48" height="48" />
+    <Region name="Jump_Left_2" x="80" y="464" width="48" height="48" />
+    <Region name="Jump_Left_3" x="128" y="464" width="48" height="48" />
+    <Region name="Jump_Left_4" x="176" y="464" width="48" height="48" />
+    <Region name="Jump_Left_5" x="224" y="464" width="48" height="48" />
+    <!--Land_Left-->
+    <Region name="Land_Left_1" x="32" y="512" width="48" height="48" />
+    <Region name="Land_Left_2" x="80" y="512" width="48" height="48" />
+    <Region name="Land_Left_3" x="128" y="512" width="48" height="48" />
+    <Region name="Land_Left_4" x="176" y="512" width="48" height="48" />
+    <Region name="Land_Left_5" x="224" y="512" width="48" height="48" />
+    <!--Attack_Left-->
+    <Region name="Attack_01_Left_1" x="32" y="560" width="48" height="48" />
+    <Region name="Attack_01_Left_2" x="80" y="560" width="48" height="48" />
+    <Region name="Attack_01_Left_3" x="128" y="560" width="48" height="48" />
+    <Region name="Attack_01_Left_4" x="176" y="560" width="48" height="48" />
+    <Region name="Attack_01_Left_5" x="224" y="560" width="48" height="48" />
+    <Region name="Attack_01_Left_6" x="272" y="560" width="48" height="48" />
+    <!--Hurt_Left-->
+    <Region name="Hurt_Left_1" x="32" y="608" width="48" height="48" />
+    <Region name="Hurt_Left_2" x="80" y="608" width="48" height="48" />
+    <Region name="Hurt_Left_3" x="128" y="608" width="48" height="48" />
+    <Region name="Hurt_Left_4" x="176" y="608" width="48" height="48" />
+    <!--Death_Left-->
+    <Region name="Death_Left_1" x="32" y="656" width="48" height="48" />
+    <Region name="Death_Left_2" x="80" y="656" width="48" height="48" />
+    <Region name="Death_Left_3" x="128" y="656" width="48" height="48" />
+    <Region name="Death_Left_4" x="176" y="656" width="48" height="48" />
+    <Region name="Death_Left_5" x="224" y="656" width="48" height="48" />
+  <!--End Left-->
+
+  <!--Right-->
+    <!--Idle_Right-->
+    <Region name="Idle_Right_1" x="32" y="704" width="48" height="48" />
+    <Region name="Idle_Right_2" x="80" y="704" width="48" height="48" />
+    <Region name="Idle_Right_3" x="128" y="704" width="48" height="48" />
+    <Region name="Idle_Right_4" x="176" y="704" width="48" height="48" />
+    <Region name="Idle_Right_5" x="224" y="704" width="48" height="48" />
+    <!--Run_Right-->
+    <Region name="Run_Right_1" x="32" y="752" width="48" height="48" />
+    <Region name="Run_Right_2" x="80" y="752" width="48" height="48" />
+    <Region name="Run_Right_3" x="128" y="752" width="48" height="48" />
+    <Region name="Run_Right_4" x="176" y="752" width="48" height="48" />
+    <Region name="Run_Right_5" x="224" y="752" width="48" height="48" />
+    <Region name="Run_Right_6" x="272" y="752" width="48" height="48" />
+    <Region name="Run_Right_7" x="320" y="752" width="48" height="48" />
+    <Region name="Run_Right_8" x="368" y="752" width="48" height="48" />
+    <!--Jump_Right-->
+    <Region name="Jump_Right_1" x="32" y="800" width="48" height="48" />
+    <Region name="Jump_Right_2" x="80" y="800" width="48" height="48" />
+    <Region name="Jump_Right_3" x="128" y="800" width="48" height="48" />
+    <Region name="Jump_Right_4" x="176" y="800" width="48" height="48" />
+    <Region name="Jump_Right_5" x="224" y="800" width="48" height="48" />
+    <!--Land_Right-->
+    <Region name="Land_Right_1" x="32" y="848" width="48" height="48" />
+    <Region name="Land_Right_2" x="80" y="848" width="48" height="48" />
+    <Region name="Land_Right_3" x="128" y="848" width="48" height="48" />
+    <Region name="Land_Right_4" x="176" y="848" width="48" height="48" />
+    <Region name="Land_Right_5" x="224" y="848" width="48" height="48" />
+    <!--Attack_Right-->
+    <Region name="Attack_01_Right_1" x="32" y="896" width="48" height="48" />
+    <Region name="Attack_01_Right_2" x="80" y="896" width="48" height="48" />
+    <Region name="Attack_01_Right_3" x="128" y="896" width="48" height="48" />
+    <Region name="Attack_01_Right_4" x="176" y="896" width="48" height="48" />
+    <Region name="Attack_01_Right_5" x="224" y="896" width="48" height="48" />
+    <Region name="Attack_01_Right_6" x="272" y="896" width="48" height="48" />
+    <!--Hurt_Right-->
+    <Region name="Hurt_Right_1" x="32" y="944" width="48" height="48" />
+    <Region name="Hurt_Right_2" x="80" y="944" width="48" height="48" />
+    <Region name="Hurt_Right_3" x="128" y="944" width="48" height="48" />
+    <Region name="Hurt_Right_4" x="176" y="944" width="48" height="48" />
+    <!--Death_Right-->
+    <Region name="Death_Right_1" x="32" y="992" width="48" height="48" />
+    <Region name="Death_Right_2" x="80" y="992" width="48" height="48" />
+    <Region name="Death_Right_3" x="128" y="992" width="48" height="48" />
+    <Region name="Death_Right_4" x="176" y="992" width="48" height="48" />
+    <Region name="Death_Right_5" x="224" y="992" width="48" height="48" />
+  <!--End Right-->
+  <!--Up-->
+    <!--Idle_Up-->
+    <Region name="Idle_Up_1" x="32" y="1040" width="48" height="48" />
+    <Region name="Idle_Up_2" x="80" y="1040" width="48" height="48" />
+    <Region name="Idle_Up_3" x="128" y="1040" width="48" height="48" />
+    <Region name="Idle_Up_4" x="176" y="1040" width="48" height="48" />
+    <Region name="Idle_Up_5" x="224" y="1040" width="48" height="48" />
+    <!--Run_Up-->
+    <Region name="Run_Up_1" x="32" y="1088" width="48" height="48" />
+    <Region name="Run_Up_2" x="80" y="1088" width="48" height="48" />
+    <Region name="Run_Up_3" x="128" y="1088" width="48" height="48" />
+    <Region name="Run_Up_4" x="176" y="1088" width="48" height="48" />
+    <Region name="Run_Up_5" x="224" y="1088" width="48" height="48" />
+    <Region name="Run_Up_6" x="272" y="1088" width="48" height="48" />
+    <Region name="Run_Up_7" x="320" y="1088" width="48" height="48" />
+    <Region name="Run_Up_8" x="368" y="1088" width="48" height="48" />
+    <!--Jump_Up-->
+    <Region name="Jump_Up_1" x="32" y="1136" width="48" height="48" />
+    <Region name="Jump_Up_2" x="80" y="1136" width="48" height="48" />
+    <Region name="Jump_Up_3" x="128" y="1136" width="48" height="48" />
+    <Region name="Jump_Up_4" x="176" y="1136" width="48" height="48" />
+    <Region name="Jump_Up_5" x="224" y="1136" width="48" height="48" />
+    <!--Land_Up-->
+    <Region name="Land_Up_1" x="32" y="1184" width="48" height="48" />
+    <Region name="Land_Up_2" x="80" y="1184" width="48" height="48" />
+    <Region name="Land_Up_3" x="128" y="1184" width="48" height="48" />
+    <Region name="Land_Up_4" x="176" y="1184" width="48" height="48" />
+    <Region name="Land_Up_5" x="224" y="1184" width="48" height="48" />
+    <!--Attack_Up-->
+    <Region name="Attack_01_Up_1" x="32" y="1232" width="48" height="48" />
+    <Region name="Attack_01_Up_2" x="80" y="1232" width="48" height="48" />
+    <Region name="Attack_01_Up_3" x="128" y="1232" width="48" height="48" />
+    <Region name="Attack_01_Up_4" x="176" y="1232" width="48" height="48" />
+    <Region name="Attack_01_Up_5" x="224" y="1232" width="48" height="48" />
+    <Region name="Attack_01_Up_6" x="272" y="1232" width="48" height="48" />
+    <!--Hurt_Up-->
+    <Region name="Hurt_Up_1" x="32" y="1280" width="48" height="48" />
+    <Region name="Hurt_Up_2" x="80" y="1280" width="48" height="48" />
+    <Region name="Hurt_Up_3" x="128" y="1280" width="48" height="48" />
+    <Region name="Hurt_Up_4" x="176" y="1280" width="48" height="48" />
+    <!--Death_Up-->
+    <Region name="Death_Up_1" x="32" y="1328" width="48" height="48" />
+    <Region name="Death_Up_2" x="80" y="1328" width="48" height="48" />
+    <Region name="Death_Up_3" x="128" y="1328" width="48" height="48" />
+    <Region name="Death_Up_4" x="176" y="1328" width="48" height="48" />
+    <Region name="Death_Up_5" x="224" y="1328" width="48" height="48" />
+    <Region name="Death_Up_6" x="272" y="1328" width="48" height="48" />
+  <!--End Up-->
+  <!--Climbing-->
+    <!--Climb_Down-->
+    <Region name ="Climb_Down_1" x="32" y="1376" width="48" height="48" />
+    <Region name ="Climb_Down_2" x="80" y="1376" width="48" height="48" />
+    <Region name ="Climb_Down_3" x="128" y="1376" width="48" height="48" />
+    <Region name ="Climb_Down_4" x="176" y="1376" width="48" height="48" /> 
+    <Region name ="Climb_Down_5" x="224" y="1376" width="48" height="48" />
+    <Region name ="Climb_Down_6" x="272" y="1376" width="48" height="48" />
+  <!--Climb_Left-->
+    <Region name ="Climb_Left_1" x="32" y="1424" width="48" height="48" />
+    <Region name ="Climb_Left_2" x="80" y="1424" width="48" height="48" />
+    <Region name ="Climb_Left_3" x="128" y="1424" width="48" height="48" />
+    <Region name ="Climb_Left_4" x="176" y="1424" width="48" height="48" /> 
+    <Region name ="Climb_Left_5" x="224" y="1424" width="48" height="48" />
+    <Region name ="Climb_Left_6" x="272" y="1424" width="48" height="48" />
+  <!--Climb_Right-->
+    <Region name ="Climb_Right_1" x="32" y="1472" width="48" height="48" />
+    <Region name ="Climb_Right_2" x="80" y="1472" width="48" height="48" />
+    <Region name ="Climb_Right_3" x="128" y="1472" width="48" height="48" />
+    <Region name ="Climb_Right_4" x="176" y="1472" width="48" height="48" /> 
+    <Region name ="Climb_Right_5" x="224" y="1472" width="48" height="48" />
+    <Region name ="Climb_Right_6" x="272" y="1472" width="48" height="48" />
+  <!--Climb_Up-->
+    <Region name ="Climb_Up_1" x="32" y="1520" width="48" height="48" />
+    <Region name ="Climb_Up_2" x="80" y="1520" width="48" height="48" />
+    <Region name ="Climb_Up_3" x="128" y="1520" width="48" height="48" />
+    <Region name ="Climb_Up_4" x="176" y="1520" width="48" height="48" /> 
+    <Region name ="Climb_Up_5" x="224" y="1520" width="48" height="48" />
+    <Region name ="Climb_Up_6" x="272" y="1520" width="48" height="48" />
+  <!--End Climbing-->
+  <!--Attack_02-->
+    <!--Attack_02_Down-->
+    <Region name="Attack_02_Down_1" x="32" y="1568" width="48" height="48" />
+    <Region name="Attack_02_Down_2" x="80" y="1568" width="48" height="48" />
+    <Region name="Attack_02_Down_3" x="128" y="1568" width="48" height="48" />
+    <Region name="Attack_02_Down_4" x="176" y="1568" width="48" height="48" />
+    <Region name="Attack_02_Down_5" x="224" y="1568" width="48" height="48" />
+    <Region name="Attack_02_Down_6" x="272" y="1568" width="48" height="48" />
+    <!--Attack_02_Left-->
+    <Region name="Attack_02_Left_1" x="32" y="1616" width="48" height="48" />
+    <Region name="Attack_02_Left_2" x="80" y="1616" width="48" height="48" />
+    <Region name="Attack_02_Left_3" x="128" y="1616" width="48" height="48" />
+    <Region name="Attack_02_Left_4" x="176" y="1616" width="48" height="48" />
+    <Region name="Attack_02_Left_5" x="224" y="1616" width="48" height="48" />
+    <Region name="Attack_02_Left_6" x="272" y="1616" width="48" height="48" />
+    <!--Attack_02_Right-->
+    <Region name="Attack_02_Right_1" x="32" y="1664" width="48" height="48" />
+    <Region name="Attack_02_Right_2" x="80" y="1664" width="48" height="48" />
+    <Region name="Attack_02_Right_3" x="128" y="1664" width="48" height="48" />
+    <Region name="Attack_02_Right_4" x="176" y="1664" width="48" height="48" />
+    <Region name="Attack_02_Right_5" x="224" y="1664" width="48" height="48" />
+    <Region name="Attack_02_Right_6" x="272" y="1664" width="48" height="48" />
+    <!--Attack_02_Up-->
+    <Region name="Attack_02_Up_1" x="32" y="1712" width="48" height="48" />
+    <Region name="Attack_02_Up_2" x="80" y="1712" width="48" height="48" />
+    <Region name="Attack_02_Up_3" x="128" y="1712" width="48" height="48" />
+    <Region name="Attack_02_Up_4" x="176" y="1712" width="48" height="48" />
+    <Region name="Attack_02_Up_5" x="224" y="1712" width="48" height="48" />
+    <Region name="Attack_02_Up_6" x="272" y="1712" width="48" height="48" />
+  <!--End Attack_02-->
+  <!--Attack_03-->
+    <!--Attack_03_Down-->
+    <Region name="Attack_03_Down_1" x="32" y="1760" width="48" height="48" />
+    <Region name="Attack_03_Down_2" x="80" y="1760" width="48" height="48" />
+    <Region name="Attack_03_Down_3" x="128" y="1760" width="48" height="48" />
+    <Region name="Attack_03_Down_4" x="176" y="1760" width="48" height="48" />
+    <Region name="Attack_03_Down_5" x="224" y="1760" width="48" height="48" />
+    <!--Attack_03_Left-->
+    <Region name="Attack_03_Left_1" x="32" y="1808" width="48" height="48" />
+    <Region name="Attack_03_Left_2" x="80" y="1808" width="48" height="48" />
+    <Region name="Attack_03_Left_3" x="128" y="1808" width="48" height="48" />
+    <Region name="Attack_03_Left_4" x="176" y="1808" width="48" height="48" />
+    <Region name="Attack_03_Left_5" x="224" y="1808" width="48" height="48" />
+    <!--Attack_03_Right-->
+    <Region name="Attack_03_Right_1" x="32" y="1856" width="48" height="48" />
+    <Region name="Attack_03_Right_2" x="80" y="1856" width="48" height="48" />
+    <Region name="Attack_03_Right_3" x="128" y="1856" width="48" height="48" />
+    <Region name="Attack_03_Right_4" x="176" y="1856" width="48" height="48" />
+    <Region name="Attack_03_Right_5" x="224" y="1856" width="48" height="48" />
+    <!--Attack_03_Up-->
+    <Region name="Attack_03_Up_1" x="32" y="1904" width="48" height="48" />
+    <Region name="Attack_03_Up_2" x="80" y="1904" width="48" height="48" />
+    <Region name="Attack_03_Up_3" x="128" y="1904" width="48" height="48" />
+    <Region name="Attack_03_Up_4" x="176" y="1904" width="48" height="48" />
+    <Region name="Attack_03_Up_5" x="224" y="1904" width="48" height="48" />
+  <!--END Attack_03-->
+  </Regions>
+
+  <Animations>
+    <!-- Idle_Down -->
+    <Animation name="Idle_Down" delay="100">
+      <Frame region="Idle_Down_1" />
+      <Frame region="Idle_Down_2" />
+      <Frame region="Idle_Down_3" />
+      <Frame region="Idle_Down_4" />
+      <Frame region="Idle_Down_5" />
+    </Animation>
+    <Animation name="Idle_Right" delay="100">
+      <Frame region="Idle_Right_1" />
+      <Frame region="Idle_Right_2" />
+      <Frame region="Idle_Right_3" />
+      <Frame region="Idle_Right_4" />
+      <Frame region="Idle_Right_5" />
+    </Animation>
+    <Animation name="Idle_Left" delay="100">
+      <Frame region="Idle_Left_1" />
+      <Frame region="Idle_Left_2" />
+      <Frame region="Idle_Left_3" />
+      <Frame region="Idle_Left_4" />
+      <Frame region="Idle_Left_5" />
+    </Animation>
+    <Animation name="Idle_Up" delay="100">
+      <Frame region="Idle_Up_1" />
+      <Frame region="Idle_Up_2" />
+      <Frame region="Idle_Up_3" />
+      <Frame region="Idle_Up_4" />
+      <Frame region="Idle_Up_5" />
+    </Animation>
+
+    <Animation name="Run_Down" delay="80">
+      <Frame region="Run_Down_1" />
+      <Frame region="Run_Down_2" />
+      <Frame region="Run_Down_3" />
+      <Frame region="Run_Down_4" />
+      <Frame region="Run_Down_5" />
+      <Frame region="Run_Down_6" />
+      <Frame region="Run_Down_7" />
+      <Frame region="Run_Down_8" />
+    </Animation>
+    <Animation name="Run_Left" delay="80">
+      <Frame region="Run_Left_1" />
+      <Frame region="Run_Left_2" />
+      <Frame region="Run_Left_3" />
+      <Frame region="Run_Left_4" />
+      <Frame region="Run_Left_5" />
+      <Frame region="Run_Left_6" />
+      <Frame region="Run_Left_7" />
+      <Frame region="Run_Left_8" />
+    </Animation>
+    <Animation name="Run_Right" delay="80">
+      <Frame region="Run_Right_1" />
+      <Frame region="Run_Right_2" />
+      <Frame region="Run_Right_3" />
+      <Frame region="Run_Right_4" />
+      <Frame region="Run_Right_5" />
+      <Frame region="Run_Right_6" />
+      <Frame region="Run_Right_7" />
+      <Frame region="Run_Right_8" />
+    </Animation>
+    <Animation name="Run_Up" delay="80">
+      <Frame region="Run_Up_1" />
+      <Frame region="Run_Up_2" />
+      <Frame region="Run_Up_3" />
+      <Frame region="Run_Up_4" />
+      <Frame region="Run_Up_5" />
+      <Frame region="Run_Up_6" />
+      <Frame region="Run_Up_7" />
+      <Frame region="Run_Up_8" />
+    </Animation>
+
+    <Animation name="Jump_Down" delay="100" once="true">
+      <Frame region="Jump_Down_1" />
+      <Frame region="Jump_Down_2" />
+      <Frame region="Jump_Down_3" />
+      <Frame region="Jump_Down_4" />
+      <Frame region="Jump_Down_5" />
+    </Animation>
+    <Animation name="Jump_Left" delay="100" once="true">
+      <Frame region="Jump_Left_1" />
+      <Frame region="Jump_Left_2" />
+      <Frame region="Jump_Left_3" />
+      <Frame region="Jump_Left_4" />
+      <Frame region="Jump_Left_5" />
+    </Animation>
+    <Animation name="Jump_Right" delay="100" once="true">
+      <Frame region="Jump_Right_1" />
+      <Frame region="Jump_Right_2" />
+      <Frame region="Jump_Right_3" />
+      <Frame region="Jump_Right_4" />
+      <Frame region="Jump_Right_5" />
+    </Animation>
+    <Animation name="Jump_Up" delay="100" once="true">
+      <Frame region="Jump_Up_1" />
+      <Frame region="Jump_Up_2" />
+      <Frame region="Jump_Up_3" />
+      <Frame region="Jump_Up_4" />
+      <Frame region="Jump_Up_5" />
+    </Animation>
+
+    <Animation name="Land_Down" delay="100" once="true">
+      <Frame region="Land_Down_1" />
+      <Frame region="Land_Down_2" />
+      <Frame region="Land_Down_3" />
+      <Frame region="Land_Down_4" />
+      <Frame region="Land_Down_5" />
+    </Animation>
+    <Animation name="Land_Left" delay="100" once="true">
+      <Frame region="Land_Left_1" />
+      <Frame region="Land_Left_2" />
+      <Frame region="Land_Left_3" />
+      <Frame region="Land_Left_4" />
+      <Frame region="Land_Left_5" />
+    </Animation>
+    <Animation name="Land_Right" delay="100" once="true">
+      <Frame region="Land_Right_1" />
+      <Frame region="Land_Right_2" />
+      <Frame region="Land_Right_3" />
+      <Frame region="Land_Right_4" />
+      <Frame region="Land_Right_5" />
+    </Animation>
+    <Animation name="Land_Up" delay="100" once="true">
+      <Frame region="Land_Up_1" />
+      <Frame region="Land_Up_2" />
+      <Frame region="Land_Up_3" />
+      <Frame region="Land_Up_4" />
+      <Frame region="Land_Up_5" />
+    </Animation>
+
+    <Animation name="Attack_01_Down" delay="80" once="true">
+      <Frame region="Attack_01_Down_1" />
+      <Frame region="Attack_01_Down_2" />
+      <Frame region="Attack_01_Down_3" />
+      <Frame region="Attack_01_Down_4" />
+      <Frame region="Attack_01_Down_5" />
+      <Frame region="Attack_01_Down_6" />
+    </Animation>
+    <Animation name="Attack_01_Left" delay="80" once="true">
+      <Frame region="Attack_01_Left_1" />
+      <Frame region="Attack_01_Left_2" />
+      <Frame region="Attack_01_Left_3" />
+      <Frame region="Attack_01_Left_4" />
+      <Frame region="Attack_01_Left_5" />
+      <Frame region="Attack_01_Left_6" />
+    </Animation>
+    <Animation name="Attack_01_Right" delay="80" once="true">
+      <Frame region="Attack_01_Right_1" />
+      <Frame region="Attack_01_Right_2" />
+      <Frame region="Attack_01_Right_3" />
+      <Frame region="Attack_01_Right_4" />
+      <Frame region="Attack_01_Right_5" />
+      <Frame region="Attack_01_Right_6" />
+    </Animation>
+    <Animation name="Attack_01_Up" delay="80" once="true">
+      <Frame region="Attack_01_Up_1" />
+      <Frame region="Attack_01_Up_2" />
+      <Frame region="Attack_01_Up_3" />
+      <Frame region="Attack_01_Up_4" />
+      <Frame region="Attack_01_Up_5" />
+      <Frame region="Attack_01_Up_6" />
+    </Animation>
+
+    <Animation name="Hurt_Down" delay="100">
+      <Frame region="Hurt_Down_1" />
+      <Frame region="Hurt_Down_2" />
+      <Frame region="Hurt_Down_3" />
+      <Frame region="Hurt_Down_4" />
+    </Animation>
+    <Animation name="Hurt_Left" delay="100">
+      <Frame region="Hurt_Left_1" />
+      <Frame region="Hurt_Left_2" />
+      <Frame region="Hurt_Left_3" />
+      <Frame region="Hurt_Left_4" />
+    </Animation>
+    <Animation name="Hurt_Right" delay="100">
+      <Frame region="Hurt_Right_1" />
+      <Frame region="Hurt_Right_2" />
+      <Frame region="Hurt_Right_3" />
+      <Frame region="Hurt_Right_4" />
+    </Animation>
+    <Animation name="Hurt_Up" delay="100">
+      <Frame region="Hurt_Up_1" />
+      <Frame region="Hurt_Up_2" />
+      <Frame region="Hurt_Up_3" />
+      <Frame region="Hurt_Up_4" />
+    </Animation>
+
+    <Animation name="Death_Down" delay="100" once="true">
+      <Frame region="Death_Down_1" />
+      <Frame region="Death_Down_2" />
+      <Frame region="Death_Down_3" />
+      <Frame region="Death_Down_4" />
+      <Frame region="Death_Down_5" />
+    </Animation>
+    <Animation name="Death_Left" delay="100" once="true">
+      <Frame region="Death_Left_1" />
+      <Frame region="Death_Left_2" />
+      <Frame region="Death_Left_3" />
+      <Frame region="Death_Left_4" />
+      <Frame region="Death_Left_5" />
+    </Animation>
+    <Animation name="Death_Right" delay="100" once="true">
+      <Frame region="Death_Right_1" />
+      <Frame region="Death_Right_2" />
+      <Frame region="Death_Right_3" />
+      <Frame region="Death_Right_4" />
+      <Frame region="Death_Right_5" />
+    </Animation>
+    <Animation name="Death_Up" delay="100" once="true">
+      <Frame region="Death_Up_1" />
+      <Frame region="Death_Up_2" />
+      <Frame region="Death_Up_3" />
+      <Frame region="Death_Up_4" />
+      <Frame region="Death_Up_5" />
+    </Animation>
+    <Animation name="Climb_Down" delay="100">
+      <Frame region="Climb_Down_1" />
+      <Frame region="Climb_Down_2" />
+      <Frame region="Climb_Down_3" />
+      <Frame region="Climb_Down_4" />
+      <Frame region="Climb_Down_5" />
+      <Frame region="Climb_Down_6" />
+    </Animation>
+    <Animation name="Climb_Left" delay="100">
+      <Frame region="Climb_Left_1" />
+      <Frame region="Climb_Left_2" />
+      <Frame region="Climb_Left_3" />
+      <Frame region="Climb_Left_4" />
+      <Frame region="Climb_Left_5" />
+      <Frame region="Climb_Left_6" />
+    </Animation>
+    <Animation name="Climb_Right" delay="100">
+      <Frame region="Climb_Right_1" />
+      <Frame region="Climb_Right_2" />
+      <Frame region="Climb_Right_3" />
+      <Frame region="Climb_Right_4" />
+      <Frame region="Climb_Right_5" />
+      <Frame region="Climb_Right_6" />
+    </Animation>
+    <Animation name="Climb_Up" delay="100">
+      <Frame region="Climb_Up_1" />
+      <Frame region="Climb_Up_2" />
+      <Frame region="Climb_Up_3" />
+      <Frame region="Climb_Up_4" />
+      <Frame region="Climb_Up_5" />
+      <Frame region="Climb_Up_6" />
+    </Animation>
+    <Animation name="Attack_02_Down" delay="80" once="true">
+      <Frame region="Attack_02_Down_1" />
+      <Frame region="Attack_02_Down_2" />
+      <Frame region="Attack_02_Down_3" />
+      <Frame region="Attack_02_Down_4" />
+      <Frame region="Attack_02_Down_5" />
+      <Frame region="Attack_02_Down_6" />
+    </Animation>
+    <Animation name="Attack_02_Left" delay="80" once="true">
+      <Frame region="Attack_02_Left_1" />
+      <Frame region="Attack_02_Left_2" />
+      <Frame region="Attack_02_Left_3" />
+      <Frame region="Attack_02_Left_4" />
+      <Frame region="Attack_02_Left_5" />
+      <Frame region="Attack_02_Left_6" />
+    </Animation>
+    <Animation name="Attack_02_Right" delay="80" once="true">
+      <Frame region="Attack_02_Right_1" />
+      <Frame region="Attack_02_Right_2" />
+      <Frame region="Attack_02_Right_3" />
+      <Frame region="Attack_02_Right_4" />
+      <Frame region="Attack_02_Right_5" />
+      <Frame region="Attack_02_Right_6" />
+    </Animation>
+    <Animation name="Attack_02_Up" delay="80" once="true">
+      <Frame region="Attack_02_Up_1" />
+      <Frame region="Attack_02_Up_2" />
+      <Frame region="Attack_02_Up_3" />
+      <Frame region="Attack_02_Up_4" />
+      <Frame region="Attack_02_Up_5" />
+      <Frame region="Attack_02_Up_6" />
+    </Animation>
+    <Animation name="Attack_03_Down" delay="80" once="true">
+      <Frame region="Attack_03_Down_1" />
+      <Frame region="Attack_03_Down_2" />
+      <Frame region="Attack_03_Down_3" />
+      <Frame region="Attack_03_Down_4" />
+      <Frame region="Attack_03_Down_5" />
+    </Animation>
+    <Animation name="Attack_03_Left" delay="80" once="true">
+      <Frame region="Attack_03_Left_1" />
+      <Frame region="Attack_03_Left_2" />
+      <Frame region="Attack_03_Left_3" />
+      <Frame region="Attack_03_Left_4" />
+      <Frame region="Attack_03_Left_5" />
+    </Animation>
+    <Animation name="Attack_03_Right" delay="80" once="true">
+      <Frame region="Attack_03_Right_1" />
+      <Frame region="Attack_03_Right_2" />
+      <Frame region="Attack_03_Right_3" />
+      <Frame region="Attack_03_Right_4" />
+      <Frame region="Attack_03_Right_5" />
+    </Animation>
+    <Animation name="Attack_03_Up" delay="80" once="true">
+      <Frame region="Attack_03_Up_1" />
+      <Frame region="Attack_03_Up_2" />
+      <Frame region="Attack_03_Up_3" />
+      <Frame region="Attack_03_Up_4" />
+      <Frame region="Attack_03_Up_5" />
+    </Animation>
+  </Animations>
+</TextureAtlas>

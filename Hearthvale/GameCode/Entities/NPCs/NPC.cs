@@ -22,9 +22,9 @@ namespace Hearthvale.GameCode.Entities.NPCs
 
     public enum NpcClass
     {
-        Merchant,
-        Knight,
-        HeavyKnight
+        Skeleton,
+        Goblin,
+        Warrior
     }
 
     public class NPC : Character, ICombatNpc, IDialog, INpcAnimationProvider, IDisposable
@@ -75,7 +75,17 @@ namespace Hearthvale.GameCode.Entities.NPCs
         {
             Name = name;
             AnimationUtils.ApplyDelayFactorToAll(animations, 2.0f);
-            var sprite = new AnimatedSprite(animations["Idle"]);
+            if (animations == null || animations.Count == 0)
+            {
+                throw new ArgumentException("NPC requires at least one animation", nameof(animations));
+            }
+
+            if (!animations.TryGetValue("Idle_Down", out var idleDownAnimation))
+            {
+                throw new ArgumentException("NPC animations must include an 'Idle_Down' entry", nameof(animations));
+            }
+
+            var sprite = new AnimatedSprite(idleDownAnimation);
 
             // Initialize base class components first
             InitializeComponents();
@@ -90,17 +100,15 @@ namespace Hearthvale.GameCode.Entities.NPCs
             // Set NPC class and AI type based on name
             Class = name.ToLower() switch
             {
-                "merchant" => NpcClass.Merchant,
-                "knight" => NpcClass.Knight,
-                "heavyknight" => NpcClass.HeavyKnight,
-                _ => NpcClass.Merchant
+                "skeleton" => NpcClass.Skeleton,
+                "goblin" => NpcClass.Goblin,
+                "warrior" => NpcClass.Warrior,
+                _ => NpcClass.Skeleton
             };
 
             var aiType = name.ToLower() switch
             {
-                "merchant" => NpcAiType.Wander,
-                "knight" => NpcAiType.ChasePlayer,
-                "heavyknight" => NpcAiType.ChasePlayer,
+                "skeleton" => NpcAiType.ChasePlayer,
                 _ => NpcAiType.Wander
             };
             _aiComponent.AiType = aiType;
@@ -112,6 +120,11 @@ namespace Hearthvale.GameCode.Entities.NPCs
             // Initialize components
             HealthComponent.SetMaxHealth(maxHealth);
             AnimationComponent.SetSprite(sprite);
+            foreach (var (animationName, animation) in animations)
+            {
+                AnimationComponent.AddAnimation(animationName, animation);
+            }
+            AnimationComponent.SetAnimation("Idle_Down");
             MovementComponent.SetPosition(position);
             MovementComponent.SetMovementSpeed(speedProfile.MovementSpeed);
             MovementComponent.SetCustomSpeeds(
@@ -247,14 +260,15 @@ namespace Hearthvale.GameCode.Entities.NPCs
 
         // Attack-related fields
         private float _attackAnimTimer = 0f;
-        private const float AttackAnimDuration = 0.25f;
+        private const float DefaultAttackAnimDuration = 0.25f;
+        private static readonly string[] AttackAnimationPrefixes = { "Attack", "Attack_01" };
         private CardinalDirection _facingDir = CardinalDirection.East;
         private Vector2 _lastAnimPosition;
 
         public void StartAttack()
         {
             IsAttacking = true;
-            _attackAnimTimer = AttackAnimDuration;
+            _attackAnimTimer = GetAttackAnimationDurationSeconds(_facingDir);
             WeaponComponent?.StartSwing(_facingDir);
             ResetAttackTimer();
         }
@@ -361,6 +375,49 @@ namespace Hearthvale.GameCode.Entities.NPCs
         {
             Dispose(true);
             GC.SuppressFinalize(this);
+        }
+
+        private float GetAttackAnimationDurationSeconds(CardinalDirection direction)
+        {
+            if (AnimationComponent == null)
+            {
+                return DefaultAttackAnimDuration;
+            }
+
+            string suffix = GetDirectionSuffix(direction);
+
+            foreach (var prefix in AttackAnimationPrefixes)
+            {
+                string directionalName = $"{prefix}_{suffix}";
+                TimeSpan duration = AnimationComponent.GetAnimationDuration(directionalName);
+                if (duration > TimeSpan.Zero)
+                {
+                    return (float)duration.TotalSeconds;
+                }
+            }
+
+            foreach (var prefix in AttackAnimationPrefixes)
+            {
+                TimeSpan duration = AnimationComponent.GetAnimationDuration(prefix);
+                if (duration > TimeSpan.Zero)
+                {
+                    return (float)duration.TotalSeconds;
+                }
+            }
+
+            return DefaultAttackAnimDuration;
+        }
+
+        private static string GetDirectionSuffix(CardinalDirection direction)
+        {
+            return direction switch
+            {
+                CardinalDirection.North => "Up",
+                CardinalDirection.South => "Down",
+                CardinalDirection.East => "Right",
+                CardinalDirection.West => "Left",
+                _ => "Down"
+            };
         }
 
         protected virtual void Dispose(bool disposing)

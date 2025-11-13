@@ -1,3 +1,4 @@
+using Hearthvale.GameCode.Data.Atlases;
 using Hearthvale.GameCode.Managers;
 using Hearthvale.GameCode.Entities;
 using Hearthvale.GameCode.Entities.NPCs;
@@ -176,6 +177,8 @@ namespace HearthvaleTest
                 new Rectangle(0, 0, 100, 100),
                 tilemap,
                 weaponManager,
+                NullNpcAtlasCatalog.Instance,
+                atlas,
                 weaponAtlas,
                 arrowAtlas
             );

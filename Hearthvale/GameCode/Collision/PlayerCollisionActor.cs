@@ -9,25 +9,28 @@ namespace Hearthvale.GameCode.Collision
     /// <summary>
     /// Collision actor for the player character
     /// </summary>
-    public class PlayerCollisionActor(Character player) : ICollisionActor
+    public class PlayerCollisionActor : IDynamicCollisionActor
     {
-        // Make bounds property dynamically return orientation-aware bounds
-        public IShapeF Bounds 
-        { 
-            get 
+        private RectangleF _boundsCache;
+
+        public IShapeF Bounds
+        {
+            get => _boundsCache;
+            set => _boundsCache = value switch
             {
-                // Always return current tight sprite bounds
-                Rectangle tightBounds = Player.GetTightSpriteBounds();
-                return new RectangleF(tightBounds.X, tightBounds.Y, 
-                                     tightBounds.Width, tightBounds.Height);
-            }
-            set 
-            {
-                // Setter required by interface, but we ignore it since we use dynamic bounds
-            } 
+                RectangleF rect => rect,
+                null => RectangleF.Empty,
+                _ => value.BoundingRectangle
+            };
         }
 
-        public Character Player { get; } = player;
+        public Character Player { get; }
+
+        public PlayerCollisionActor(Character player)
+        {
+            Player = player;
+            _boundsCache = GetCurrentBounds();
+        }
 
         public void OnCollision(CollisionEventArgs collisionInfo)
         {
@@ -43,8 +46,20 @@ namespace Hearthvale.GameCode.Collision
         }
         public RectangleF CalculateInitialBounds()
         {
-            // The projectile's bounds are set on creation.
-            return (RectangleF)Player.Bounds;
+            return GetCurrentBounds();
+        }
+
+        public RectangleF GetCurrentBounds()
+        {
+            if (Player == null)
+            {
+                return RectangleF.Empty;
+            }
+
+            var bounds = Player.GetSpriteBoundsAt(Player.Position);
+            var rectF = new RectangleF(bounds.X, bounds.Y, bounds.Width, bounds.Height);
+            _boundsCache = rectF;
+            return rectF;
         }
     }
 }

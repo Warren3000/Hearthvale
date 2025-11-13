@@ -78,13 +78,13 @@ namespace Hearthvale.GameCode.Entities.NPCs.Components
 
         private void CheckConditionalBuffs()
         {
-            // Example: HeavyKnight enrages under 50% HP
-            if (_owner.Class == NpcClass.HeavyKnight && !_enrageApplied &&
-                _owner.Health <= (_owner.MaxHealth / 2))
-            {
-                _enrageApplied = true;
-                ApplyAttackBuff(+2, 10f);
-            }
+            // // Example: HeavyKnight enrages under 50% HP
+            // if (_owner.Class == NpcClass.HeavyKnight && !_enrageApplied &&
+            //     _owner.Health <= (_owner.MaxHealth / 2))
+            // {
+            //     _enrageApplied = true;
+            //     ApplyAttackBuff(+2, 10f);
+            // }
         }
 
         public void ApplyAttackBuff(int flatDelta, float durationSeconds)
@@ -102,21 +102,21 @@ namespace Hearthvale.GameCode.Entities.NPCs.Components
         {
             switch (_owner.Class)
             {
-                case NpcClass.Merchant:
+                case NpcClass.Skeleton:
                     // No combat buffs
                     break;
 
-                case NpcClass.Knight:
-                    // Flat permanent bonus
-                    _owner.AttackPower += 2;
-                    _owner.Sprite?.Flash(Color.Goldenrod, 0.25f);
-                    break;
+                // case NpcClass.Knight:
+                //     // Flat permanent bonus
+                //     _owner.AttackPower += 2;
+                //     _owner.Sprite?.Flash(Color.Goldenrod, 0.25f);
+                //     break;
 
-                case NpcClass.HeavyKnight:
-                    _owner.AttackPower += 3;
-                    _owner.AttackCooldown = MathF.Max(_owner.AttackCooldown, 2.0f);
-                    _owner.Sprite?.Flash(Color.Goldenrod, 0.35f);
-                    break;
+                // case NpcClass.HeavyKnight:
+                //     _owner.AttackPower += 3;
+                //     _owner.AttackCooldown = MathF.Max(_owner.AttackCooldown, 2.0f);
+                //     _owner.Sprite?.Flash(Color.Goldenrod, 0.35f);
+                //     break;
             }
         }
     }

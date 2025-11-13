@@ -49,6 +49,38 @@ namespace Hearthvale.GameCode.Entities.Components
             return _knockbackVelocity;
         }
 
+        /// <summary>
+        /// Removes the knockback velocity component that presses into a blocking surface.
+        /// </summary>
+        public void CancelKnockbackAlong(Vector2 pushDirection)
+        {
+            if (_knockbackTimer <= 0f)
+            {
+                return;
+            }
+
+            if (pushDirection.LengthSquared() <= float.Epsilon)
+            {
+                return;
+            }
+
+            Vector2 axis = Vector2.Normalize(pushDirection);
+            float projected = Vector2.Dot(_knockbackVelocity, axis);
+
+            if (projected <= 0f)
+            {
+                return;
+            }
+
+            _knockbackVelocity -= axis * projected;
+
+            if (_knockbackVelocity.LengthSquared() < 1f)
+            {
+                _knockbackVelocity = Vector2.Zero;
+                _knockbackTimer = 0f;
+            }
+        }
+
         public void UpdateKnockback(GameTime gameTime)
         {
             if (_knockbackTimer > 0)
@@ -265,20 +297,7 @@ namespace Hearthvale.GameCode.Entities.Components
             return false;
         }
 
-        public Rectangle GetBoundsAtPosition(Vector2 position)
-        {
-            // Use the same simple centering logic as the base Character.GetTightSpriteBounds method
-            // Get current bounds to determine size
-            Rectangle currentBounds = _character.Bounds;
-            int width = currentBounds.Width;
-            int height = currentBounds.Height;
-            
-            // Center the bounds at the target position using the same logic as Character.GetTightSpriteBounds
-            int left = (int)Math.Round(position.X - width / 2f);
-            int top = (int)Math.Round(position.Y - height / 2f);
-            
-            return new Rectangle(left, top, width, height);
-        }
+        public Rectangle GetBoundsAtPosition(Vector2 position) => _character.GetSpriteBoundsAt(position);
 
         /// <summary>
         /// Physics-based collision detection using pre-fetched candidates for performance.

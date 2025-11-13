@@ -413,7 +413,7 @@ public class DebugManager
         if (velocity.LengthSquared() > 0.1f)
         {
             Vector2 center = new Vector2(bounds.Center.X, bounds.Center.Y);
-            DrawLine(spriteBatch, _whitePixel, center, center + Vector2.Normalize(velocity) * 20f, Color.Yellow);
+            //DrawLine(spriteBatch, _whitePixel, center, center + Vector2.Normalize(velocity) * 20f, Color.Yellow);
         }
 
         // Draw detailed bounds if enabled
@@ -489,10 +489,10 @@ public class DebugManager
         Rectangle tightBounds = character.GetTightSpriteBounds();
         
         // Draw logical position (large cross)
-        DrawCross(spriteBatch, _whitePixel, logicalPos, 12, Color.Red, 3);
+        //DrawCross(spriteBatch, _whitePixel, logicalPos, 12, Color.Red, 3);
         
         // Draw sprite position (medium cross)
-        DrawCross(spriteBatch, _whitePixel, spritePos, 8, Color.Yellow, 2);
+        //DrawCross(spriteBatch, _whitePixel, spritePos, 8, Color.Yellow, 2);
         
         // Draw bounds center (small cross)
         Vector2 boundsCenter = new Vector2(bounds.Center.X, bounds.Center.Y);
@@ -510,7 +510,7 @@ public class DebugManager
         if (font != null)
         {
             Vector2 textPos = logicalPos + new Vector2(20, -40);
-            float scale = FontScale * 0.8f;
+            float scale = FontScale * 0.5f;
             
             spriteBatch.DrawString(font, $"{label}", textPos, color, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
             spriteBatch.DrawString(font, $"Pos: {(int)logicalPos.X},{(int)logicalPos.Y}", 
@@ -538,9 +538,6 @@ public class DebugManager
 
         // Draw sprite bounds
         DrawRect(spriteBatch, spriteBounds, Color.Yellow * 0.5f, 2f);
-        
-        // Draw character bounds
-        DrawRect(spriteBatch, character.Bounds, color * 0.5f, 2f);
         
         // Draw tight bounds
         Rectangle tightBounds = character.GetTightSpriteBounds();

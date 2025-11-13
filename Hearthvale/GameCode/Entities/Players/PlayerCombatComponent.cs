@@ -1,12 +1,10 @@
 ﻿using Hearthvale.GameCode.Entities.NPCs;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
 using Hearthvale.GameCode.Managers;
 using Microsoft.Xna.Framework.Audio;
 using System.Linq;
-using System.Diagnostics;
 using Hearthvale.GameCode.Utils;
 using Hearthvale.GameCode.Entities.Players;
 
@@ -16,7 +14,7 @@ namespace Hearthvale.GameCode.Entities.Components
     {
         private readonly Player _player;
         private float _attackTimer = 0f;
-        private const float AttackDuration = 0.25f;
+        private const float DefaultAttackDuration = 0.25f;
         private readonly SoundEffect _hitSound;
         private readonly SoundEffect _defeatSound;
         private readonly SoundEffect _playerAttackSound;
@@ -56,22 +54,16 @@ namespace Hearthvale.GameCode.Entities.Components
 
             if (_player.EquippedWeapon?.IsSlashing == true)
             {
-                Vector2 playerCenter = _player.GetVisualCenter();
-                var hittableNpcs = npcs.Where(n => !n.IsDefeated && !_hitNpcsThisSwing.Contains(n));
-
-                var hitPoly = _player.EquippedWeapon.GetTransformedHitPolygon(playerCenter);
-                foreach (var npc in hittableNpcs.ToList())
+                var hitPolygon = _player.WeaponComponent.GetCombatHitPolygon();
+                if (hitPolygon.Count > 0)
                 {
-                    var npcRect = npc.Bounds;
-                    var corners = new[]
+                    var hittableNpcs = npcs.Where(n => !n.IsDefeated && !_hitNpcsThisSwing.Contains(n)).ToList();
+                    foreach (var npc in hittableNpcs)
                     {
-                new Vector2(npcRect.Left, npcRect.Top),
-                new Vector2(npcRect.Right, npcRect.Top),
-                new Vector2(npcRect.Right, npcRect.Bottom),
-                new Vector2(npcRect.Left, npcRect.Bottom)
-            };
-                    if (corners.Any(corner => GeometryUtils.PointInPolygon(corner, hitPoly)))
-                    {
+                        var npcPolygon = PolygonIntersection.CreateRectanglePolygon(npc.GetCombatBounds());
+                        if (!PolygonIntersection.DoPolygonsIntersect(hitPolygon, npcPolygon))
+                            continue;
+
                         Vector2 direction = npc.Position - _player.Position;
                         if (direction.LengthSquared() > 0)
                         {
@@ -79,8 +71,9 @@ namespace Hearthvale.GameCode.Entities.Components
                         }
                         else
                         {
-                            direction = Vector2.UnitX; // Fallback direction
+                            direction = Vector2.UnitX;
                         }
+
                         float knockbackStrength = 150f;
                         Vector2 knockback = direction * knockbackStrength;
 
@@ -106,7 +99,19 @@ namespace Hearthvale.GameCode.Entities.Components
             _player.StartAttack();
             IsAttacking = true;
             _player.IsAttacking = true;
-            _attackTimer = AttackDuration;
+            var attackAnimationName = _player.MovementComponent.FacingDirection switch
+            {
+                CardinalDirection.North => "Attack_01_Up",
+                CardinalDirection.South => "Attack_01_Down",
+                CardinalDirection.East => "Attack_01_Right",
+                CardinalDirection.West => "Attack_01_Left",
+                _ => "Attack_01_Down"
+            };
+
+            var attackDuration = _player.AnimationComponent?.GetAnimationDuration(attackAnimationName) ?? TimeSpan.Zero;
+            _attackTimer = attackDuration.TotalSeconds > 0
+                ? (float)attackDuration.TotalSeconds
+                : DefaultAttackDuration;
 
             CombatManager.Instance.StartCooldown();
             _playerAttackSound?.Play(0.5f, 0, 0);

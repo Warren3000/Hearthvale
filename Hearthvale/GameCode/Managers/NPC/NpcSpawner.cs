@@ -1,4 +1,5 @@
-﻿using Hearthvale.GameCode.Entities;
+﻿using Hearthvale.GameCode.Data.Atlases;
+using Hearthvale.GameCode.Entities;
 using Hearthvale.GameCode.Entities.NPCs;
 using Hearthvale.GameCode.Data;
 using Microsoft.Xna.Framework;
@@ -17,16 +18,20 @@ namespace Hearthvale.GameCode.Managers
     public class NpcSpawner
     {
         private readonly TextureAtlas _heroAtlas;
+        private readonly TextureAtlas _fallbackNpcAtlas;
         private readonly TextureAtlas _weaponAtlas;
         private readonly TextureAtlas _arrowAtlas;
         private readonly WeaponManager _weaponManager;
+        private readonly INpcAtlasCatalog _npcAtlasCatalog;
 
-        public NpcSpawner(TextureAtlas heroAtlas, TextureAtlas weaponAtlas, TextureAtlas arrowAtlas, WeaponManager weaponManager)
+        public NpcSpawner(TextureAtlas heroAtlas, TextureAtlas fallbackNpcAtlas, TextureAtlas weaponAtlas, TextureAtlas arrowAtlas, WeaponManager weaponManager, INpcAtlasCatalog npcAtlasCatalog)
         {
             _heroAtlas = heroAtlas ?? throw new ArgumentNullException(nameof(heroAtlas));
+            _fallbackNpcAtlas = fallbackNpcAtlas;
             _weaponAtlas = weaponAtlas ?? throw new ArgumentNullException(nameof(weaponAtlas));
             _arrowAtlas = arrowAtlas ?? throw new ArgumentNullException(nameof(arrowAtlas));
             _weaponManager = weaponManager ?? throw new ArgumentNullException(nameof(weaponManager));
+            _npcAtlasCatalog = npcAtlasCatalog ?? NullNpcAtlasCatalog.Instance;
         }
 
         public NPC CreateNPC(string npcType, Vector2 spawnPos, Rectangle bounds, Tilemap tilemap)
@@ -40,7 +45,7 @@ namespace Hearthvale.GameCode.Managers
             try
             {
                 var config = NpcConfiguration.GetConfiguration(npcType);
-                var animations = CreateAnimations(config.AnimationPrefix);
+                var animations = ResolveAnimations(config.ManifestId, config.AnimationPrefix);
 
                 if (animations.Count == 0)
                 {
@@ -65,7 +70,26 @@ namespace Hearthvale.GameCode.Managers
             }
         }
 
-        private Dictionary<string, Animation> CreateAnimations(string animationPrefix)
+        private Dictionary<string, Animation> ResolveAnimations(string npcManifestId, string animationPrefix)
+        {
+            if (!string.IsNullOrWhiteSpace(npcManifestId) && _npcAtlasCatalog.TryGetDefinition(npcManifestId, out var definition))
+            {
+                var mapped = definition.CreateAnimations();
+                if (mapped.Count > 0)
+                {
+                    return mapped;
+                }
+            }
+
+            if (_fallbackNpcAtlas == null)
+            {
+                return new Dictionary<string, Animation>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            return CreateFallbackAnimations(_fallbackNpcAtlas, animationPrefix);
+        }
+
+        private Dictionary<string, Animation> CreateFallbackAnimations(TextureAtlas atlas, string animationPrefix)
         {
             var animations = new Dictionary<string, Animation>();
 
@@ -74,47 +98,68 @@ namespace Hearthvale.GameCode.Managers
                 // Add all 4-directional idle and run animations
                 string[] animNames = new[]
                 {
-                    "Idle_Down", "Idle_Up", "Idle_Side",
-                    "Run_Down", "Run_Up", "Run_Side"
+                    "Idle_Down", "Idle_Up", "Idle_Right", "Idle_Left",
+                    "Run_Down", "Run_Up", "Run_Right", "Run_Left",
+                    "Jump_Down", "Jump_Up", "Jump_Right", "Jump_Left",
+                    "Land_Down", "Land_Up", "Land_Right", "Land_Left",
+                    "Attack_Down", "Attack_Up", "Attack_Right", "Attack_Left",
+                    "Death_Down", "Death_Up", "Death_Right", "Death_Left",
+                    "Hurt_Down", "Hurt_Up", "Hurt_Right", "Hurt_Left"
                 };
                 foreach (var anim in animNames)
                 {
-                    string key = $"{animationPrefix}_{anim}";
-                    if (_heroAtlas.HasAnimation(key))
+                    string key = $"{anim}";
+                    string resolved = key;
+
+                    if (!string.IsNullOrEmpty(animationPrefix))
                     {
-                        animations[anim] = _heroAtlas.GetAnimation(key);
+                        string prefixed = $"{key}";
+                        if (atlas.HasAnimation(prefixed))
+                        {
+                            resolved = prefixed;
+                        }
+                    }
+
+                    if (atlas.HasAnimation(resolved))
+                    {
+                        animations[anim] = CloneAnimation(atlas.GetAnimation(resolved));
                     }
                     else
                     {
-                        System.Diagnostics.Debug.WriteLine($"Warning: Missing animation {key}");
+                        System.Diagnostics.Debug.WriteLine($"Warning: Missing animation {resolved}");
                     }
                 }
 
                 // Add optional animations if they exist
-                string defeatedKey = $"{animationPrefix}_Defeated";
-                if (_heroAtlas.HasAnimation(defeatedKey))
+                string climbKey = $"Climb";
+                if (atlas.HasAnimation(climbKey))
                 {
-                    animations["Defeated"] = _heroAtlas.GetAnimation(defeatedKey);
+                    animations["Climb"] = CloneAnimation(atlas.GetAnimation(climbKey));
                 }
 
-                string hitKey = $"{animationPrefix}_Hit";
-                if (_heroAtlas.HasAnimation(hitKey))
+                string attack02Key = $"Attack_02";
+                if (atlas.HasAnimation(attack02Key))
                 {
-                    animations["Hit"] = _heroAtlas.GetAnimation(hitKey);
+                    animations["Attack_02"] = CloneAnimation(atlas.GetAnimation(attack02Key));
                 }
 
                 // Ensure we have at least one animation
                 if (animations.Count == 0)
                 {
-                    System.Diagnostics.Debug.WriteLine($"No valid animations found for {animationPrefix}");
+                    System.Diagnostics.Debug.WriteLine($"No valid animations found");
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error creating animations for {animationPrefix}: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Error creating animations: {ex.Message}");
             }
 
             return animations;
+        }
+
+        private static Animation CloneAnimation(Animation source)
+        {
+            return new Animation(new List<TextureRegion>(source.Frames), source.Delay);
         }
     }
 
@@ -123,27 +168,25 @@ namespace Hearthvale.GameCode.Managers
     /// </summary>
     internal static class NpcConfiguration
     {
-        private static readonly Dictionary<string, (string AnimationPrefix, int Health)> Configurations = new()
+        private static readonly Dictionary<string, NpcConfig> Configurations = new()
         {
-            { "merchant", ("Merchant", 8) },
-            { "mage", ("Mage", 12) },
-            { "archer", ("Archer", 10) },
-            { "blacksmith", ("Blacksmith", 10) },
-            { "knight", ("Knight", 20) },
-            { "heavyknight", ("HeavyKnight", 10) },
-            { "fatnun", ("FatNun", 10) },
-            { "defaultnpctype", ("Merchant", 10) } // Fallback for the lambda in GameScene
+            { "skeleton", new NpcConfig("skeleton_grunt", "Skeleton", 10) },
+            { "goblin", new NpcConfig("goblin", "Goblin", 15) },
+            { "warrior", new NpcConfig("warrior_hero", "Warrior", 30) },
+            { "defaultnpctype", new NpcConfig("skeleton_grunt", "Skeleton", 10) }
         };
 
-        public static (string AnimationPrefix, int Health) GetConfiguration(string npcType)
+        public static NpcConfig GetConfiguration(string npcType)
         {
             if (string.IsNullOrEmpty(npcType))
-                return ("Merchant", 10);
+                return new NpcConfig("skeleton_grunt", "Skeleton", 10);
 
             string key = npcType.ToLower();
-            return Configurations.TryGetValue(key, out var config) ? config : ("Merchant", 10);
+            return Configurations.TryGetValue(key, out var config) ? config : new NpcConfig("skeleton_grunt", "Skeleton", 10);
         }
     }
+
+    internal sealed record NpcConfig(string ManifestId, string AnimationPrefix, int Health);
 
     /// <summary>
     /// Provides available NPC types
@@ -154,8 +197,9 @@ namespace Hearthvale.GameCode.Managers
         {
             return new[]
             {
-                "merchant", "mage", "archer", "blacksmith",
-                "knight", "heavyknight", "fatnun"
+                "Skeleton",
+                "Goblin",
+                "Warrior"
             };
         }
     }

@@ -1,4 +1,5 @@
-﻿using Hearthvale.GameCode.Entities;
+﻿using Hearthvale.GameCode.Data.Atlases;
+using Hearthvale.GameCode.Entities;
 using Hearthvale.GameCode.Entities.NPCs;
 using Hearthvale.GameCode.Entities.Players;
 using Hearthvale.GameCode.Collision;
@@ -24,6 +25,7 @@ namespace Hearthvale.GameCode.Managers
         private readonly CollisionWorldManager _collisionManager;
         private readonly NpcSpawnValidator _spawnValidator;
         private readonly NpcUpdateCoordinator _updateCoordinator;
+        private readonly INpcAtlasCatalog _npcAtlasCatalog;
         private bool _disposed = false;
 
         public IEnumerable<NPC> Npcs => _npcs;
@@ -35,6 +37,8 @@ namespace Hearthvale.GameCode.Managers
             Rectangle bounds,
             Tilemap tilemap,
             WeaponManager weaponManager,
+            INpcAtlasCatalog npcAtlasCatalog,
+            TextureAtlas fallbackNpcAtlas,
             TextureAtlas weaponAtlas,
             TextureAtlas arrowAtlas)
         {
@@ -42,7 +46,8 @@ namespace Hearthvale.GameCode.Managers
             _collisionManager = new CollisionWorldManager(bounds, tilemap);
             _spawnValidator = new NpcSpawnValidator(bounds, _collisionManager.CollisionWorld);
             _updateCoordinator = new NpcUpdateCoordinator(_collisionManager);
-            _npcSpawner = new NpcSpawner(heroAtlas, weaponAtlas, arrowAtlas, weaponManager);
+            _npcAtlasCatalog = npcAtlasCatalog ?? NullNpcAtlasCatalog.Instance;
+            _npcSpawner = new NpcSpawner(heroAtlas, fallbackNpcAtlas, weaponAtlas, arrowAtlas, weaponManager, _npcAtlasCatalog);
         }
 
         public void LoadNPCs(IEnumerable<TiledMapObject> npcObjects)
@@ -115,7 +120,11 @@ namespace Hearthvale.GameCode.Managers
 
         public void SpawnAllNpcTypesTest(Player player = null)
         {
-            var spawner = new TestNpcSpawner(_collisionManager.CollisionWorld, 48f, 32f);
+            var spawner = new TestNpcSpawner(
+                _collisionManager.CollisionWorld,
+                48f,
+                32f,
+                _spawnValidator.CreateNpcBounds);
             var spawnPositions = spawner.GetValidSpawnPositions(player, _npcs);
 
             var npcTypes = NpcTypes.GetAllTypes();
@@ -222,12 +231,18 @@ namespace Hearthvale.GameCode.Managers
         private readonly CollisionWorld _collisionWorld;
         private readonly float _minDistanceFromPlayer;
         private readonly float _minDistanceBetweenNpcs;
+        private readonly Func<Vector2, RectangleF> _boundsFactory;
 
-        public TestNpcSpawner(CollisionWorld collisionWorld, float minDistanceFromPlayer, float minDistanceBetweenNpcs)
+        public TestNpcSpawner(
+            CollisionWorld collisionWorld,
+            float minDistanceFromPlayer,
+            float minDistanceBetweenNpcs,
+            Func<Vector2, RectangleF> boundsFactory)
         {
             _collisionWorld = collisionWorld;
             _minDistanceFromPlayer = minDistanceFromPlayer;
             _minDistanceBetweenNpcs = minDistanceBetweenNpcs;
+            _boundsFactory = boundsFactory ?? throw new ArgumentNullException(nameof(boundsFactory));
         }
 
         public List<Vector2> GetValidSpawnPositions(Player player, List<NPC> existingNpcs)
@@ -240,9 +255,11 @@ namespace Hearthvale.GameCode.Managers
                 for (int y = 100; y < 800; y += 100)
                 {
                     Vector2 pos = new Vector2(x, y);
-                    var testBounds = new RectangleF(pos.X + 8, pos.Y + 16, 16, 16);
+                    var testBounds = _boundsFactory(pos);
 
-                    if (!IsPositionBlocked(testBounds) && IsValidDistanceFromPlayer(pos, player))
+                    if (!IsPositionBlocked(testBounds)
+                        && IsValidDistanceFromPlayer(testBounds, player)
+                        && IsValidDistanceFromExistingNpcs(testBounds, existingNpcs))
                     {
                         validPositions.Add(pos);
                     }
@@ -256,21 +273,58 @@ namespace Hearthvale.GameCode.Managers
 
         public bool CanSpawnAt(Vector2 position, Player player, List<NPC> existingNpcs)
         {
-            if (!IsValidDistanceFromPlayer(position, player))
+            var spawnBounds = _boundsFactory(position);
+
+            if (!IsValidDistanceFromPlayer(spawnBounds, player))
                 return false;
 
-            return existingNpcs.All(npc => Vector2.Distance(position, npc.Position) >= _minDistanceBetweenNpcs);
+            Vector2 spawnCenter = new Vector2(spawnBounds.Center.X, spawnBounds.Center.Y);
+            return existingNpcs.All(npc =>
+            {
+                var npcCenter = new Vector2(npc.Bounds.Center.X, npc.Bounds.Center.Y);
+                return Vector2.Distance(spawnCenter, npcCenter) >= _minDistanceBetweenNpcs;
+            });
         }
 
         private bool IsPositionBlocked(RectangleF bounds)
         {
             return _collisionWorld.GetActorsInBounds(bounds)
-                .Any(actor => actor is WallCollisionActor || actor is NpcCollisionActor);
+            .Any(actor => actor is WallCollisionActor
+                   || actor is ChestCollisionActor
+                   || actor is PlayerCollisionActor
+                   || actor is NpcCollisionActor);
         }
 
-        private bool IsValidDistanceFromPlayer(Vector2 position, Player player)
+        private bool IsValidDistanceFromPlayer(RectangleF spawnBounds, Player player)
         {
-            return player == null || Vector2.Distance(position, player.Position) >= _minDistanceFromPlayer;
+            if (player == null)
+            {
+                return true;
+            }
+
+            var spawnCenter = new Vector2(spawnBounds.Center.X, spawnBounds.Center.Y);
+            var playerCenter = new Vector2(player.Bounds.Center.X, player.Bounds.Center.Y);
+            return Vector2.Distance(spawnCenter, playerCenter) >= _minDistanceFromPlayer;
+        }
+
+        private bool IsValidDistanceFromExistingNpcs(RectangleF spawnBounds, IEnumerable<NPC> existingNpcs)
+        {
+            if (existingNpcs == null)
+            {
+                return true;
+            }
+
+            var spawnCenter = new Vector2(spawnBounds.Center.X, spawnBounds.Center.Y);
+            foreach (var npc in existingNpcs)
+            {
+                var npcCenter = new Vector2(npc.Bounds.Center.X, npc.Bounds.Center.Y);
+                if (Vector2.Distance(spawnCenter, npcCenter) < _minDistanceBetweenNpcs)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
     }
 }

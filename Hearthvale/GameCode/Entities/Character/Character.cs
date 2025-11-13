@@ -17,42 +17,129 @@ namespace Hearthvale.GameCode.Entities;
 public abstract class Character : IDamageable, IMovable, IAnimatable, IDialog
 {
     #region Bounds
+    private const int DefaultBoundsWidth = 12;
+    private const int DefaultBoundsHeight = 12;
+
     /// <summary>
-    /// Returns a rectangle centered on the character's position, matching the sprite's size.
+    /// Returns an axis-aligned rectangle that tightly encloses the visible sprite pixels at the current position.
     /// </summary>
-    public virtual Rectangle GetTightSpriteBounds()
+    public virtual Rectangle GetTightSpriteBounds() => GetSpriteBoundsAt(Position);
+
+    /// <summary>
+    /// Computes the tight bounds for this character's sprite as if it were rendered at the supplied position.
+    /// </summary>
+    public virtual Rectangle GetSpriteBoundsAt(Vector2 position)
     {
-        // Calculate actual tight bounds around character pixels (not just remove padding)
-        int width = 12; // Tight character body width based on typical character sprites
-        int height = 12; // Tight character body height
-        
-        if (Sprite?.Region != null)
+        var sprite = Sprite;
+        if (sprite?.Region?.Texture == null)
         {
-            // For typical character sprites in a 32x32 or 16x16 region:
-            // - Character body is roughly 60-75% of the region width
-            // - Character body is roughly 60-75% of the region height minus padding
-            const int topPad = 1;
-            const int bottomPad = 1;
-            
-            // Calculate tight bounds based on typical character proportions
-            float characterWidthRatio = 0.7f;  // Character takes ~70% of sprite width
-            float characterHeightRatio = 0.7f; // Character takes ~70% of content height
-            
-            int contentHeight = Sprite.Region.Height - (topPad + bottomPad);
-            width = (int)(Sprite.Region.Width * characterWidthRatio);
-            height = (int)(contentHeight * characterHeightRatio);
-            
-            // Ensure minimum reasonable bounds
-            width = Math.Max(8, width);
-            height = Math.Max(8, height);
+            return CreateCenteredBounds(position, DefaultBoundsWidth, DefaultBoundsHeight);
         }
-        
-        // Center the tight bounding box on the character's position
-        // Use Math.Round to ensure pixel-perfect alignment and avoid gaps
-        int left = (int)Math.Round(Position.X - width / 2f);
-        int top = (int)Math.Round(Position.Y - height / 2f);
-        
+
+        Rectangle contentBounds = SpriteAnalyzer.GetContentBounds(sprite.Region.Texture, sprite.Region.SourceRectangle);
+        if (contentBounds.Width <= 0 || contentBounds.Height <= 0)
+        {
+            contentBounds = new Rectangle(0, 0, sprite.Region.Width, sprite.Region.Height);
+        }
+
+        var origin = CalculateRenderOrigin(sprite);
+        var scale = sprite.Scale;
+        if (scale == Vector2.Zero)
+        {
+            scale = Vector2.One;
+        }
+
+        float rotation = sprite.Rotation;
+        float cos = MathF.Cos(rotation);
+        float sin = MathF.Sin(rotation);
+
+        Span<Vector2> corners = stackalloc Vector2[4];
+        corners[0] = new Vector2(contentBounds.Left, contentBounds.Top);
+        corners[1] = new Vector2(contentBounds.Right, contentBounds.Top);
+        corners[2] = new Vector2(contentBounds.Right, contentBounds.Bottom);
+        corners[3] = new Vector2(contentBounds.Left, contentBounds.Bottom);
+
+        float minOffsetX = float.PositiveInfinity;
+        float maxOffsetX = float.NegativeInfinity;
+        float minOffsetY = float.PositiveInfinity;
+        float maxOffsetY = float.NegativeInfinity;
+
+        for (int i = 0; i < corners.Length; i++)
+        {
+            Vector2 corner = corners[i];
+            Vector2 relative = corner - origin;
+
+            Vector2 scaled = new Vector2(relative.X * scale.X, relative.Y * scale.Y);
+
+            Vector2 rotated = new Vector2(
+                scaled.X * cos - scaled.Y * sin,
+                scaled.X * sin + scaled.Y * cos);
+
+            minOffsetX = MathF.Min(minOffsetX, rotated.X);
+            maxOffsetX = MathF.Max(maxOffsetX, rotated.X);
+            minOffsetY = MathF.Min(minOffsetY, rotated.Y);
+            maxOffsetY = MathF.Max(maxOffsetY, rotated.Y);
+        }
+
+        if (!IsFinite(minOffsetX) || !IsFinite(maxOffsetX) || !IsFinite(minOffsetY) || !IsFinite(maxOffsetY))
+        {
+            return CreateCenteredBounds(position, DefaultBoundsWidth, DefaultBoundsHeight);
+        }
+
+        float widthExtent = MathF.Max(1f, maxOffsetX - minOffsetX);
+        float heightExtent = MathF.Max(1f, maxOffsetY - minOffsetY);
+
+        float centerOffsetX = (minOffsetX + maxOffsetX) * 0.5f;
+        float centerOffsetY = (minOffsetY + maxOffsetY) * 0.5f;
+
+        float halfWidth = MathF.Max(DefaultBoundsWidth * 0.5f, widthExtent * 0.5f);
+        float halfHeight = MathF.Max(DefaultBoundsHeight * 0.5f, heightExtent * 0.5f);
+
+        float centerX = position.X + centerOffsetX;
+        float centerY = position.Y + centerOffsetY;
+
+        int width = (int)MathF.Max(1f, MathF.Round(halfWidth * 2f));
+        int height = (int)MathF.Max(1f, MathF.Round(halfHeight * 2f));
+
+        float leftF = centerX - halfWidth;
+        float topF = centerY - halfHeight;
+        float rightF = centerX + halfWidth;
+        float bottomF = centerY + halfHeight;
+
+        int left = (int)MathF.Floor(leftF);
+        int top = (int)MathF.Floor(topF);
+        int right = (int)MathF.Ceiling(rightF);
+        int bottom = (int)MathF.Ceiling(bottomF);
+
+        width = Math.Max(width, right - left);
+        height = Math.Max(height, bottom - top);
+
         return new Rectangle(left, top, width, height);
+    }
+
+    private static Rectangle CreateCenteredBounds(Vector2 position, int width, int height)
+    {
+        int left = (int)Math.Round(position.X - width / 2f);
+        int top = (int)Math.Round(position.Y - height / 2f);
+        return new Rectangle(left, top, width, height);
+    }
+
+    private static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
+
+    /// <summary>
+    /// Mirrors the origin used during rendering so bounds align with the visual sprite placement.
+    /// </summary>
+    protected virtual Vector2 CalculateRenderOrigin(AnimatedSprite sprite)
+    {
+        if (sprite?.Region == null)
+        {
+            return Vector2.Zero;
+        }
+
+        float originX = sprite.Width / 2f;
+        float originY = sprite.Height / 2f - 1f;
+
+        return new Vector2(originX, originY);
     }
     #endregion
     #region Fields

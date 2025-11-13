@@ -1,0 +1,59 @@
+{
+  "npcs": [
+    {
+      "id": "warrior_hero",
+      "displayName": "Warrior Hero",
+      "textureAtlas": "images/xml/warrior-atlas.xml",
+      "animations": {
+        "idle_down": { "framePattern": "Idle_Down_*", "fps": 10, "loop": true },
+        "idle_left": { "framePattern": "Idle_Left_*", "fps": 10, "loop": true },
+        "idle_right": { "framePattern": "Idle_Right_*", "fps": 10, "loop": true },
+        "idle_up": { "framePattern": "Idle_Up_*", "fps": 10, "loop": true },
+        "run_down": { "framePattern": "Run_Down_*", "fps": 12.5, "loop": true },
+        "run_left": { "framePattern": "Run_Left_*", "fps": 12.5, "loop": true },
+        "run_right": { "framePattern": "Run_Right_*", "fps": 12.5, "loop": true },
+        "run_up": { "framePattern": "Run_Up_*", "fps": 12.5, "loop": true },
+        "jump_down": { "framePattern": "Jump_Down_*", "fps": 10, "loop": false },
+        "jump_left": { "framePattern": "Jump_Left_*", "fps": 10, "loop": false },
+        "jump_right": { "framePattern": "Jump_Right_*", "fps": 10, "loop": false },
+        "jump_up": { "framePattern": "Jump_Up_*", "fps": 10, "loop": false },
+        "land_down": { "framePattern": "Land_Down_*", "fps": 10, "loop": false },
+        "land_left": { "framePattern": "Land_Left_*", "fps": 10, "loop": false },
+        "land_right": { "framePattern": "Land_Right_*", "fps": 10, "loop": false },
+        "land_up": { "framePattern": "Land_Up_*", "fps": 10, "loop": false },
+        "attack_primary_down": { "framePattern": "Attack_01_Down_*", "fps": 12.5, "loop": false },
+        "attack_primary_left": { "framePattern": "Attack_01_Left_*", "fps": 12.5, "loop": false },
+        "attack_primary_right": { "framePattern": "Attack_01_Right_*", "fps": 12.5, "loop": false },
+        "attack_primary_up": { "framePattern": "Attack_01_Up_*", "fps": 12.5, "loop": false },
+        "attack_secondary_down": { "framePattern": "Attack_02_Down_*", "fps": 12.5, "loop": false },
+        "attack_secondary_left": { "framePattern": "Attack_02_Left_*", "fps": 12.5, "loop": false },
+        "attack_secondary_right": { "framePattern": "Attack_02_Right_*", "fps": 12.5, "loop": false },
+        "attack_secondary_up": { "framePattern": "Attack_02_Up_*", "fps": 12.5, "loop": false },
+        "attack_spin_down": { "framePattern": "Attack_03_Down_*", "fps": 12.5, "loop": false },
+        "attack_spin_left": { "framePattern": "Attack_03_Left_*", "fps": 12.5, "loop": false },
+        "attack_spin_right": { "framePattern": "Attack_03_Right_*", "fps": 12.5, "loop": false },
+        "attack_spin_up": { "framePattern": "Attack_03_Up_*", "fps": 12.5, "loop": false },
+        "hurt_down": { "framePattern": "Hurt_Down_*", "fps": 10, "loop": true },
+        "hurt_left": { "framePattern": "Hurt_Left_*", "fps": 10, "loop": true },
+        "hurt_right": { "framePattern": "Hurt_Right_*", "fps": 10, "loop": true },
+        "hurt_up": { "framePattern": "Hurt_Up_*", "fps": 10, "loop": true },
+        "death_down": { "framePattern": "Death_Down_*", "fps": 10, "loop": false },
+        "death_left": { "framePattern": "Death_Left_*", "fps": 10, "loop": false },
+        "death_right": { "framePattern": "Death_Right_*", "fps": 10, "loop": false },
+        "death_up": { "framePattern": "Death_Up_*", "fps": 10, "loop": false },
+        "climb_down": { "framePattern": "Climb_Down_*", "fps": 10, "loop": true },
+        "climb_left": { "framePattern": "Climb_Left_*", "fps": 10, "loop": true },
+        "climb_right": { "framePattern": "Climb_Right_*", "fps": 10, "loop": true },
+        "climb_up": { "framePattern": "Climb_Up_*", "fps": 10, "loop": true }
+      },
+      "collision": {
+        "hitbox": { "x": 10, "y": 12, "width": 28, "height": 34 },
+        "projectileOrigin": { "x": 24, "y": 18 }
+      },
+      "attachments": [
+        { "slot": "weapon", "atlas": "images/xml/weapon-atlas.xml" },
+        { "slot": "projectile", "atlas": "images/xml/arrow-atlas.xml" }
+      ]
+    }
+  ]
+}

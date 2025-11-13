@@ -335,15 +335,15 @@ namespace Hearthvale.GameCode.Input
             }
 
             // Combat actions - use the processed set
-            if (ProcessKeyPress(Keys.Space, keyboard))
+            if (ProcessKeyPress(Keys.F, keyboard))
             {
-                System.Diagnostics.Debug.WriteLine("SPACE KEY PROCESSED - MELEE ATTACK");
+                System.Diagnostics.Debug.WriteLine("F KEY PROCESSED - MELEE ATTACK");
                 _meleeAttackCallback?.Invoke();
             }
 
-            if (ProcessKeyPress(Keys.F, keyboard))
+            if (ProcessKeyPress(Keys.Space, keyboard))
             {
-                System.Diagnostics.Debug.WriteLine("F KEY PROCESSED - PROJECTILE ATTACK");
+                System.Diagnostics.Debug.WriteLine("SPACE KEY PROCESSED - PROJECTILE ATTACK");
                 _projectileAttackCallback?.Invoke();
             }
 

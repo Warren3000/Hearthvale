@@ -1,0 +1,61 @@
+{
+  "spritesheetPath": "Content/images/sprites/Character.png",
+  "outputPath": "Content/images/xml/character-atlas-generated.xml",
+  "texturePath": "images/sprites/Character",
+  "gridWidth": 32,
+  "gridHeight": 32,
+  "namingPattern": "Char_{state}_{direction}_{variant}_{frame}",
+  "isGridBased": true,
+  "trimTransparency": false,
+  "transparencyThreshold": 0,
+  "animations": [
+    {
+      "name": "Idle_Down_NH",
+      "delayMs": 100,
+      "frameNames": [
+        "Char_Idle_Down_NH_1",
+        "Char_Idle_Down_NH_2", 
+        "Char_Idle_Down_NH_3",
+        "Char_Idle_Down_NH_4",
+        "Char_Idle_Down_NH_5",
+        "Char_Idle_Down_NH_6"
+      ]
+    },
+    {
+      "name": "Idle_Down",
+      "delayMs": 100,
+      "frameNames": [
+        "Char_Idle_Down_1",
+        "Char_Idle_Down_2",
+        "Char_Idle_Down_3", 
+        "Char_Idle_Down_4",
+        "Char_Idle_Down_5",
+        "Char_Idle_Down_6"
+      ]
+    },
+    {
+      "name": "Run_Down_NH",
+      "delayMs": 80,
+      "frameNames": [
+        "Char_Run_Down_NH_1",
+        "Char_Run_Down_NH_2",
+        "Char_Run_Down_NH_3",
+        "Char_Run_Down_NH_4", 
+        "Char_Run_Down_NH_5",
+        "Char_Run_Down_NH_6"
+      ]
+    },
+    {
+      "name": "Run_Down",
+      "delayMs": 80,
+      "frameNames": [
+        "Char_Run_Down_1",
+        "Char_Run_Down_2",
+        "Char_Run_Down_3",
+        "Char_Run_Down_4",
+        "Char_Run_Down_5", 
+        "Char_Run_Down_6"
+      ]
+    }
+  ]
+}

@@ -15,10 +15,10 @@ namespace HearthvaleTest
         [InlineData(CardinalDirection.North, true, "Run_Up")]
         [InlineData(CardinalDirection.South, false, "Idle_Down")]
         [InlineData(CardinalDirection.South, true, "Run_Down")]
-        [InlineData(CardinalDirection.East, false, "Idle_Side")]
-        [InlineData(CardinalDirection.East, true, "Run_Side")]
-        [InlineData(CardinalDirection.West, false, "Idle_Side")]
-        [InlineData(CardinalDirection.West, true, "Run_Side")]
+        [InlineData(CardinalDirection.East, false, "Idle_Right")]
+        [InlineData(CardinalDirection.East, true, "Run_Right")]
+        [InlineData(CardinalDirection.West, false, "Idle_Left")]
+        [InlineData(CardinalDirection.West, true, "Run_Left")]
         public void Player_Animation_Matches_Direction_And_Movement(CardinalDirection dir, bool isMoving, string expectedAnim)
         {
             // Arrange
@@ -28,10 +28,11 @@ namespace HearthvaleTest
             {
                 { "Idle_Down", new Animation(new List<TextureRegion> { dummyRegion }, System.TimeSpan.FromSeconds(0.1)) },
                 { "Idle_Up", new Animation(new List<TextureRegion> { dummyRegion }, System.TimeSpan.FromSeconds(0.1)) },
-                { "Idle_Side", new Animation(new List<TextureRegion> { dummyRegion }, System.TimeSpan.FromSeconds(0.1)) },
+                { "Idle_Right", new Animation(new List<TextureRegion> { dummyRegion }, System.TimeSpan.FromSeconds(0.1)) },
                 { "Run_Down", new Animation(new List<TextureRegion> { dummyRegion }, System.TimeSpan.FromSeconds(0.1)) },
                 { "Run_Up", new Animation(new List<TextureRegion> { dummyRegion }, System.TimeSpan.FromSeconds(0.1)) },
-                { "Run_Side", new Animation(new List<TextureRegion> { dummyRegion }, System.TimeSpan.FromSeconds(0.1)) }
+                { "Run_Right", new Animation(new List<TextureRegion> { dummyRegion }, System.TimeSpan.FromSeconds(0.1)) },
+                { "Run_Left", new Animation(new List<TextureRegion> { dummyRegion }, System.TimeSpan.FromSeconds(0.1)) }
             };
             var animComponent = new CharacterAnimationComponent(null, new AnimatedSprite(anims["Idle_Down"]));
             foreach (var kv in anims)

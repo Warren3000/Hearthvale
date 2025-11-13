@@ -15,6 +15,7 @@ namespace Hearthvale.GameCode.Entities.Components
         // Track last animated direction and movement state
         private CardinalDirection? _lastAnimatedDirection = null;
         private bool? _lastWasMoving = null;
+        private bool _lastWasAttacking = false;
         private readonly Character _character;
         private AnimatedSprite _sprite;
         private string _currentAnimationName;
@@ -55,20 +56,25 @@ namespace Hearthvale.GameCode.Entities.Components
             _animations[name] = animation;
         }
 
-        public void SetAnimation(string animationName)
+        public bool SetAnimation(string animationName)
         {
             if (_sprite == null || string.IsNullOrEmpty(animationName))
-                return;
+                return false;
 
-            if (_currentAnimationName == animationName)
-                return;
-
-            _currentAnimationName = animationName;
+            if (_currentAnimationName == animationName && _sprite.Animation != null)
+            {
+                return true;
+            }
 
             if (_animations.TryGetValue(animationName, out var animation))
             {
+                _currentAnimationName = animationName;
                 _sprite.Animation = animation;
+                _sprite.IsLooping = true;
+                return true;
             }
+
+            return false;
         }
 
         public void Flash()
@@ -111,46 +117,117 @@ namespace Hearthvale.GameCode.Entities.Components
                 _sprite.Update(new GameTime(new TimeSpan(), TimeSpan.FromSeconds(deltaTime)));
                 // Atlas now top-left aligned: keep sprite position locked to logical character position
                 _sprite.Position = _character.Position;
-
-                // Update sprite effects based on facing direction
-                _sprite.Effects = _character.FacingRight ? SpriteEffects.None : SpriteEffects.FlipHorizontally;
             }
         }
         public void UpdateAnimation(bool isMoving)
         {
             // Get current cardinal direction from movement component
             var direction = _character.MovementComponent.FacingDirection;
-            string animationName = null;
+            bool isAttacking = _character.IsAttacking;
+            bool shouldLoop = !isAttacking;
 
-            // Only update animation if direction or movement state changed
-            if (_lastAnimatedDirection != direction || _lastWasMoving != isMoving)
+            if (_lastAnimatedDirection == direction && _lastWasMoving == isMoving && _lastWasAttacking == isAttacking)
             {
-                switch (direction)
+                return;
+            }
+
+            string animationName;
+
+            if (isAttacking)
+            {
+                animationName = direction switch
                 {
-                    case CardinalDirection.North:
-                        animationName = isMoving ? "Run_Up" : "Idle_Up";
-                        break;
-                    case CardinalDirection.South:
-                        animationName = isMoving ? "Run_Down" : "Idle_Down";
-                        break;
-                    case CardinalDirection.East:
-                        animationName = isMoving ? "Run_Side" : "Idle_Side";
-                        this.Sprite.Effects = SpriteEffects.None;
-                        break;
-                    case CardinalDirection.West:
-                        animationName = isMoving ? "Run_Side" : "Idle_Side";
-                        this.Sprite.Effects = SpriteEffects.FlipHorizontally;
-                        break;
-                    default:
-                        animationName = isMoving ? "Run_Down" : "Idle_Down";
-                        this.Sprite.Effects = SpriteEffects.None;
-                        break;
+                    CardinalDirection.North => "Attack_01_Up",
+                    CardinalDirection.South => "Attack_01_Down",
+                    CardinalDirection.East => "Attack_01_Right",
+                    CardinalDirection.West => "Attack_01_Left",
+                    _ => "Attack_01_Down"
+                };
+            }
+            else
+            {
+                animationName = direction switch
+                {
+                    CardinalDirection.North => isMoving ? "Run_Up" : "Idle_Up",
+                    CardinalDirection.South => isMoving ? "Run_Down" : "Idle_Down",
+                    CardinalDirection.East => isMoving ? "Run_Right" : "Idle_Right",
+                    CardinalDirection.West => isMoving ? "Run_Left" : "Idle_Left",
+                    _ => isMoving ? "Run_Down" : "Idle_Down"
+                };
+            }
+
+            bool mirroredFallback = false;
+            if (!string.IsNullOrEmpty(animationName))
+            {
+                if (!SetAnimation(animationName))
+                {
+                    if (TryResolveMirroredFallback(animationName, out var fallback, out var shouldMirror)
+                        && SetAnimation(fallback))
+                    {
+                        mirroredFallback = shouldMirror;
+                    }
+                    else
+                    {
+                        mirroredFallback = false;
+                    }
                 }
 
-                SetAnimation(animationName);
-                _lastAnimatedDirection = direction;
-                _lastWasMoving = isMoving;
+                if (_sprite != null)
+                {
+                    _sprite.Effects = mirroredFallback ? SpriteEffects.FlipHorizontally : SpriteEffects.None;
+                    _sprite.IsLooping = shouldLoop;
+                }
             }
+
+            _lastAnimatedDirection = direction;
+            _lastWasMoving = isMoving;
+            _lastWasAttacking = isAttacking;
+        }
+
+        private static bool TryResolveMirroredFallback(string animationName, out string fallbackName, out bool shouldMirror)
+        {
+            fallbackName = null;
+            shouldMirror = false;
+
+            const string leftSuffix = "_Left";
+            const string rightSuffix = "_Right";
+
+            if (animationName.EndsWith(leftSuffix, StringComparison.OrdinalIgnoreCase))
+            {
+                fallbackName = animationName[..^leftSuffix.Length] + rightSuffix;
+                shouldMirror = true;
+                return true;
+            }
+
+            if (animationName.EndsWith(rightSuffix, StringComparison.OrdinalIgnoreCase))
+            {
+                fallbackName = animationName[..^rightSuffix.Length] + leftSuffix;
+                shouldMirror = true;
+                return true;
+            }
+
+            return false;
+        }
+
+        public TimeSpan GetAnimationDuration(string animationName)
+        {
+            if (string.IsNullOrWhiteSpace(animationName))
+            {
+                return TimeSpan.Zero;
+            }
+
+            if (_animations.TryGetValue(animationName, out var animation))
+            {
+                var frameCount = animation.Frames?.Count ?? 0;
+                if (frameCount == 0)
+                {
+                    return TimeSpan.Zero;
+                }
+
+                return TimeSpan.FromTicks(animation.Delay.Ticks * frameCount);
+            }
+
+            return TimeSpan.Zero;
         }
     }
 }

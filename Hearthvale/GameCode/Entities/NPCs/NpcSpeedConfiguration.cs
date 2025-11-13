@@ -17,7 +17,7 @@ namespace Hearthvale.GameCode.Entities.NPCs
         private static readonly Dictionary<NpcClass, SpeedProfile> _speedProfiles = new()
         {
             {
-                NpcClass.Knight,
+                NpcClass.Skeleton,
                 new SpeedProfile
                 {
                     WanderSpeed = 12f,  // Increased for more dynamic movement
@@ -26,26 +26,26 @@ namespace Hearthvale.GameCode.Entities.NPCs
                     MovementSpeed = 2f
                 }
             },
-            {
-                NpcClass.HeavyKnight,
-                new SpeedProfile
-                {
-                    WanderSpeed = 8f,
-                    ChaseSpeed = 25f,   // Slower but still aggressive
-                    FleeSpeed = 15f,
-                    MovementSpeed = 1.5f
-                }
-            },
-            {
-                NpcClass.Merchant,
-                new SpeedProfile
-                {
-                    WanderSpeed = 10f,
-                    ChaseSpeed = 8f,    // Merchants shouldn't be aggressive chasers
-                    FleeSpeed = 25f,    // But they should flee quickly
-                    MovementSpeed = 1.8f
-                }
-            }
+            // {
+            //     NpcClass.HeavyKnight,
+            //     new SpeedProfile
+            //     {
+            //         WanderSpeed = 8f,
+            //         ChaseSpeed = 25f,   // Slower but still aggressive
+            //         FleeSpeed = 15f,
+            //         MovementSpeed = 1.5f
+            //     }
+            // },
+            // {
+            //     NpcClass.Merchant,
+            //     new SpeedProfile
+            //     {
+            //         WanderSpeed = 10f,
+            //         ChaseSpeed = 8f,    // Merchants shouldn't be aggressive chasers
+            //         FleeSpeed = 25f,    // But they should flee quickly
+            //         MovementSpeed = 1.8f
+            //     }
+            // }
         };
 
         public static SpeedProfile GetSpeedProfile(NpcClass npcClass)
@@ -56,7 +56,7 @@ namespace Hearthvale.GameCode.Entities.NPCs
             }
 
             // Fallback to merchant speeds
-            return _speedProfiles[NpcClass.Merchant].Clone();
+            return _speedProfiles[NpcClass.Skeleton].Clone();
         }
 
         public static bool IsValidSpeed(float speed)

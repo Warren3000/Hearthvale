@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Hearthvale.GameCode.Entities.Components
 {
@@ -153,26 +154,23 @@ namespace Hearthvale.GameCode.Entities.Components
         public Rectangle GetAttackArea()
         {
             if (EquippedWeapon?.IsSlashing != true)
-                return Rectangle.Empty; // No attack area when not slashing
+                return Rectangle.Empty;
 
-            // Use the tight bounds center for weapon positioning
-            Rectangle tightBounds = _character.GetTightSpriteBounds();
-            Vector2 characterCenter = new Vector2(
-                tightBounds.Left + tightBounds.Width / 2f,
-                tightBounds.Top + tightBounds.Height / 1.4f
-            );
+            var polygon = GetCombatHitPolygon();
+            if (polygon.Count == 0)
+                return Rectangle.Empty;
 
-            // Calculate weapon offset based on facing
-            Vector2 weaponOffset = CalculateWeaponOffset();
-            Vector2 weaponCenter = characterCenter + weaponOffset;
+            float minX = polygon.Min(p => p.X);
+            float maxX = polygon.Max(p => p.X);
+            float minY = polygon.Min(p => p.Y);
+            float maxY = polygon.Max(p => p.Y);
 
-            // Return attack area centered on weapon position
-            return new Rectangle(
-                (int)(weaponCenter.X - 20),
-                (int)(weaponCenter.Y - 20),
-                40,
-                40
-            );
+            int left = (int)MathF.Floor(minX);
+            int top = (int)MathF.Floor(minY);
+            int width = Math.Max(1, (int)MathF.Ceiling(maxX - minX));
+            int height = Math.Max(1, (int)MathF.Ceiling(maxY - minY));
+
+            return new Rectangle(left, top, width, height);
         }
 
         public List<Vector2> GetCombatHitPolygon()
@@ -180,10 +178,10 @@ namespace Hearthvale.GameCode.Entities.Components
             if (EquippedWeapon?.IsSlashing != true)
                 return new List<Vector2>(); // Empty when not attacking
 
-            // Use the character's center position consistently
+            Rectangle tightBounds = _character.GetTightSpriteBounds();
             Vector2 characterCenter = new Vector2(
-                _character.Bounds.Center.X,
-                _character.Bounds.Center.Y
+                tightBounds.Left + tightBounds.Width / 2f,
+                tightBounds.Top + tightBounds.Height / 2f
             );
 
             return EquippedWeapon.GetTransformedHitPolygon(characterCenter);

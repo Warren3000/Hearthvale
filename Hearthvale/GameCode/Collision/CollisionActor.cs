@@ -49,24 +49,26 @@ namespace Hearthvale.GameCode.Collision
     /// <summary>
     /// Collision actor for NPC characters
     /// </summary>
-    public class NpcCollisionActor : ICollisionActor
+    public class NpcCollisionActor : IDynamicCollisionActor
     {
         public NPC Npc { get; }
-        public IShapeF Bounds { get; set; }
+        private RectangleF _boundsCache;
+
+        public IShapeF Bounds
+        {
+            get => _boundsCache;
+            set => _boundsCache = value switch
+            {
+                RectangleF rect => rect,
+                null => RectangleF.Empty,
+                _ => value.BoundingRectangle
+            };
+        }
 
         public NpcCollisionActor(NPC npc)
         {
             Npc = npc;
-            UpdateBounds();
-        }
-
-        public void UpdateBounds()
-        {
-            if (Npc != null)
-            {
-                var bounds = Npc.Bounds;
-                Bounds = new RectangleF(bounds.X, bounds.Y, bounds.Width, bounds.Height);
-            }
+            _boundsCache = GetCurrentBounds();
         }
 
         public void OnCollision(CollisionEventArgs collisionInfo)
@@ -77,12 +79,20 @@ namespace Hearthvale.GameCode.Collision
 
         public RectangleF CalculateInitialBounds()
         {
-            if (Npc != null)
+            return GetCurrentBounds();
+        }
+
+        public RectangleF GetCurrentBounds()
+        {
+            if (Npc == null)
             {
-                var bounds = Npc.Bounds;
-                return new RectangleF(bounds.X, bounds.Y, bounds.Width, bounds.Height);
+                return RectangleF.Empty;
             }
-            return RectangleF.Empty;
+
+            var bounds = Npc.GetSpriteBoundsAt(Npc.Position);
+            var rectF = new RectangleF(bounds.X, bounds.Y, bounds.Width, bounds.Height);
+            _boundsCache = rectF;
+            return rectF;
         }
     }
 

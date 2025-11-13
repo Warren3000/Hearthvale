@@ -47,6 +47,7 @@ namespace Hearthvale.GameCode.Entities.Components
         // Advanced movement
         private Vector2 _velocity;
         private Vector2 _desiredVelocity;
+        private Vector2 _desiredDirection = Vector2.Zero;
         private float _acceleration = 300f; // Pixels per second squared
         private float _deceleration = 400f;
         private float _maxSpeed = 100f;
@@ -218,13 +219,13 @@ namespace Hearthvale.GameCode.Entities.Components
             // Only make decisions after reaction time
             if (_reactionTimer > 0f) return;
 
-            Vector2 targetVelocity = Vector2.Zero;
+            Vector2 targetDirection = Vector2.Zero;
             float targetSpeed = 0f;
 
             switch (_currentState)
             {
                 case AIState.Idle:
-                    targetVelocity = Vector2.Zero;
+                    targetDirection = Vector2.Zero;
                     break;
 
                 case AIState.Wandering:
@@ -233,7 +234,7 @@ namespace Hearthvale.GameCode.Entities.Components
                         SetRandomWanderDirection();
                         _pathRecalculationTimer = PATH_RECALC_INTERVAL * 2f; // Less frequent for wandering
                     }
-                    targetVelocity = _desiredVelocity;
+                    targetDirection = _desiredDirection;
                     targetSpeed = _wanderSpeed;
                     break;
 
@@ -257,17 +258,17 @@ namespace Hearthvale.GameCode.Entities.Components
                         if (distance > 2f) // Small threshold to prevent jitter
                         {
                             direction.Normalize();
-                            _desiredVelocity = direction;
+                            _desiredDirection = direction;
                         }
                         else
                         {
                             // We've reached our target, stop
-                            _desiredVelocity = Vector2.Zero;
+                            _desiredDirection = Vector2.Zero;
                         }
                         
                         _pathRecalculationTimer = PATH_RECALC_INTERVAL;
                     }
-                    targetVelocity = _desiredVelocity;
+                    targetDirection = _desiredDirection;
                     targetSpeed = _chaseSpeed;
                     break;
 
@@ -278,7 +279,7 @@ namespace Hearthvale.GameCode.Entities.Components
                         if (direction.LengthSquared() > 4f) // Close enough threshold
                         {
                             direction.Normalize();
-                            targetVelocity = direction;
+                            targetDirection = direction;
                             targetSpeed = _wanderSpeed;
                         }
                         else
@@ -287,7 +288,7 @@ namespace Hearthvale.GameCode.Entities.Components
                             if (_stateTimer > 1f)
                             {
                                 SetRandomWanderDirection();
-                                targetVelocity = _desiredVelocity * 0.5f; // Slower investigation
+                                targetDirection = _desiredDirection;
                                 targetSpeed = _wanderSpeed * 0.5f;
                             }
                         }
@@ -301,7 +302,7 @@ namespace Hearthvale.GameCode.Entities.Components
                         if (fleeDirection.LengthSquared() > 0.1f)
                         {
                             fleeDirection.Normalize();
-                            targetVelocity = fleeDirection;
+                            targetDirection = fleeDirection;
                             targetSpeed = _fleeSpeed;
                         }
                     }
@@ -309,9 +310,16 @@ namespace Hearthvale.GameCode.Entities.Components
             }
 
             // Apply target velocity with speed
-            if (targetVelocity.LengthSquared() > 0f)
+            if (targetDirection.LengthSquared() > 0f)
             {
-                _desiredVelocity = targetVelocity * targetSpeed;
+                targetDirection.Normalize();
+                _desiredDirection = targetDirection;
+                _desiredVelocity = targetDirection * targetSpeed;
+            }
+            else
+            {
+                _desiredDirection = Vector2.Zero;
+                _desiredVelocity = Vector2.Zero;
             }
         }
 
@@ -408,8 +416,26 @@ namespace Hearthvale.GameCode.Entities.Components
 
         private void SetRandomWanderDirection()
         {
-            float angle = (float)(_random.NextDouble() * Math.PI * 2);
-            _desiredVelocity = new Vector2((float)Math.Cos(angle), (float)Math.Sin(angle));
+            Span<CardinalDirection> options = stackalloc CardinalDirection[]
+            {
+                CardinalDirection.North,
+                CardinalDirection.South,
+                CardinalDirection.East,
+                CardinalDirection.West
+            };
+
+            CardinalDirection current = _desiredDirection.LengthSquared() > 0.01f
+                ? VelocityToCardinal(_desiredDirection)
+                : CardinalDirection.South;
+
+            CardinalDirection chosen = current;
+            for (int attempt = 0; attempt < options.Length && chosen == current; attempt++)
+            {
+                chosen = options[_random.Next(options.Length)];
+            }
+
+            _desiredDirection = chosen.ToVector();
+            _desiredVelocity = _desiredDirection * _wanderSpeed;
         }
 
         private float GetRandomIdleTime() => 1f + (float)_random.NextDouble() * 2f;
@@ -477,6 +503,14 @@ namespace Hearthvale.GameCode.Entities.Components
         {
             _velocity = velocity;
             _desiredVelocity = velocity;
+            if (velocity.LengthSquared() > 0.001f)
+            {
+                _desiredDirection = Vector2.Normalize(velocity);
+            }
+            else
+            {
+                _desiredDirection = Vector2.Zero;
+            }
         }
         
         public Vector2 GetVelocity() => _velocity;

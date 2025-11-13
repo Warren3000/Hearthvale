@@ -152,8 +152,9 @@ public class Weapon
             Length = region.Height * Scale;
             SetAnimation("Idle");
 
-            // Generate hitbox from texture
-            //GenerateHitboxFromTexture(region);
+            // Generate a per-weapon hit polygon from the texture data so swing detection
+            // reflects the actual animated blade rather than a generic arc.
+            GenerateHitboxFromTexture(region);
 
             Log.Info(LogArea.Weapon, $"[Weapon] Using atlas region '{_resolvedRegionName}' for '{Name}'.");
         }
@@ -163,48 +164,46 @@ public class Weapon
         }
     }
 
-    //private void GenerateHitboxFromTexture(TextureRegion region)
-    //{
-    //    try
-    //    {
-    //        var options = new WeaponHitboxOptions
-    //        {
-    //            AlphaThreshold = 1,
-    //            InflatePixels = 2, // Slight inflation for better collision detection
-    //            UseOrientedBoundingBox = false, // Use AABB for now
-    //            PivotMode = HitboxPivotMode.BottomCenter,
-    //            NormalizeYUp = true
-    //        };
+    private void GenerateHitboxFromTexture(TextureRegion region)
+    {
+        if (region?.Texture == null)
+        {
+            return;
+        }
 
-    //        var generatedPolygon = WeaponHitboxGenerator.GenerateBoundingPolygon(
-    //            region.Texture,
-    //            region.SourceRectangle,
-    //            options,
-    //            out _opaqueRegionBounds
-    //        );
+        try
+        {
+            var options = new WeaponHitboxOptions
+            {
+                AlphaThreshold = 8,
+                InflatePixels = 1,
+                UseOrientedBoundingBox = true,
+                PivotMode = HitboxPivotMode.BottomCenter,
+                NormalizeYUp = true
+            };
 
-    //        if (generatedPolygon != null && generatedPolygon.Count >= 3)
-    //        {
-    //            HitPolygon = generatedPolygon;
-    //            Log.Info(LogArea.Weapon, $"[Weapon] Generated hitbox for '{Name}' with {generatedPolygon.Count} vertices");
+            var generatedPolygon = WeaponHitboxGenerator.GenerateBoundingPolygon(
+                region.Texture,
+                region.SourceRectangle,
+                options,
+                out _opaqueRegionBounds
+            );
 
-    //            // Debug: Log the generated polygon points
-    //            for (int i = 0; i < generatedPolygon.Count; i++)
-    //            {
-    //                Log.Info(LogArea.Weapon, $"  Vertex {i}: {generatedPolygon[i]}");
-    //            }
-    //            Log.Info(LogArea.Weapon, $"  Opaque bounds: {_opaqueRegionBounds}");
-    //        }
-    //        else
-    //        {
-    //            Log.Warn(LogArea.Weapon, $"[Weapon] Failed to generate hitbox for '{Name}', using default");
-    //        }
-    //    }
-    //    catch (Exception ex)
-    //    {
-    //        Log.Error(LogArea.Weapon, $"[Weapon] Exception generating hitbox for '{Name}': {ex.Message}");
-    //    }
-    //}
+            if (generatedPolygon != null && generatedPolygon.Count >= 3)
+            {
+                HitPolygon = generatedPolygon;
+                Log.Info(LogArea.Weapon, $"[Weapon] Generated hitbox for '{Name}' with {generatedPolygon.Count} vertices");
+            }
+            else
+            {
+                Log.Warn(LogArea.Weapon, $"[Weapon] Failed to generate hitbox for '{Name}', falling back to default polygon.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(LogArea.Weapon, $"[Weapon] Exception generating hitbox for '{Name}': {ex.Message}");
+        }
+    }
 
     public void PlayLevelUpEffect(SoundEffect soundEffect = null)
     {
@@ -293,18 +292,18 @@ public class Weapon
     public List<Vector2> GetTransformedHitPolygon(Vector2 ownerCenter)
     {
         var transformed = new List<Vector2>(HitPolygon?.Count ?? 0);
-        if (HitPolygon == null || HitPolygon.Count == 0) return transformed;
+        if (HitPolygon == null || HitPolygon.Count == 0)
+            return transformed;
 
-        // The hit polygon should be centered at the same position as the sprite
         Vector2 origin = ownerCenter + Offset + ManualOffset;
-
-        // Use the weapon's base rotation, not the sprite rotation which includes art offset
-        float totalRotation = Rotation;
+        float uniformScale = Scale;
+        float totalRotation = Sprite != null ? Sprite.Rotation : Rotation + ArtRotationOffset;
+        Matrix rotationMatrix = Matrix.CreateRotationZ(totalRotation);
 
         foreach (var pt in HitPolygon)
         {
-            var scaled = pt * Scale;
-            var rotated = Vector2.Transform(scaled, Matrix.CreateRotationZ(totalRotation));
+            var scaled = new Vector2(pt.X * uniformScale, pt.Y * uniformScale);
+            var rotated = Vector2.Transform(scaled, rotationMatrix);
             transformed.Add(origin + rotated);
         }
         return transformed;
