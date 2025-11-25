@@ -1,4 +1,5 @@
-﻿using Hearthvale.GameCode.Entities.Components;
+﻿using Hearthvale.GameCode.Data.Models;
+using Hearthvale.GameCode.Entities.Components;
 using Hearthvale.GameCode.Entities.Interfaces;
 using Hearthvale.GameCode.Entities.NPCs;
 using Hearthvale.GameCode.Utils;
@@ -19,6 +20,16 @@ public abstract class Character : IDamageable, IMovable, IAnimatable, IDialog
     #region Bounds
     private const int DefaultBoundsWidth = 12;
     private const int DefaultBoundsHeight = 12;
+    private AttackShapeDefinition _collisionBodyOverride;
+    protected Rectangle? _definedCollisionBox;
+
+    /// <summary>
+    /// Sets a fixed collision box relative to the sprite's top-left corner.
+    /// </summary>
+    public void SetCollisionBox(Rectangle box)
+    {
+        _definedCollisionBox = box;
+    }
 
     /// <summary>
     /// Returns an axis-aligned rectangle that tightly encloses the visible sprite pixels at the current position.
@@ -36,83 +47,18 @@ public abstract class Character : IDamageable, IMovable, IAnimatable, IDialog
             return CreateCenteredBounds(position, DefaultBoundsWidth, DefaultBoundsHeight);
         }
 
-        Rectangle contentBounds = SpriteAnalyzer.GetContentBounds(sprite.Region.Texture, sprite.Region.SourceRectangle);
-        if (contentBounds.Width <= 0 || contentBounds.Height <= 0)
-        {
-            contentBounds = new Rectangle(0, 0, sprite.Region.Width, sprite.Region.Height);
-        }
+        // Default to a centered box based on the sprite size if no specific collision box is defined
+        // This replaces the expensive pixel-perfect analysis
+        int width = (int)(sprite.Width * 0.5f); // Use 50% of sprite width
+        int height = (int)(sprite.Height * 0.4f); // Use 40% of sprite height
+        
+        // Ensure minimum size
+        width = Math.Max(width, DefaultBoundsWidth);
+        height = Math.Max(height, DefaultBoundsHeight);
 
-        var origin = CalculateRenderOrigin(sprite);
-        var scale = sprite.Scale;
-        if (scale == Vector2.Zero)
-        {
-            scale = Vector2.One;
-        }
-
-        float rotation = sprite.Rotation;
-        float cos = MathF.Cos(rotation);
-        float sin = MathF.Sin(rotation);
-
-        Span<Vector2> corners = stackalloc Vector2[4];
-        corners[0] = new Vector2(contentBounds.Left, contentBounds.Top);
-        corners[1] = new Vector2(contentBounds.Right, contentBounds.Top);
-        corners[2] = new Vector2(contentBounds.Right, contentBounds.Bottom);
-        corners[3] = new Vector2(contentBounds.Left, contentBounds.Bottom);
-
-        float minOffsetX = float.PositiveInfinity;
-        float maxOffsetX = float.NegativeInfinity;
-        float minOffsetY = float.PositiveInfinity;
-        float maxOffsetY = float.NegativeInfinity;
-
-        for (int i = 0; i < corners.Length; i++)
-        {
-            Vector2 corner = corners[i];
-            Vector2 relative = corner - origin;
-
-            Vector2 scaled = new Vector2(relative.X * scale.X, relative.Y * scale.Y);
-
-            Vector2 rotated = new Vector2(
-                scaled.X * cos - scaled.Y * sin,
-                scaled.X * sin + scaled.Y * cos);
-
-            minOffsetX = MathF.Min(minOffsetX, rotated.X);
-            maxOffsetX = MathF.Max(maxOffsetX, rotated.X);
-            minOffsetY = MathF.Min(minOffsetY, rotated.Y);
-            maxOffsetY = MathF.Max(maxOffsetY, rotated.Y);
-        }
-
-        if (!IsFinite(minOffsetX) || !IsFinite(maxOffsetX) || !IsFinite(minOffsetY) || !IsFinite(maxOffsetY))
-        {
-            return CreateCenteredBounds(position, DefaultBoundsWidth, DefaultBoundsHeight);
-        }
-
-        float widthExtent = MathF.Max(1f, maxOffsetX - minOffsetX);
-        float heightExtent = MathF.Max(1f, maxOffsetY - minOffsetY);
-
-        float centerOffsetX = (minOffsetX + maxOffsetX) * 0.5f;
-        float centerOffsetY = (minOffsetY + maxOffsetY) * 0.5f;
-
-        float halfWidth = MathF.Max(DefaultBoundsWidth * 0.5f, widthExtent * 0.5f);
-        float halfHeight = MathF.Max(DefaultBoundsHeight * 0.5f, heightExtent * 0.5f);
-
-        float centerX = position.X + centerOffsetX;
-        float centerY = position.Y + centerOffsetY;
-
-        int width = (int)MathF.Max(1f, MathF.Round(halfWidth * 2f));
-        int height = (int)MathF.Max(1f, MathF.Round(halfHeight * 2f));
-
-        float leftF = centerX - halfWidth;
-        float topF = centerY - halfHeight;
-        float rightF = centerX + halfWidth;
-        float bottomF = centerY + halfHeight;
-
-        int left = (int)MathF.Floor(leftF);
-        int top = (int)MathF.Floor(topF);
-        int right = (int)MathF.Ceiling(rightF);
-        int bottom = (int)MathF.Ceiling(bottomF);
-
-        width = Math.Max(width, right - left);
-        height = Math.Max(height, bottom - top);
+        // Center at the bottom of the sprite (feet)
+        int left = (int)(position.X - width / 2f);
+        int top = (int)(position.Y + sprite.Height / 2f - height); // Align bottom with sprite bottom
 
         return new Rectangle(left, top, width, height);
     }
@@ -196,7 +142,8 @@ public abstract class Character : IDamageable, IMovable, IAnimatable, IDialog
     public Weapon EquippedWeapon => _weaponComponent?.EquippedWeapon;
     public bool IsKnockedBack => _collisionComponent?.IsKnockedBack ?? false;
 
-    public virtual Rectangle Bounds => this.GetTightSpriteBounds();
+    public virtual Rectangle Bounds => GetCollisionBoundsAt(Position);
+    public bool HasCollisionOverride => _collisionBodyOverride != null;
 
     #endregion
 
@@ -313,10 +260,98 @@ public abstract class Character : IDamageable, IMovable, IAnimatable, IDialog
 
     #region Combat
 
-    public virtual Rectangle GetCombatBounds()
+    public virtual Rectangle GetCombatBounds() => GetCollisionBoundsAt(Position);
+
+    public Rectangle GetCollisionBoundsAt(Vector2 position)
     {
-        // Use tight sprite bounds for combat calculations
-        return this.GetTightSpriteBounds();
+        if (_collisionBodyOverride != null)
+        {
+            return BuildCollisionBoundsFromShape(_collisionBodyOverride, position);
+        }
+
+        if (_definedCollisionBox.HasValue)
+        {
+            var sprite = Sprite;
+            if (sprite != null)
+            {
+                var origin = CalculateRenderOrigin(sprite);
+                // Top-left of sprite in world space
+                // Note: We ignore rotation for the simple collision box as it's usually AABB
+                var topLeft = position - origin;
+
+                return new Rectangle(
+                    (int)(topLeft.X + _definedCollisionBox.Value.X),
+                    (int)(topLeft.Y + _definedCollisionBox.Value.Y),
+                    _definedCollisionBox.Value.Width,
+                    _definedCollisionBox.Value.Height
+                );
+            }
+        }
+
+        return GetSpriteBoundsAt(position);
+    }
+
+    internal void SetCollisionBodyOverride(AttackShapeDefinition overrideShape)
+    {
+        _collisionBodyOverride = overrideShape;
+    }
+
+    internal void ClearCollisionBodyOverride()
+    {
+        _collisionBodyOverride = null;
+    }
+
+    private Rectangle BuildCollisionBoundsFromShape(AttackShapeDefinition shape, Vector2 position)
+    {
+        if (shape == null)
+        {
+            return GetSpriteBoundsAt(position);
+        }
+
+        Rectangle defaultBounds = GetSpriteBoundsAt(position);
+        float width = shape.Width ?? shape.Length ?? defaultBounds.Width;
+        float height = shape.Height ?? shape.Length ?? defaultBounds.Height;
+
+        // Clamp to reasonable minimums to avoid degenerate rectangles
+        width = MathF.Max(1f, width);
+        height = MathF.Max(1f, height);
+
+        var direction = MovementComponent?.FacingDirection.ToVector() ?? Vector2.Zero;
+        if (direction.LengthSquared() > 0.0001f)
+        {
+            direction.Normalize();
+        }
+        else
+        {
+            direction = Vector2.UnitY;
+        }
+
+        Vector2 perpendicular = new Vector2(-direction.Y, direction.X);
+
+        float forwardOffset = shape.ForwardOffset ?? 0f;
+        float lateralOffset = shape.LateralOffset ?? 0f;
+        float verticalOffset = shape.VerticalOffset ?? 0f;
+
+        Vector2 offset = direction * forwardOffset + perpendicular * lateralOffset + new Vector2(0f, verticalOffset);
+        Vector2 center = position + offset;
+
+        float halfWidth = width * 0.5f;
+        float halfHeight = height * 0.5f;
+
+        float leftF = center.X - halfWidth;
+        float topF = center.Y - halfHeight;
+        float rightF = center.X + halfWidth;
+        float bottomF = center.Y + halfHeight;
+
+        int left = (int)MathF.Floor(leftF);
+        int top = (int)MathF.Floor(topF);
+        int right = (int)MathF.Ceiling(rightF);
+        int bottom = (int)MathF.Ceiling(bottomF);
+
+        int rectWidth = Math.Max(1, right - left);
+        int rectHeight = Math.Max(1, bottom - top);
+
+        return new Rectangle(left, top, rectWidth, rectHeight);
     }
 
     #endregion
@@ -356,7 +391,7 @@ public abstract class Character : IDamageable, IMovable, IAnimatable, IDialog
 
     protected bool ShouldDrawWeaponBehind()
     {
-        return MovementComponent.FacingDirection == CardinalDirection.North;
+        return MovementComponent.FacingDirection.IsUpwardFacing();
     }
 
     /// <summary>
@@ -419,7 +454,7 @@ public abstract class Character : IDamageable, IMovable, IAnimatable, IDialog
             new Vector2(bounds.Left, bounds.Top),
             new Vector2(bounds.Right, bounds.Top),
             new Vector2(bounds.Right, bounds.Bottom),
-            new Vector2(bounds.Left, bounds.Bottom)
+            new Vector2(bounds.Left, Bounds.Bottom)
         };
     }
 

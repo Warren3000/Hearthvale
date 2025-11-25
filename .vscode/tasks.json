@@ -1,0 +1,52 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "build AtlasGeneratorUI",
+			"type": "shell",
+			"command": "dotnet",
+			"args": [
+				"build",
+				"AtlasGeneratorUI/AtlasGeneratorUI.csproj"
+			],
+			"problemMatcher": [
+				"$msCompile"
+			],
+			"group": "build"
+		},
+		{
+			"label": "run AtlasGeneratorUI",
+			"type": "shell",
+			"command": "dotnet",
+			"args": [
+				"run",
+				"--project",
+				"AtlasGeneratorUI/AtlasGeneratorUI.csproj"
+			],
+			"problemMatcher": [
+				"$msCompile"
+			],
+			"group": "none"
+		},
+		{
+			"label": "build Hearthvale",
+			"type": "shell",
+			"command": "dotnet build Hearthvale/Hearthvale.csproj",
+			"isBackground": false,
+			"problemMatcher": [
+				"$msCompile"
+			],
+			"group": "build"
+		},
+		{
+			"label": "build Hearthvale",
+			"type": "shell",
+			"command": "dotnet build Hearthvale/Hearthvale.csproj",
+			"isBackground": false,
+			"problemMatcher": [
+				"$msCompile"
+			],
+			"group": "build"
+		}
+	]
+}

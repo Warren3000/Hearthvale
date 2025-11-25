@@ -131,6 +131,9 @@ namespace Hearthvale.GameCode.Collision
             if (rect.Width <= 0 || rect.Height <= 0)
                 return;
 
+            var spawnArea = new RectangleF(rect.X, rect.Y, rect.Width, rect.Height);
+            ResolveDynamicOverlap(spawnArea);
+
             var chestActor = new ChestCollisionActor(loot, rect);
 
             // IMPORTANT: seed bounds so a physics body is created
@@ -180,10 +183,7 @@ namespace Hearthvale.GameCode.Collision
         public bool IsPositionBlocked(RectangleF bounds)
         {
             return _collisionWorld.GetActorsInBounds(bounds)
-                .Any(actor =>
-                    actor is WallCollisionActor
-                    || actor is NpcCollisionActor
-                    || actor is ChestCollisionActor);
+                .Any(IsBlockingActor);
         }
 
         public bool CanMoveTo(Vector2 currentPosition, Vector2 newPosition, RectangleF entityBounds)
@@ -255,6 +255,108 @@ namespace Hearthvale.GameCode.Collision
 
             var bounds = shape.BoundingRectangle;
             return new Rectangle((int)bounds.X, (int)bounds.Y, (int)bounds.Width, (int)bounds.Height);
+        }
+
+        private void ResolveDynamicOverlap(RectangleF obstacleBounds)
+        {
+            var overlapping = _collisionWorld.GetActorsInBounds(obstacleBounds);
+            foreach (var actor in overlapping)
+            {
+                switch (actor)
+                {
+                    case PlayerCollisionActor playerActor when playerActor.Player is { IsDefeated: false }:
+                        PushCharacterOutOfBounds(playerActor.Player, obstacleBounds);
+                        break;
+                    case NpcCollisionActor npcActor when npcActor.Npc is { IsDefeated: false }:
+                        PushCharacterOutOfBounds(npcActor.Npc, obstacleBounds);
+                        break;
+                }
+            }
+        }
+
+        private void PushCharacterOutOfBounds(Character character, RectangleF obstacleBounds)
+        {
+            if (character == null)
+            {
+                return;
+            }
+
+            var currentRect = new RectangleF(character.Bounds.X, character.Bounds.Y, character.Bounds.Width, character.Bounds.Height);
+            if (!currentRect.Intersects(obstacleBounds))
+            {
+                return;
+            }
+
+            Vector2 separation = ComputeSeparationVector(currentRect, obstacleBounds);
+            if (separation == Vector2.Zero)
+            {
+                return;
+            }
+
+            Vector2 originalPosition = character.Position;
+            Vector2 targetPosition = originalPosition + separation;
+
+            bool moved = character.CollisionComponent?.TryMove(targetPosition) ?? false;
+            if (!moved)
+            {
+                character.SetPosition(targetPosition);
+            }
+
+            character.CollisionComponent?.CancelKnockbackAlong(separation);
+
+            if (character is NPC npc)
+            {
+                UpdateNpcPosition(npc);
+            }
+            else
+            {
+                UpdatePlayerPosition(character);
+            }
+        }
+
+        private static Vector2 ComputeSeparationVector(RectangleF dynamicBounds, RectangleF obstacleBounds)
+        {
+            if (!dynamicBounds.Intersects(obstacleBounds))
+            {
+                return Vector2.Zero;
+            }
+
+            var intersection = RectangleF.Intersection(dynamicBounds, obstacleBounds);
+            if (intersection.Width <= 0f || intersection.Height <= 0f)
+            {
+                return Vector2.Zero;
+            }
+
+            const float Padding = 1f;
+
+            if (intersection.Width < intersection.Height)
+            {
+                float direction = dynamicBounds.Center.X <= obstacleBounds.Center.X ? -1f : 1f;
+                float amount = intersection.Width + Padding;
+                return new Vector2(direction * amount, 0f);
+            }
+            else
+            {
+                float direction = dynamicBounds.Center.Y <= obstacleBounds.Center.Y ? -1f : 1f;
+                float amount = intersection.Height + Padding;
+                return new Vector2(0f, direction * amount);
+            }
+        }
+
+        private static bool IsBlockingActor(ICollisionActor actor)
+        {
+            switch (actor)
+            {
+                case WallCollisionActor:
+                case ChestCollisionActor:
+                    return true;
+                case PlayerCollisionActor playerActor:
+                    return playerActor.Player is { IsDefeated: false };
+                case NpcCollisionActor npcActor:
+                    return npcActor.Npc is { IsDefeated: false };
+                default:
+                    return false;
+            }
         }
 
         public void Dispose()

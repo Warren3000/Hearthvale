@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Hearthvale.GameCode.UI;
 using System;
+using System.Reflection;
 
 namespace HearthvaleTest
 {
@@ -142,9 +143,10 @@ namespace HearthvaleTest
             // Position the projectile to hit the NPC immediately
             var projectile = new Projectile(anim, npc.Position, Vector2.Zero, 5);
             combatManager.RegisterProjectile(projectile);
+            projectile.Update(new GameTime(TimeSpan.Zero, TimeSpan.FromSeconds(0.1)));
 
             // Act
-            combatManager.Update(new GameTime());
+            combatManager.HandleProjectileNpcCollision(projectile, npc);
 
             // Assert
             Assert.True(npc.Health < initialNpcHealth);
@@ -183,6 +185,18 @@ namespace HearthvaleTest
                 arrowAtlas
             );
 
+            var npc = CreateTestNpc(dummyTexture);
+            npc.SetPosition(new Vector2(32, 32));
+            npcManager.CollisionManager.RegisterNpc(npc);
+            var npcField = typeof(NpcManager).GetField("_npcs", BindingFlags.NonPublic | BindingFlags.Instance);
+            if (npcField != null)
+            {
+                if (npcField.GetValue(npcManager) is List<NPC> managedNpcs)
+                {
+                    managedNpcs.Add(npc);
+                }
+            }
+
             var dummyFont = new SpriteFont(
                 dummyTexture,
                 new List<Rectangle>(),
@@ -204,6 +218,23 @@ namespace HearthvaleTest
 
             CombatManager.Initialize(npcManager, player, ScoreManager.Instance, spriteBatch, CombatEffectsManager.Instance, hitSound, defeatSound, new Rectangle(0, 0, 100, 100));
             return (CombatManager.Instance, player, npcManager, ScoreManager.Instance, spriteBatch, CombatEffectsManager.Instance);
+        }
+
+        private NPC CreateTestNpc(Texture2D texture)
+        {
+            var region = new TextureRegion(texture, 0, 0, 1, 1);
+            var anim = new Animation(new List<TextureRegion> { region }, TimeSpan.FromSeconds(0.1));
+
+            var animations = new Dictionary<string, Animation>
+            {
+                { "Idle_Down", anim },
+                { "Idle", anim },
+                { "Walk", anim },
+                { "Attack", anim },
+                { "Defeated", anim }
+            };
+
+            return new NPC("test", animations, Vector2.Zero, new Rectangle(0, 0, 32, 32), null, 20);
         }
 
         private GraphicsDevice GraphicsDevice()

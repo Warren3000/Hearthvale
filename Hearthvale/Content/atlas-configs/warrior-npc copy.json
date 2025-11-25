@@ -1,0 +1,62 @@
+{
+  "npcs": [
+    {
+      "id": "warrior_hero",
+      "displayName": "Warrior Hero",
+      "textureAtlas": "images/xml/warrior-atlas copy.xml",
+      "animations": {
+        "Idle": { "atlasAnimation": "Idle_Down", "fps": 10, "loop": true },
+        "Idle_Down": { "atlasAnimation": "Idle_Down", "fps": 10, "loop": true },
+        "Idle_Left": { "atlasAnimation": "Idle_Left", "fps": 10, "loop": true },
+        "Idle_Right": { "atlasAnimation": "Idle_Right", "fps": 10, "loop": true },
+        "Idle_Up": { "atlasAnimation": "Idle_Up", "fps": 10, "loop": true },
+        "Run_Down": { "atlasAnimation": "Run_Down", "fps": 12.5, "loop": true },
+        "Run_Left": { "atlasAnimation": "Run_Left", "fps": 12.5, "loop": true },
+        "Run_Right": { "atlasAnimation": "Run_Right", "fps": 12.5, "loop": true },
+        "Run_Up": { "atlasAnimation": "Run_Up", "fps": 12.5, "loop": true },
+        "Jump_Down": { "atlasAnimation": "Jump_Down", "fps": 10, "loop": false },
+        "Jump_Left": { "atlasAnimation": "Jump_Left", "fps": 10, "loop": false },
+        "Jump_Right": { "atlasAnimation": "Jump_Right", "fps": 10, "loop": false },
+        "Jump_Up": { "atlasAnimation": "Jump_Up", "fps": 10, "loop": false },
+        "Land_Down": { "atlasAnimation": "Land_Down", "fps": 10, "loop": false },
+        "Land_Left": { "atlasAnimation": "Land_Left", "fps": 10, "loop": false },
+        "Land_Right": { "atlasAnimation": "Land_Right", "fps": 10, "loop": false },
+        "Land_Up": { "atlasAnimation": "Land_Up", "fps": 10, "loop": false },
+        "Attack": { "atlasAnimation": "Attack_01_Down", "fps": 12.5, "loop": false },
+        "Attack_Down": { "atlasAnimation": "Attack_01_Down", "fps": 12.5, "loop": false },
+        "Attack_Left": { "atlasAnimation": "Attack_01_Left", "fps": 12.5, "loop": false },
+        "Attack_Right": { "atlasAnimation": "Attack_01_Right", "fps": 12.5, "loop": false },
+        "Attack_Up": { "atlasAnimation": "Attack_01_Up", "fps": 12.5, "loop": false },
+        "Attack_02_Down": { "atlasAnimation": "Attack_02_Down", "fps": 12.5, "loop": false },
+        "Attack_02_Left": { "atlasAnimation": "Attack_02_Left", "fps": 12.5, "loop": false },
+        "Attack_02_Right": { "atlasAnimation": "Attack_02_Right", "fps": 12.5, "loop": false },
+        "Attack_02_Up": { "atlasAnimation": "Attack_02_Up", "fps": 12.5, "loop": false },
+        "Attack_03_Down": { "atlasAnimation": "Attack_03_Down", "fps": 12.5, "loop": false },
+        "Attack_03_Left": { "atlasAnimation": "Attack_03_Left", "fps": 12.5, "loop": false },
+        "Attack_03_Right": { "atlasAnimation": "Attack_03_Right", "fps": 12.5, "loop": false },
+        "Attack_03_Up": { "atlasAnimation": "Attack_03_Up", "fps": 12.5, "loop": false },
+        "Hurt_Down": { "atlasAnimation": "Hurt_Down", "fps": 10, "loop": true },
+        "Hurt_Left": { "atlasAnimation": "Hurt_Left", "fps": 10, "loop": true },
+        "Hurt_Right": { "atlasAnimation": "Hurt_Right", "fps": 10, "loop": true },
+        "Hurt_Up": { "atlasAnimation": "Hurt_Up", "fps": 10, "loop": true },
+        "Defeated": { "atlasAnimation": "Death_Down", "fps": 10, "loop": false },
+        "Death_Down": { "atlasAnimation": "Death_Down", "fps": 10, "loop": false },
+        "Death_Left": { "atlasAnimation": "Death_Left", "fps": 10, "loop": false },
+        "Death_Right": { "atlasAnimation": "Death_Right", "fps": 10, "loop": false },
+        "Death_Up": { "atlasAnimation": "Death_Up", "fps": 10, "loop": false },
+        "Climb_Down": { "atlasAnimation": "Climb_Down", "fps": 10, "loop": true },
+        "Climb_Left": { "atlasAnimation": "Climb_Left", "fps": 10, "loop": true },
+        "Climb_Right": { "atlasAnimation": "Climb_Right", "fps": 10, "loop": true },
+        "Climb_Up": { "atlasAnimation": "Climb_Up", "fps": 10, "loop": true }
+      },
+      "collision": {
+        "hitbox": { "x": 10, "y": 12, "width": 28, "height": 34 },
+        "projectileOrigin": { "x": 24, "y": 18 }
+      },
+      "attachments": [
+        { "slot": "weapon", "atlas": "images/xml/weapon-atlas.xml" },
+        { "slot": "projectile", "atlas": "images/xml/arrow-atlas.xml" }
+      ]
+    }
+  ]
+}

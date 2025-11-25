@@ -259,34 +259,15 @@ public class DungeonLoot : IDungeonElement
     /// </summary>
     private Rectangle ComputeTightWorldBounds()
     {
-        if (_currentSprite?.Animation == null ||
-            _currentSprite.Animation.Frames == null ||
-            _currentSprite.Animation.Frames.Count == 0)
-            return Bounds;
-
-        // Current frame index inferred from animated sprite private state is not exposed;
-        // we approximate using Region (animated sprite sets Region as it advances).
-        var region = _currentSprite.Region;
-        if (region?.Texture == null)
-            return Bounds;
-
-        // Analyze region pixels
-        Rectangle source = region.SourceRectangle;
-        var content = SpriteAnalyzer.GetContentBounds(region.Texture, source);
-        if (content.IsEmpty)
-            content = new Rectangle(0, 0, source.Width, source.Height);
-
-        // World top-left for sprite = tile world (Column*size, Row*size)
+        // Use a standard collision box for loot (slightly smaller than tile)
         int tileSize = GetTileSize();
-        int worldX = Column * tileSize;
-        int worldY = Row * tileSize;
-
-        // Offset inside region
+        int padding = 4;
+        
         return new Rectangle(
-            worldX + content.X,
-            worldY + content.Y,
-            content.Width,
-            content.Height
+            Column * tileSize + padding,
+            Row * tileSize + padding,
+            tileSize - (padding * 2),
+            tileSize - (padding * 2)
         );
     }
 

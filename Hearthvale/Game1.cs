@@ -16,6 +16,8 @@ public class Game1 : Core
     private Effect _postEffect;
     private bool _postEnabled = true;
     private bool _prevF10Down;
+    private bool _prevF5Down;
+    private bool _prevF3Down;
     public Game1() : base("Next Day Deadlivery", 1920, 1080, false) { }
 
     protected override void Initialize()
@@ -55,6 +57,26 @@ public class Game1 : Core
         if (f10Down && !_prevF10Down)
             _postEnabled = !_postEnabled;
         _prevF10Down = f10Down;
+
+        // Reload Data on F5
+        bool f5Down = Input.Keyboard.IsKeyDown(Keys.F5);
+        if (f5Down && !_prevF5Down)
+        {
+            DataManager.Instance.ReloadDataCategory("enemies");
+            DataManager.Instance.ReloadDataCategory("characters");
+            System.Diagnostics.Debug.WriteLine("Reloaded Enemy and Character Data");
+        }
+        _prevF5Down = f5Down;
+
+        // Toggle Debug on F3
+        bool f3Down = Input.Keyboard.IsKeyDown(Keys.F3);
+        if (f3Down && !_prevF3Down)
+        {
+            DebugManager.Instance.ToggleCombatDebug();
+            DebugManager.Instance.TogglePhysicsDebug();
+            System.Diagnostics.Debug.WriteLine($"Debug Mode: {DebugManager.Instance.DebugDrawEnabled}");
+        }
+        _prevF3Down = f3Down;
 
         SceneManager.Update(gameTime);
         SystemManager.UpdateAll(gameTime);

@@ -30,7 +30,7 @@ public static class GameBootstrapper
         SystemManager.Register(new InputSystem());
         SystemManager.Register(new AudioSystem(AssetSystem));
         SystemManager.Register(new GumUiSystem(core), participatesInDraw: true);
-        SystemManager.Register(new SpriteAnalysisSystem(AssetSystem));
+        // SystemManager.Register(new SpriteAnalysisSystem(AssetSystem));
 
         SystemManager.InitializeAll();
     }

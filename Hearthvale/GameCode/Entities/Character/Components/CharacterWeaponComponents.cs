@@ -1,4 +1,6 @@
-﻿using Hearthvale.GameCode.Utils;
+﻿using Hearthvale.GameCode.Data.Models;
+using Hearthvale.GameCode.Utils;
+using Hearthvale.GameCode.Entities;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -11,6 +13,7 @@ namespace Hearthvale.GameCode.Entities.Components
     {
         private readonly Character _character;
         public Weapon EquippedWeapon { get; private set; }
+        private WeaponSwingProfile _activeSwingProfile = WeaponSwingProfile.Default;
 
         public CharacterWeaponComponent(Character character)
         {
@@ -24,6 +27,7 @@ namespace Hearthvale.GameCode.Entities.Components
         public void UnequipWeapon()
         {
             EquippedWeapon = null;
+            _activeSwingProfile = WeaponSwingProfile.Default;
         }
 
         /// <summary>
@@ -80,34 +84,91 @@ namespace Hearthvale.GameCode.Entities.Components
         {
             // Base offset distance from character center
             float offsetDistance = 0f; // Adjust this value to move weapon further/closer
+            float lateralOffset = 0f;
+            float verticalOffset = 0f;
+
+            if (IsAttacking() && _activeSwingProfile?.Shape != null)
+            {
+                if (_activeSwingProfile.Shape.ForwardOffset.HasValue)
+                    offsetDistance += _activeSwingProfile.Shape.ForwardOffset.Value;
+                
+                if (_activeSwingProfile.Shape.LateralOffset.HasValue)
+                    lateralOffset += _activeSwingProfile.Shape.LateralOffset.Value;
+
+                if (_activeSwingProfile.Shape.VerticalOffset.HasValue)
+                    verticalOffset += _activeSwingProfile.Shape.VerticalOffset.Value;
+            }
 
             // Get the character's facing direction
             CardinalDirection facing = _character.MovementComponent.FacingDirection;
+            Vector2 direction = facing.ToVector();
+            
+            // Calculate perpendicular vector (right of facing)
+            Vector2 right = new Vector2(-direction.Y, direction.X);
 
-            // Apply directional offset based on facing
-            Vector2 offset = facing.ToVector() * offsetDistance;
+            // Apply directional offsets
+            Vector2 offset = (direction * offsetDistance) + (right * lateralOffset);
+            
+            // Apply vertical offset (world Y axis)
+            offset.Y += verticalOffset;
 
-            // REMOVED: Don't add weapon's offset here - it's added in Weapon.Draw()
             return offset;
         }
 
         /// <summary>
         /// Starts a weapon swing attack
         /// </summary>
-        public void StartSwing(CardinalDirection facingDirection)
+        public void StartSwing(CardinalDirection facingDirection, WeaponSwingProfile swingProfile = null)
         {
             if (EquippedWeapon == null) return;
+
+            // Ensure the weapon pivot is aligned with the initiating facing the instant the swing begins.
+            // Without this, input triggered before the next Update() leaves Rotation stuck on the previous frame.
+            EquippedWeapon.Rotation = facingDirection.ToRotation();
+            EquippedWeapon.Offset = CalculateWeaponOffset();
+
+            _activeSwingProfile = swingProfile ?? WeaponSwingProfile.Default;
+
+            ApplyDefensiveColliderOverride(_activeSwingProfile);
+
+            if (swingProfile != null)
+            {
+                EquippedWeapon.SetNextSwingProfile(swingProfile);
+            }
+            else
+            {
+                EquippedWeapon.SetNextSwingProfile(WeaponSwingProfile.Default);
+            }
 
             bool swingClockwise = facingDirection switch
             {
                 CardinalDirection.North => true,
+                CardinalDirection.NorthEast => true,
                 CardinalDirection.East => true,
+                CardinalDirection.SouthEast => false,
                 CardinalDirection.South => false,
+                CardinalDirection.SouthWest => false,
                 CardinalDirection.West => false,
+                CardinalDirection.NorthWest => true,
                 _ => true
             };
 
             EquippedWeapon.StartSwing(swingClockwise);
+        }
+
+        private void ApplyDefensiveColliderOverride(WeaponSwingProfile swingProfile)
+        {
+            var defensiveShape = swingProfile?.DefensiveBodyShape
+                ?? swingProfile?.SourceProfile?.DefensiveBodyShape;
+
+            if (defensiveShape == null)
+            {
+                _character.CollisionComponent?.ClearProfileCollider();
+            }
+            else
+            {
+                _character.CollisionComponent?.ApplyProfileCollider(defensiveShape);
+            }
         }
 
         /// <summary>
@@ -129,23 +190,7 @@ namespace Hearthvale.GameCode.Entities.Components
         /// </summary>
         private static CardinalDirection AngleToCardinal(float angleRadians)
         {
-            // Normalize angle to [0, 2π)
-            float normalizedAngle = angleRadians;
-            while (normalizedAngle < 0) normalizedAngle += MathF.Tau;
-            while (normalizedAngle >= MathF.Tau) normalizedAngle -= MathF.Tau;
-
-            // Convert to degrees for easier reasoning
-            float degrees = normalizedAngle * (180f / MathF.PI);
-
-            // Map angle ranges to cardinal directions
-            return degrees switch
-            {
-                >= 315f or < 45f => CardinalDirection.East,
-                >= 45f and < 135f => CardinalDirection.South,
-                >= 135f and < 225f => CardinalDirection.West,
-                >= 225f and < 315f => CardinalDirection.North,
-                _ => CardinalDirection.East // fallback
-            };
+            return CardinalDirectionExtensions.FromAngle(angleRadians);
         }
 
         /// <summary>
@@ -184,7 +229,107 @@ namespace Hearthvale.GameCode.Entities.Components
                 tightBounds.Top + tightBounds.Height / 2f
             );
 
-            return EquippedWeapon.GetTransformedHitPolygon(characterCenter);
+            var shape = _activeSwingProfile?.Shape ?? new AttackShapeDefinition { Type = AttackShapeKind.Arc };
+            return shape.Type switch
+            {
+                AttackShapeKind.Box => BuildBoxPolygon(shape, characterCenter),
+                AttackShapeKind.Thrust => BuildThrustPolygon(shape, characterCenter),
+                AttackShapeKind.Area => BuildAreaPolygon(shape, characterCenter),
+                _ => EquippedWeapon.GetTransformedHitPolygon(characterCenter)
+            };
+        }
+
+        public MagicEffectDefinition GetActiveMagicEffect() => _activeSwingProfile?.Magic;
+
+        private List<Vector2> BuildBoxPolygon(AttackShapeDefinition shape, Vector2 origin)
+        {
+            float angle = EquippedWeapon?.Rotation ?? _character.MovementComponent.FacingDirection.ToRotation();
+            Vector2 forward = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
+            Vector2 right = new Vector2(-forward.Y, forward.X);
+
+            float length = shape.Length ?? shape.Height ?? (EquippedWeapon?.Length ?? 32f);
+            float width = shape.Width ?? 24f;
+            float forwardOffset = shape.ForwardOffset ?? (length * 0.5f);
+            float lateralOffset = shape.LateralOffset ?? 0f;
+            float verticalOffset = shape.VerticalOffset ?? 0f;
+
+            Vector2 center = origin + forward * forwardOffset + right * lateralOffset + new Vector2(0f, verticalOffset);
+            Vector2 halfForward = forward * (length * 0.5f);
+            Vector2 halfRight = right * (width * 0.5f);
+
+            return new List<Vector2>
+            {
+                center - halfForward - halfRight,
+                center + halfForward - halfRight,
+                center + halfForward + halfRight,
+                center - halfForward + halfRight
+            };
+        }
+
+        private List<Vector2> BuildThrustPolygon(AttackShapeDefinition shape, Vector2 origin)
+        {
+            float angle = EquippedWeapon?.Rotation ?? _character.MovementComponent.FacingDirection.ToRotation();
+            Vector2 forward = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
+            Vector2 right = new Vector2(-forward.Y, forward.X);
+
+            float length = shape.Length ?? (EquippedWeapon?.Length ?? 40f);
+            float thickness = shape.Thickness ?? shape.Width ?? 12f;
+            float forwardOffset = shape.ForwardOffset ?? (length * 0.5f);
+            float lateralOffset = shape.LateralOffset ?? 0f;
+            float verticalOffset = shape.VerticalOffset ?? 0f;
+
+            Vector2 center = origin + forward * forwardOffset + right * lateralOffset + new Vector2(0f, verticalOffset);
+            Vector2 halfForward = forward * (length * 0.5f);
+            Vector2 halfRight = right * (thickness * 0.5f);
+
+            return new List<Vector2>
+            {
+                center - halfForward - halfRight,
+                center + halfForward - halfRight,
+                center + halfForward + halfRight,
+                center - halfForward + halfRight
+            };
+        }
+
+        private List<Vector2> BuildAreaPolygon(AttackShapeDefinition shape, Vector2 origin)
+        {
+            float radius = Math.Max(1f, shape.Radius ?? (EquippedWeapon?.Length ?? 32f));
+            int segments = Math.Clamp(shape.SegmentCount ?? 12, 6, 64);
+            float angleOffset = _character.MovementComponent.FacingDirection.ToRotation();
+            Vector2 forward = new Vector2(MathF.Cos(angleOffset), MathF.Sin(angleOffset));
+            Vector2 right = new Vector2(-forward.Y, forward.X);
+
+            float forwardOffset = shape.ForwardOffset ?? 0f;
+            float lateralOffset = shape.LateralOffset ?? 0f;
+            float verticalOffset = shape.VerticalOffset ?? 0f;
+
+            Vector2 center = origin + forward * forwardOffset + right * lateralOffset + new Vector2(0f, verticalOffset);
+
+            float coneDegrees = shape.ConeAngleDegrees ?? 360f;
+            bool isFullCircle = coneDegrees >= 360f - float.Epsilon;
+            float coneRadians = MathHelper.ToRadians(MathHelper.Clamp(coneDegrees, 1f, 360f));
+
+            var points = new List<Vector2>(segments + (isFullCircle ? 0 : 2));
+
+            if (!isFullCircle)
+            {
+                points.Add(center);
+            }
+
+            float startAngle = isFullCircle
+                ? 0f
+                : angleOffset - coneRadians * 0.5f;
+
+            float step = coneRadians / segments;
+            for (int i = 0; i <= segments; i++)
+            {
+                float angle = startAngle + step * i;
+                Vector2 dir = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
+                Vector2 point = center + dir * radius;
+                points.Add(point);
+            }
+
+            return points;
         }
     }
 }

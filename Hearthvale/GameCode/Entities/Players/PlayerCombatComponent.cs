@@ -1,4 +1,5 @@
-﻿using Hearthvale.GameCode.Entities.NPCs;
+﻿using Hearthvale.GameCode.Data.Models;
+using Hearthvale.GameCode.Entities.NPCs;
 using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
@@ -15,12 +16,14 @@ namespace Hearthvale.GameCode.Entities.Components
         private readonly Player _player;
         private float _attackTimer = 0f;
         private const float DefaultAttackDuration = 0.25f;
+        private const float DebugSlowSwingSpeedMultiplier = 0.25f;
         private readonly SoundEffect _hitSound;
         private readonly SoundEffect _defeatSound;
         private readonly SoundEffect _playerAttackSound;
 
         public bool IsAttacking { get; private set; }
         private readonly List<NPC> _hitNpcsThisSwing = new();
+        private bool _magicTriggeredThisSwing;
 
         public PlayerCombatComponent(Player player, SoundEffect hitSound, SoundEffect defeatSound, SoundEffect playerAttackSound)
         {
@@ -32,6 +35,8 @@ namespace Hearthvale.GameCode.Entities.Components
 
         public void Update(GameTime gameTime, IEnumerable<NPC> npcs)
         {
+            bool wasAttacking = IsAttacking;
+
             if (IsAttacking)
             {
                 _attackTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -39,6 +44,7 @@ namespace Hearthvale.GameCode.Entities.Components
                 {
                     IsAttacking = false;
                     _player.IsAttacking = false;
+                    _magicTriggeredThisSwing = false;
                 }
             }
 
@@ -54,6 +60,8 @@ namespace Hearthvale.GameCode.Entities.Components
 
             if (_player.EquippedWeapon?.IsSlashing == true)
             {
+                TryTriggerMagicEffect();
+
                 var hitPolygon = _player.WeaponComponent.GetCombatHitPolygon();
                 if (hitPolygon.Count > 0)
                 {
@@ -82,24 +90,35 @@ namespace Hearthvale.GameCode.Entities.Components
                     }
                 }
             }
+
+            if (wasAttacking && !IsAttacking)
+            {
+                _player.CollisionComponent?.ClearProfileCollider();
+            }
+
         }
 
         public void StartMeleeAttack()
         {
+            StartMeleeAttackInternal(1f);
+        }
+
+        public void StartDebugSlowMeleeAttack()
+        {
+            StartMeleeAttackInternal(DebugSlowSwingSpeedMultiplier);
+        }
+
+        private void StartMeleeAttackInternal(float swingSpeedMultiplier)
+        {
             if (!CombatManager.Instance.CanAttack()) return;
 
+            swingSpeedMultiplier = MathF.Max(0.01f, swingSpeedMultiplier);
             _hitNpcsThisSwing.Clear();
+            _magicTriggeredThisSwing = false;
 
-            if (_player.EquippedWeapon != null)
-            {
-                CardinalDirection facing = _player.MovementComponent.FacingDirection;
-                _player.WeaponComponent.StartSwing(facing);
-            }
-
-            _player.StartAttack();
-            IsAttacking = true;
-            _player.IsAttacking = true;
-            var attackAnimationName = _player.MovementComponent.FacingDirection switch
+            CardinalDirection facing = _player.MovementComponent.FacingDirection;
+            
+            string attackAnimationName = facing.ToFourWay() switch
             {
                 CardinalDirection.North => "Attack_01_Up",
                 CardinalDirection.South => "Attack_01_Down",
@@ -108,10 +127,51 @@ namespace Hearthvale.GameCode.Entities.Components
                 _ => "Attack_01_Down"
             };
 
-            var attackDuration = _player.AnimationComponent?.GetAnimationDuration(attackAnimationName) ?? TimeSpan.Zero;
-            _attackTimer = attackDuration.TotalSeconds > 0
-                ? (float)attackDuration.TotalSeconds
-                : DefaultAttackDuration;
+            // Resolve attack profile
+            var timingProfile = DataManager.Instance.GetPlayerAttackProfile("default");
+            WeaponSwingProfile swingProfile = WeaponSwingProfile.Default;
+
+            if (timingProfile != null && _player.AnimationComponent.TryGetAnimation(attackAnimationName, out var animation))
+            {
+                swingProfile = WeaponSwingProfileFactory.FromAttackTiming(timingProfile, animation);
+            }
+
+            if (_player.EquippedWeapon != null)
+            {
+                if (MathF.Abs(swingSpeedMultiplier - 1f) > 0.001f)
+                {
+                    _player.EquippedWeapon.SetNextSwingSpeedMultiplier(swingSpeedMultiplier);
+                }
+                _player.WeaponComponent.StartSwing(facing, swingProfile);
+            }
+
+            _player.StartAttack();
+            IsAttacking = true;
+            _player.IsAttacking = true;
+
+            float totalDuration = swingProfile.WindUpDuration + swingProfile.ActiveDuration + swingProfile.RecoveryDuration;
+            
+            // Fallback if profile duration is zero (shouldn't happen with default fallback)
+            if (totalDuration <= 0f)
+            {
+                TimeSpan attackDuration = _player.AnimationComponent?.GetAnimationDuration(attackAnimationName) ?? TimeSpan.Zero;
+                totalDuration = attackDuration.TotalSeconds > 0 ? (float)attackDuration.TotalSeconds : DefaultAttackDuration;
+            }
+
+            float adjustedDuration = swingSpeedMultiplier != 1f
+                ? totalDuration / swingSpeedMultiplier
+                : totalDuration;
+
+            _attackTimer = adjustedDuration;
+
+            if (swingSpeedMultiplier != 1f)
+            {
+                CombatManager.Instance.OverrideNextCooldown(adjustedDuration);
+            }
+            else
+            {
+                CombatManager.Instance.OverrideNextCooldown(null);
+            }
 
             CombatManager.Instance.StartCooldown();
             _playerAttackSound?.Play(0.5f, 0, 0);
@@ -135,5 +195,28 @@ namespace Hearthvale.GameCode.Entities.Components
 
         public void TakeDamage(int amount) => _player.TakeDamage(amount);
         public void Heal(int amount) => _player.Heal(amount);
+
+        private void TryTriggerMagicEffect()
+        {
+            if (_magicTriggeredThisSwing)
+            {
+                return;
+            }
+
+            var magic = _player.WeaponComponent.GetActiveMagicEffect();
+            if (magic == null || magic.Type == MagicEffectKind.None)
+            {
+                return;
+            }
+
+            Rectangle tightBounds = _player.GetTightSpriteBounds();
+            Vector2 center = new Vector2(
+                tightBounds.Left + tightBounds.Width / 2f,
+                tightBounds.Top + tightBounds.Height / 2f
+            );
+
+            CombatManager.Instance.TriggerMagicEffect(_player, magic, center);
+            _magicTriggeredThisSwing = true;
+        }
     }
 }

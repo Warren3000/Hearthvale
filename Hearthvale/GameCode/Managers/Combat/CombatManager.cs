@@ -1,6 +1,7 @@
 using Hearthvale.GameCode.Entities;
 using Hearthvale.GameCode.Entities.NPCs;
 using Hearthvale.GameCode.Data;
+using Hearthvale.GameCode.Data.Models;
 using Hearthvale.GameCode.Utils;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
@@ -47,6 +48,7 @@ public class CombatManager
     private float _playerDamageCooldown = PLAYER_DAMAGE_COOLDOWN;
     private float _playerDamageTimer = 0f;
     private readonly Dictionary<Character, bool> _npcHitPlayerThisSwing = new();
+    private float? _nextCooldownOverride;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CombatManager"/> class.
@@ -548,9 +550,23 @@ public class CombatManager
         _player = player;
     }
 
+    public void OverrideNextCooldown(float? duration)
+    {
+        if (duration.HasValue)
+        {
+            _nextCooldownOverride = Math.Max(0f, duration.Value);
+        }
+        else
+        {
+            _nextCooldownOverride = null;
+        }
+    }
+
     public void StartCooldown()
     {
-        _attackTimer = _attackCooldown;
+        float cooldown = _nextCooldownOverride ?? _attackCooldown;
+        _attackTimer = cooldown;
+        _nextCooldownOverride = null;
     }
 
     public void RegisterProjectile(Projectile projectile)
@@ -604,6 +620,94 @@ public class CombatManager
         }
 
         return justDefeated;
+    }
+
+    public void TriggerMagicEffect(Character attacker, MagicEffectDefinition effect, Vector2 origin)
+    {
+        if (effect == null || effect.Type == MagicEffectKind.None)
+        {
+            return;
+        }
+
+        switch (effect.Type)
+        {
+            case MagicEffectKind.AreaOfEffect:
+                HandleAreaMagic(attacker, effect, origin);
+                break;
+            case MagicEffectKind.Projectile:
+                Debug.WriteLine("[CombatManager] Projectile magic effects are not wired yet.");
+                break;
+            case MagicEffectKind.Chain:
+            case MagicEffectKind.Buff:
+            case MagicEffectKind.Debuff:
+                Debug.WriteLine($"[CombatManager] Magic effect '{effect.Type}' is not implemented yet.");
+                break;
+            default:
+                Debug.WriteLine($"[CombatManager] Unknown magic effect type '{effect.Type}'.");
+                break;
+        }
+    }
+
+    private void HandleAreaMagic(Character attacker, MagicEffectDefinition effect, Vector2 origin)
+    {
+        float radius = Math.Max(8f, effect.Radius ?? 48f);
+        float radiusSq = radius * radius;
+        float damageScale = effect.DamageScale ?? 0.5f;
+
+        if (attacker == _player)
+        {
+            var targets = _npcManager.Npcs
+                .Where(n => !n.IsDefeated && Vector2.DistanceSquared(origin, n.Position) <= radiusSq)
+                .ToList();
+
+            if (targets.Count == 0)
+            {
+                return;
+            }
+
+            int baseDamage = _player.EquippedWeapon?.Damage ?? 1;
+            int aoeDamage = Math.Max(1, (int)MathF.Round(baseDamage * damageScale));
+
+            foreach (var target in targets)
+            {
+                Vector2 dir = target.Position - origin;
+                if (dir.LengthSquared() > 1f)
+                {
+                    dir.Normalize();
+                }
+                else
+                {
+                    dir = Vector2.UnitX;
+                }
+
+                HandleNpcHit(target, aoeDamage, dir * (PROJECTILE_KNOCKBACK * 0.35f));
+            }
+
+            _effectsManager.ShowCombatText(origin, effect.EffectId ?? "AOE", Color.Cyan, 0.9f);
+        }
+        else if (attacker is NPC npcAttacker && _player != null && !_player.IsDefeated)
+        {
+            if (Vector2.DistanceSquared(origin, _player.Position) > radiusSq)
+            {
+                return;
+            }
+
+            int baseDamage = npcAttacker.EquippedWeapon?.Damage ?? 1;
+            int aoeDamage = Math.Max(1, (int)MathF.Round(baseDamage * damageScale));
+
+            Vector2 knockbackDir = _player.Position - origin;
+            if (knockbackDir.LengthSquared() > 1f)
+            {
+                knockbackDir.Normalize();
+            }
+            else
+            {
+                knockbackDir = Vector2.UnitY;
+            }
+
+            _player.TakeDamage(aoeDamage, knockbackDir * (NPC_ATTACK_KNOCKBACK * 0.4f));
+            _effectsManager.ShowCombatText(_player.Position, aoeDamage.ToString(), Color.Cyan, 0.9f);
+        }
     }
 
     public void DrawProjectiles(SpriteBatch spriteBatch)

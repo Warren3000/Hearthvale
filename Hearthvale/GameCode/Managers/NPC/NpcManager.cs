@@ -62,27 +62,80 @@ namespace Hearthvale.GameCode.Managers
             }
         }
 
-        public void SpawnNPC(string npcType, Vector2 position, Player player = null, float minDistanceFromPlayer = 48f)
+        public NPC SpawnNPC(string npcType, Vector2 position, Player player = null, float minDistanceFromPlayer = 48f)
         {
-            if (!_spawnValidator.IsValidSpawnPosition(npcType, position, player, _npcs, minDistanceFromPlayer))
+            Vector2 desiredPosition = _spawnValidator.GetValidSpawnPosition(position);
+
+            if (!_spawnValidator.IsValidSpawnPosition(npcType, desiredPosition, player, _npcs, minDistanceFromPlayer))
             {
-                System.Diagnostics.Debug.WriteLine($"Cannot spawn {npcType} at {position} - validation failed");
-                return;
+                System.Diagnostics.Debug.WriteLine($"Cannot spawn {npcType} at {desiredPosition} - validation failed");
+                return null;
             }
 
-            Vector2 spawnPos = _spawnValidator.GetValidSpawnPosition(position);
-            var npc = _npcSpawner.CreateNPC(npcType, spawnPos, _bounds, null);
-
+            var npc = _npcSpawner.CreateNPC(npcType, desiredPosition, _bounds, null);
             if (npc == null)
             {
                 System.Diagnostics.Debug.WriteLine($"Failed to create NPC of type {npcType}");
-                return;
+                return null;
             }
 
+            npc.SetPosition(desiredPosition);
+
+            if (!TryResolveSpawnPosition(npc, player, desiredPosition, minDistanceFromPlayer, out var resolvedPosition))
+            {
+                npc.Dispose();
+                System.Diagnostics.Debug.WriteLine($"Cannot spawn {npcType} near {desiredPosition} - no free space available");
+                return null;
+            }
+
+            npc.SetPosition(resolvedPosition);
             _collisionManager.RegisterNpc(npc);
             _npcs.Add(npc);
 
-            System.Diagnostics.Debug.WriteLine($"Successfully spawned {npcType} at {spawnPos}");
+            System.Diagnostics.Debug.WriteLine($"Successfully spawned {npcType} at {resolvedPosition}");
+            return npc;
+        }
+
+        /// <summary>
+        /// Spawns a specific NPC type around the player at a safe distance
+        /// </summary>
+        public NPC SpawnNpcAroundPlayer(string npcType, Player player, float minSpawnDistance = -1f, float maxSpawnDistance = -1f)
+        {
+            if (player?.EquippedWeapon == null)
+            {
+                System.Diagnostics.Debug.WriteLine("Cannot spawn NPC: Player or weapon is null");
+                return null;
+            }
+
+            // Calculate spawn position around player
+            float minDistance;
+            float maxDistance;
+
+            if (minSpawnDistance > 0)
+            {
+                minDistance = minSpawnDistance;
+                maxDistance = maxSpawnDistance > minDistance ? maxSpawnDistance : minDistance + 32f;
+            }
+            else
+            {
+                float swingRadius = player.EquippedWeapon.Length;
+                minDistance = swingRadius + 16f;
+                maxDistance = minDistance + 16f;
+            }
+
+            var random = new Random();
+            double angle = random.NextDouble() * Math.PI * 2;
+            float distance = minDistance + (float)random.NextDouble() * (maxDistance - minDistance);
+            
+            Vector2 direction = new Vector2((float)Math.Cos(angle), (float)Math.Sin(angle));
+            Vector2 spawnPos = player.Position + direction * distance;
+
+            // Clamp to bounds
+            spawnPos.X = MathHelper.Clamp(spawnPos.X, _bounds.Left, _bounds.Right - 32);
+            spawnPos.Y = MathHelper.Clamp(spawnPos.Y, _bounds.Top, _bounds.Bottom - 32);
+
+            // Spawn the NPC with player distance validation
+            return SpawnNPC(npcType, spawnPos, player);
         }
 
         /// <summary>
@@ -120,28 +173,95 @@ namespace Hearthvale.GameCode.Managers
 
         public void SpawnAllNpcTypesTest(Player player = null)
         {
+            var npcTypes = NpcTypes.GetAllTypes();
+            var pendingTypes = new Queue<string>(npcTypes);
+            int initialCount = _npcs.Count;
+
             var spawner = new TestNpcSpawner(
                 _collisionManager.CollisionWorld,
                 48f,
                 32f,
-                _spawnValidator.CreateNpcBounds);
-            var spawnPositions = spawner.GetValidSpawnPositions(player, _npcs);
+                _spawnValidator.CreateNpcBounds,
+                _bounds);
 
-            var npcTypes = NpcTypes.GetAllTypes();
-            int spawned = 0;
+            const int maxAttempts = 3;
+            int attempts = 0;
 
-            foreach (var pos in spawnPositions)
+            while (pendingTypes.Count > 0 && attempts < maxAttempts)
             {
-                if (spawned >= npcTypes.Length) break;
+                var spawnPositions = spawner.GetValidSpawnPositions(player, _npcs, attempts);
 
-                if (spawner.CanSpawnAt(pos, player, _npcs))
+                foreach (var pos in spawnPositions)
                 {
-                    SpawnNPC(npcTypes[spawned], pos);
-                    spawned++;
+                    if (pendingTypes.Count == 0)
+                    {
+                        break;
+                    }
+
+                    if (!spawner.CanSpawnAt(pos, player, _npcs))
+                    {
+                        continue;
+                    }
+
+                    int beforeSpawn = _npcs.Count;
+                    var nextType = pendingTypes.Peek();
+                    SpawnNPC(nextType, pos);
+
+                    if (_npcs.Count > beforeSpawn)
+                    {
+                        pendingTypes.Dequeue();
+                    }
                 }
+
+                attempts++;
             }
 
-            System.Diagnostics.Debug.WriteLine($"Successfully spawned {spawned} NPCs out of {npcTypes.Length} types using Aether collision detection");
+            if (pendingTypes.Count > 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"Test NPC spawner missing {pendingTypes.Count} types after {attempts} attempts: {string.Join(", ", pendingTypes)}");
+            }
+
+            int totalSpawned = _npcs.Count - initialCount;
+            System.Diagnostics.Debug.WriteLine($"Successfully spawned {totalSpawned} NPCs out of {npcTypes.Length} types using Aether collision detection after {attempts} attempt(s)");
+        }
+
+        public bool EnsureCharacterSpawnClear(Character character)
+        {
+            if (character == null)
+            {
+                return false;
+            }
+
+            Vector2 initialPosition = character.Position;
+            var initialBounds = character.GetSpriteBoundsAt(initialPosition);
+            var boundsRect = new RectangleF(initialBounds.X, initialBounds.Y, initialBounds.Width, initialBounds.Height);
+
+            if (!_spawnValidator.IsAreaBlocked(boundsRect))
+            {
+                return true;
+            }
+
+            if (TryFindNonBlockingPosition(initialPosition, pos =>
+            {
+                var rect = character.GetSpriteBoundsAt(pos);
+                return new RectangleF(rect.X, rect.Y, rect.Width, rect.Height);
+            }, out var resolvedPosition))
+            {
+                character.SetPosition(resolvedPosition);
+
+                if (character is NPC npc)
+                {
+                    _collisionManager.UpdateNpcPosition(npc);
+                }
+                else
+                {
+                    _collisionManager.UpdatePlayerPosition(character);
+                }
+
+                return true;
+            }
+
+            return false;
         }
 
         public void Update(GameTime gameTime, Character player, List<Rectangle> rectangles)
@@ -175,6 +295,142 @@ namespace Hearthvale.GameCode.Managers
             {
                 npc.Draw(spriteBatch);
                 DrawNpcHealthBar(spriteBatch, uiManager, npc);
+            }
+        }
+
+        public void ReevaluateEntities(Player player, IReadOnlyList<Rectangle> obstacles)
+        {
+            if (obstacles == null)
+            {
+                return;
+            }
+
+            foreach (var npc in _npcs)
+            {
+                npc.UpdateObstacles(obstacles, _npcs, player);
+            }
+        }
+
+        private bool TryResolveSpawnPosition(NPC npc, Player player, Vector2 desiredPosition, float minDistanceFromPlayer, out Vector2 resolvedPosition)
+        {
+            foreach (var candidate in EnumerateCandidatePositions(desiredPosition))
+            {
+                npc.SetPosition(candidate);
+
+                var rect = npc.GetSpriteBoundsAt(candidate);
+                var bounds = new RectangleF(rect.X, rect.Y, rect.Width, rect.Height);
+
+                if (_spawnValidator.IsAreaBlocked(bounds))
+                {
+                    continue;
+                }
+
+                if (!MeetsDistanceConstraints(bounds, player, minDistanceFromPlayer))
+                {
+                    continue;
+                }
+
+                resolvedPosition = candidate;
+                return true;
+            }
+
+            npc.SetPosition(desiredPosition);
+            resolvedPosition = default;
+            return false;
+        }
+
+        private bool MeetsDistanceConstraints(RectangleF spawnBounds, Player player, float minDistanceFromPlayer)
+        {
+            Vector2 center = new Vector2(spawnBounds.Center.X, spawnBounds.Center.Y);
+
+            if (player != null)
+            {
+                var playerCenter = new Vector2(player.Bounds.Center.X, player.Bounds.Center.Y);
+                float playerSpacing = MathF.Max(minDistanceFromPlayer, _spawnValidator.DefaultMinDistanceFromPlayer);
+                if (Vector2.Distance(center, playerCenter) < playerSpacing)
+                {
+                    return false;
+                }
+            }
+
+            float minNpcDistance = _spawnValidator.DefaultMinDistanceBetweenNpcs;
+            foreach (var existing in _npcs)
+            {
+                if (existing == null || existing.IsDefeated)
+                {
+                    continue;
+                }
+
+                var npcCenter = new Vector2(existing.Bounds.Center.X, existing.Bounds.Center.Y);
+                if (Vector2.Distance(center, npcCenter) < minNpcDistance)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private bool TryFindNonBlockingPosition(Vector2 desiredPosition, Func<Vector2, RectangleF> boundsFactory, out Vector2 resolvedPosition)
+        {
+            foreach (var candidate in EnumerateCandidatePositions(desiredPosition))
+            {
+                var bounds = boundsFactory(candidate);
+                if (!_spawnValidator.IsAreaBlocked(bounds))
+                {
+                    resolvedPosition = candidate;
+                    return true;
+                }
+            }
+
+            resolvedPosition = default;
+            return false;
+        }
+
+        private IEnumerable<Vector2> EnumerateCandidatePositions(Vector2 origin)
+        {
+            float tileSize = _collisionManager.Tilemap?.TileWidth ?? 32f;
+            float step = MathF.Max(8f, tileSize * 0.5f);
+            const int maxRings = 6;
+
+            var seen = new HashSet<(int x, int y)>();
+
+            Vector2 first = _spawnValidator.GetValidSpawnPosition(origin);
+            if (AddCandidate(first))
+            {
+                yield return first;
+            }
+
+            Vector2[] directions = new[]
+            {
+                new Vector2(1f, 0f),
+                new Vector2(-1f, 0f),
+                new Vector2(0f, 1f),
+                new Vector2(0f, -1f),
+                new Vector2(1f, 1f),
+                new Vector2(1f, -1f),
+                new Vector2(-1f, 1f),
+                new Vector2(-1f, -1f)
+            };
+
+            for (int ring = 1; ring <= maxRings; ring++)
+            {
+                float distance = step * ring;
+                foreach (var direction in directions)
+                {
+                    Vector2 candidate = origin + direction * distance;
+                    candidate = _spawnValidator.GetValidSpawnPosition(candidate);
+                    if (AddCandidate(candidate))
+                    {
+                        yield return candidate;
+                    }
+                }
+            }
+
+            bool AddCandidate(Vector2 value)
+            {
+                var key = ((int)MathF.Round(value.X), (int)MathF.Round(value.Y));
+                return seen.Add(key);
             }
         }
 
@@ -232,27 +488,34 @@ namespace Hearthvale.GameCode.Managers
         private readonly float _minDistanceFromPlayer;
         private readonly float _minDistanceBetweenNpcs;
         private readonly Func<Vector2, RectangleF> _boundsFactory;
+        private readonly Rectangle _searchBounds;
+        private readonly Random _random = new();
 
         public TestNpcSpawner(
             CollisionWorld collisionWorld,
             float minDistanceFromPlayer,
             float minDistanceBetweenNpcs,
-            Func<Vector2, RectangleF> boundsFactory)
+            Func<Vector2, RectangleF> boundsFactory,
+            Rectangle searchBounds)
         {
             _collisionWorld = collisionWorld;
             _minDistanceFromPlayer = minDistanceFromPlayer;
             _minDistanceBetweenNpcs = minDistanceBetweenNpcs;
             _boundsFactory = boundsFactory ?? throw new ArgumentNullException(nameof(boundsFactory));
+            _searchBounds = searchBounds;
         }
 
-        public List<Vector2> GetValidSpawnPositions(Player player, List<NPC> existingNpcs)
+        public List<Vector2> GetValidSpawnPositions(Player player, List<NPC> existingNpcs, int attempt = 0)
         {
             var validPositions = new List<Vector2>();
 
-            // Generate positions in a grid pattern for testing
-            for (int x = 100; x < 1000; x += 100)
+            float spacing = MathF.Max(_minDistanceBetweenNpcs * 2f, 80f);
+            float offsetX = (_random.NextSingle() * spacing * 0.5f) + (attempt * 23f % spacing);
+            float offsetY = (_random.NextSingle() * spacing * 0.5f) + (attempt * 37f % spacing);
+
+            for (float x = _searchBounds.Left + offsetX; x < _searchBounds.Right; x += spacing)
             {
-                for (int y = 100; y < 800; y += 100)
+                for (float y = _searchBounds.Top + offsetY; y < _searchBounds.Bottom; y += spacing)
                 {
                     Vector2 pos = new Vector2(x, y);
                     var testBounds = _boundsFactory(pos);
@@ -266,9 +529,36 @@ namespace Hearthvale.GameCode.Managers
                 }
             }
 
+            if (validPositions.Count == 0)
+            {
+                validPositions.AddRange(SampleRandomPositions(player, existingNpcs, attempt));
+            }
+
             // Shuffle positions for random distribution
-            var random = new Random();
-            return validPositions.OrderBy(x => random.Next()).ToList();
+            return validPositions.OrderBy(_ => _random.Next()).ToList();
+        }
+
+        private IEnumerable<Vector2> SampleRandomPositions(Player player, List<NPC> existingNpcs, int attempt)
+        {
+            var samples = new List<Vector2>();
+            int sampleCount = 32 + attempt * 8;
+
+            for (int i = 0; i < sampleCount; i++)
+            {
+                float x = _random.Next(_searchBounds.Left, _searchBounds.Right);
+                float y = _random.Next(_searchBounds.Top, _searchBounds.Bottom);
+                Vector2 pos = new Vector2(x, y);
+                var bounds = _boundsFactory(pos);
+
+                if (!IsPositionBlocked(bounds)
+                    && IsValidDistanceFromPlayer(bounds, player)
+                    && IsValidDistanceFromExistingNpcs(bounds, existingNpcs))
+                {
+                    samples.Add(pos);
+                }
+            }
+
+            return samples;
         }
 
         public bool CanSpawnAt(Vector2 position, Player player, List<NPC> existingNpcs)
@@ -289,10 +579,7 @@ namespace Hearthvale.GameCode.Managers
         private bool IsPositionBlocked(RectangleF bounds)
         {
             return _collisionWorld.GetActorsInBounds(bounds)
-            .Any(actor => actor is WallCollisionActor
-                   || actor is ChestCollisionActor
-                   || actor is PlayerCollisionActor
-                   || actor is NpcCollisionActor);
+                .Any(IsBlockingActor);
         }
 
         private bool IsValidDistanceFromPlayer(RectangleF spawnBounds, Player player)
@@ -325,6 +612,22 @@ namespace Hearthvale.GameCode.Managers
             }
 
             return true;
+        }
+
+        private static bool IsBlockingActor(ICollisionActor actor)
+        {
+            switch (actor)
+            {
+                case WallCollisionActor:
+                case ChestCollisionActor:
+                    return true;
+                case PlayerCollisionActor playerActor:
+                    return playerActor.Player is { IsDefeated: false };
+                case NpcCollisionActor npcActor:
+                    return npcActor.Npc is { IsDefeated: false };
+                default:
+                    return false;
+            }
         }
     }
 }

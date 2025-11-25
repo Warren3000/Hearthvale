@@ -406,7 +406,15 @@ public class DebugManager
 
         // Use Bounds property directly
         Rectangle bounds = character.Bounds;
-        DrawRect(spriteBatch, bounds, color * 0.8f);
+        
+        // Check for override
+        Color drawColor = color;
+        if (character.HasCollisionOverride)
+        {
+            drawColor = Color.Gold; // Distinct color for defensive shape
+        }
+
+        DrawRect(spriteBatch, bounds, drawColor * 0.8f);
 
         // Draw velocity vector
         Vector2 velocity = character.GetVelocity();
@@ -451,22 +459,28 @@ public class DebugManager
     {
         if (character.EquippedWeapon == null) return;
 
-        // Use Bounds center instead of GetTightSpriteBounds
-        Vector2 center = new Vector2(character.Bounds.Center.X, character.Bounds.Center.Y);
+        Rectangle tightBounds = character.GetTightSpriteBounds();
+        Vector2 center = new Vector2(tightBounds.Left + tightBounds.Width / 2f, tightBounds.Top + tightBounds.Height / 2f);
 
-        // Draw the weapon's precise hitbox polygon
-        //character.EquippedWeapon.DrawHitPolygon(spriteBatch, _whitePixel, center, color);
-        
         // Optionally draw the opaque region bounds for debugging hitbox generation
         if (ShowDetailedWeaponDebug)
         {
             character.EquippedWeapon.DrawOpaqueRegionBounds(spriteBatch, _whitePixel, center, Color.Yellow * 0.5f);
         }
 
-        // If the weapon is actively slashing, draw the full swing arc
-        if (character.EquippedWeapon.IsSlashing)
+        var combatPolygon = character.WeaponComponent?.GetCombatHitPolygon();
+        if (combatPolygon != null && combatPolygon.Count >= 3)
         {
-            DrawSwingArcForWeapon(spriteBatch, _whitePixel, character.EquippedWeapon, center, color * 0.6f);
+            var outlineColor = character.EquippedWeapon.IsSlashing ? color * 0.9f : color * 0.35f;
+            if (character.EquippedWeapon.IsSlashing || ShowDetailedWeaponDebug)
+            {
+                DrawPolygonOutline(spriteBatch, _whitePixel, combatPolygon, outlineColor);
+            }
+        }
+        else if (ShowDetailedWeaponDebug)
+        {
+            var fallbackPolygon = character.EquippedWeapon.GetTransformedHitPolygon(center);
+            DrawPolygonOutline(spriteBatch, _whitePixel, fallbackPolygon, color * 0.35f);
         }
 
         // Draw NPC AI engagement info
@@ -573,49 +587,17 @@ public class DebugManager
     #endregion
 
     #region Weapon Debug Drawing
-    // Unified helpers for arc + polygon debug rendering (moved from Weapon to DebugManager)
-    private void DrawSwingArcForWeapon(SpriteBatch spriteBatch, Texture2D pixel, Weapon weapon, Vector2 ownerCenter, Color color, float? halfArcOverrideRadians = null, int segments = Weapon.DefaultDebugArcSegments)
+    private void DrawPolygonOutline(SpriteBatch spriteBatch, Texture2D pixel, IReadOnlyList<Vector2> polygon, Color color)
     {
-        if (weapon == null || pixel == null) return;
-
-        var spec = weapon.GetDebugSwingSpec(halfArcOverrideRadians);
-
-        float angleStep = (spec.EndAngle - spec.StartAngle) / segments;
-        float innerRadius = spec.HandleOffset;
-        float outerRadius = spec.HandleOffset + spec.BladeLength;
-
-        // Use the weapon's actual world origin (same as sprite) instead of ownerCenter
-        Vector2 origin = weapon.GetWorldOrigin(ownerCenter);
-
-        Vector2 ToPoint(float angle, float radius) => origin + new Vector2((float)Math.Cos(angle), (float)Math.Sin(angle)) * radius;
-
-        Vector2 prevInner = ToPoint(spec.StartAngle, innerRadius);
-        Vector2 prevOuter = ToPoint(spec.StartAngle, outerRadius);
-
-        for (int i = 1; i <= segments; i++)
+        if (pixel == null || polygon == null || polygon.Count < 2)
         {
-            float angle = spec.StartAngle + angleStep * i;
-            Vector2 inner = ToPoint(angle, innerRadius);
-            Vector2 outer = ToPoint(angle, outerRadius);
-
-            DrawLine(spriteBatch, pixel, prevOuter, outer, color);
-            DrawLine(spriteBatch, pixel, prevInner, inner, color);
-            DrawLine(spriteBatch, pixel, prevInner, prevOuter, color);
-
-            prevInner = inner;
-            prevOuter = outer;
+            return;
         }
-    }
 
-    private void DrawHitPolygonForWeapon(SpriteBatch spriteBatch, Texture2D pixel, Weapon weapon, Vector2 ownerCenter, Color color)
-    {
-        if (weapon == null || pixel == null) return;
-
-        var poly = weapon.GetTransformedHitPolygon(ownerCenter);
-        for (int i = 0; i < poly.Count; i++)
+        for (int i = 0; i < polygon.Count; i++)
         {
-            var a = poly[i];
-            var b = poly[(i + 1) % poly.Count];
+            var a = polygon[i];
+            var b = polygon[(i + 1) % polygon.Count];
             DrawLine(spriteBatch, pixel, a, b, color);
         }
     }
@@ -637,7 +619,7 @@ public class DebugManager
                 continue;
             }
 
-            float attackRange = MathF.Max(npc.EquippedWeapon?.Length ?? 32f, 32f);
+            float attackRange = npc.GetEffectiveAttackRange();
             float desiredStandOff = attackRange - 5f;
             Vector2 engagementPoint = ComputeEngagementPointDebug(player.Bounds, npc.Bounds, desiredStandOff);
 

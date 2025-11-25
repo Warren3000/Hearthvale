@@ -1,4 +1,3 @@
-
 #----------------------------- Global Properties ----------------------------#
 
 /outputDir:bin/$(Platform)
@@ -16,11 +15,11 @@
 
 #---------------------------------- Content ---------------------------------#
 
-#begin atlas-configs/skeleton-npc.json
-/copy:atlas-configs/skeleton-npc.json
-
 #begin atlas-configs/goblin-npc.json
 /copy:atlas-configs/goblin-npc.json
+
+#begin atlas-configs/skeleton-npc.json
+/copy:atlas-configs/skeleton-npc.json
 
 #begin atlas-configs/warrior-npc.json
 /copy:atlas-configs/warrior-npc.json
@@ -67,8 +66,14 @@
 /processorParam:Quality=Best
 /build:audio/ui.wav
 
-#begin data/CharacterStats.json
-/copy:data/CharacterStats.json
+#begin data/Characters/Enemies/AttackProfiles.json
+/copy:data/Characters/Enemies/AttackProfiles.json
+
+#begin data/Characters/Players/PlayerAttackProfiles.json
+/copy:data/Characters/Players/PlayerAttackProfiles.json
+
+#begin data/Characters/Enemies/enemies.xml
+/copy:data/Characters/Enemies/enemies.xml
 
 #begin data/enemies.xml
 /copy:data/enemies.xml
@@ -390,6 +395,21 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Tilesets/DampDungeons/Tiles/Dungeon_Autotiles.png;Tilesets/DampDungeons/Tiles/Dungeon_Autotiles
+
+#begin Tilesets/DampDungeons/Tiles/DungeonDecorations.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Tilesets/DampDungeons/Tiles/DungeonDecorations.png;Tilesets/DampDungeons/Tiles/DungeonDecorations
+
+#begin Tilesets/DampDungeons/Tiles/DungeonDecorations.json
+/copy:Tilesets/DampDungeons/Tiles/DungeonDecorations.json
 
 #begin Tilesets/DampDungeons/Tiles/Dungeon_WallsAndFloors.png
 /importer:TextureImporter

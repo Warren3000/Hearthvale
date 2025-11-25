@@ -66,6 +66,7 @@ namespace Hearthvale.Scenes
                 rotateWeaponLeftCallback: rotateWeaponLeftCallback, // Rotate the player's weapon to the left
                 rotateWeaponRightCallback: rotateWeaponRightCallback, // Rotate the player's weapon to the right
                 interactionCallback: interactionCallback, // Handle player interaction with objects or NPCs
+                debugSlowSwingCallback: () => player.CombatController.StartDebugSlowMeleeAttack(), // Trigger a slowed melee swing for debugging
                 toggleDebugModeCallback: () => DebugManager.Instance.ToggleDebugMode(), // Toggle debug mode
                 toggleDebugGridCallback: () => DebugManager.Instance.ShowUIDebugGrid = !DebugManager.Instance.ShowUIDebugGrid, // Toggle the debug grid
                 pauseGameCallback: () => GameUIManager.Instance.PauseGame(), // Pause the game

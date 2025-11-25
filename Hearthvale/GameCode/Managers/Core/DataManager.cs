@@ -19,14 +19,34 @@ namespace Hearthvale.GameCode.Managers
         private Dictionary<string, WeaponStats> _weaponStats;
         private Dictionary<string, Item> _items;
         private Dictionary<string, EnemyData> _enemies;
+        private Dictionary<string, AttackTimingProfile> _enemyAttackProfiles;
+        private Dictionary<string, AttackTimingProfile> _playerAttackProfiles;
+        private int _enemyAttackProfileSchemaVersion = 1;
         private Dictionary<string, object> _dungeonData; // For dungeon-specific data
         private Dictionary<string, string> _dialogData; // For NPC/Quest dialogs
 
-        private readonly string _contentRoot = "Content/Data";
+        private string _contentRoot = "Content/Data";
         private readonly JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true };
 
         private DataManager()
         {
+#if DEBUG
+            // In debug mode, try to load from source to enable hot reloading
+            // Go up from bin/Debug/net6.0/ to project root
+            try 
+            {
+                var debugContentRoot = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "../../../Content/Data"));
+                if (Directory.Exists(debugContentRoot))
+                {
+                    _contentRoot = debugContentRoot;
+                    System.Diagnostics.Debug.WriteLine($"[DataManager] Hot Reload Enabled. Watching: {_contentRoot}");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[DataManager] Failed to resolve debug content path: {ex.Message}");
+            }
+#endif
             InitializeCollections();
             LoadAllContent();
         }
@@ -45,6 +65,8 @@ namespace Hearthvale.GameCode.Managers
             _weaponStats = new Dictionary<string, WeaponStats>();
             _items = new Dictionary<string, Item>();
             _enemies = new Dictionary<string, EnemyData>();
+            _enemyAttackProfiles = new Dictionary<string, AttackTimingProfile>(StringComparer.OrdinalIgnoreCase);
+            _playerAttackProfiles = new Dictionary<string, AttackTimingProfile>(StringComparer.OrdinalIgnoreCase);
             _dungeonData = new Dictionary<string, object>();
             _dialogData = new Dictionary<string, string>();
         }
@@ -55,6 +77,7 @@ namespace Hearthvale.GameCode.Managers
             {
                 // Load character data
                 LoadCharacterData();
+                LoadPlayerAttackProfiles();
                 
                 // Load item data
                 LoadItemData();
@@ -78,11 +101,7 @@ namespace Hearthvale.GameCode.Managers
         private void LoadCharacterData()
         {
             // Load main character stats
-            var characterStatsPath = Path.Combine(_contentRoot, "Characters/CharacterStats.json");
-            if (File.Exists(characterStatsPath))
-            {
-                _characterStats = LoadJsonFile<Dictionary<string, CharacterStats>>(characterStatsPath);
-            }
+           
 
             // Load NPC data if needed
             LoadDataFromDirectory("Characters/NPCs", (file, data) =>
@@ -93,6 +112,30 @@ namespace Hearthvale.GameCode.Managers
                     _characterStats[$"npc_{kvp.Key}"] = kvp.Value;
                 }
             });
+        }
+
+        private void LoadPlayerAttackProfiles()
+        {
+            _playerAttackProfiles.Clear();
+            var path = Path.Combine(_contentRoot, "Characters/Players/PlayerAttackProfiles.json");
+            if (!File.Exists(path)) return;
+
+            try
+            {
+                var wrapped = LoadJsonFile<AttackProfilesFile>(path);
+                if (wrapped != null)
+                {
+                    var resolved = wrapped.ResolveProfiles(_jsonOptions);
+                    foreach (var (key, profile) in resolved)
+                    {
+                        _playerAttackProfiles[key] = profile;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading player attack profiles: {ex.Message}");
+            }
         }
 
         private void LoadItemData()
@@ -160,6 +203,61 @@ namespace Hearthvale.GameCode.Managers
                 {
                     _enemies[kvp.Key] = kvp.Value;
                 }
+            }
+
+            LoadEnemyAttackProfiles();
+        }
+
+        private void LoadEnemyAttackProfiles()
+        {
+            _enemyAttackProfiles.Clear();
+
+            var attackProfilesPath = Path.Combine(_contentRoot, "Characters/Enemies/AttackProfiles.json");
+            if (!File.Exists(attackProfilesPath))
+            {
+                return;
+            }
+
+            try
+            {
+                var wrappedProfiles = LoadJsonFile<AttackProfilesFile>(attackProfilesPath);
+                if (wrappedProfiles != null)
+                {
+                    var resolved = wrappedProfiles.ResolveProfiles(_jsonOptions);
+                    if (resolved.Count > 0)
+                    {
+                        PopulateEnemyAttackProfiles(resolved);
+                        _enemyAttackProfileSchemaVersion = Math.Max(1, wrappedProfiles.SchemaVersion);
+                        return;
+                    }
+                }
+
+                // Legacy fallback: older files may still be a flat dictionary
+                var legacyProfiles = LoadJsonFile<Dictionary<string, AttackTimingProfile>>(attackProfilesPath);
+                if (legacyProfiles == null)
+                {
+                    return;
+                }
+
+                PopulateEnemyAttackProfiles(legacyProfiles);
+                _enemyAttackProfileSchemaVersion = 1;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading enemy attack profiles: {ex.Message}");
+            }
+        }
+
+        private void PopulateEnemyAttackProfiles(Dictionary<string, AttackTimingProfile> source)
+        {
+            foreach (var (key, profile) in source)
+            {
+                if (string.IsNullOrWhiteSpace(key) || profile == null)
+                {
+                    continue;
+                }
+
+                _enemyAttackProfiles[key.ToLowerInvariant()] = profile;
             }
         }
 
@@ -328,6 +426,41 @@ namespace Hearthvale.GameCode.Managers
             return enemy;
         }
 
+        public AttackTimingProfile GetEnemyAttackProfile(string idOrType)
+        {
+            if (string.IsNullOrWhiteSpace(idOrType))
+            {
+                return null;
+            }
+
+            var key = idOrType.Trim();
+
+            if (_enemyAttackProfiles.TryGetValue(key.ToLowerInvariant(), out var profile))
+            {
+                return profile;
+            }
+
+            // Allow lookup by enemy id (e.g., skeleton_warrior) if a more specific entry exists
+            var enemy = _enemies.FirstOrDefault(e => string.Equals(e.Key, key, StringComparison.OrdinalIgnoreCase) || string.Equals(e.Value?.Id, key, StringComparison.OrdinalIgnoreCase)).Value;
+            if (enemy != null && !string.IsNullOrWhiteSpace(enemy.Id))
+            {
+                var shortId = enemy.Id.ToLowerInvariant();
+                if (_enemyAttackProfiles.TryGetValue(shortId, out var specificProfile))
+                {
+                    return specificProfile;
+                }
+            }
+
+            return null;
+        }
+
+        public AttackTimingProfile GetPlayerAttackProfile(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id)) return null;
+            _playerAttackProfiles.TryGetValue(id, out var profile);
+            return profile;
+        }
+
         public IEnumerable<EnemyData> GetEnemiesByFaction(string faction)
         {
             return _enemies.Values.Where(e => e.Faction == faction);
@@ -360,6 +493,7 @@ namespace Hearthvale.GameCode.Managers
             {
                 case "characters":
                     LoadCharacterData();
+                    LoadPlayerAttackProfiles();
                     break;
                 case "items":
                     LoadItemData();

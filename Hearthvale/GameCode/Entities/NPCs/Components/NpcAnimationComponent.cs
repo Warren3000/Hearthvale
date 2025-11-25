@@ -60,6 +60,7 @@ namespace Hearthvale.GameCode.Entities.NPCs.Components
 
             // Determine animation based on current state
             var direction = _owner.MovementComponent.FacingDirection;
+            var primaryDirection = direction.ToFourWay();
             string animName = null;
             if (_owner.IsAttacking)
             {
@@ -71,7 +72,7 @@ namespace Hearthvale.GameCode.Entities.NPCs.Components
             }
             else
             {
-                switch (direction)
+                switch (primaryDirection)
                 {
                     case CardinalDirection.North:
                         animName = _movingForAnim ? "Run_Up" : "Idle_Up";
@@ -178,7 +179,8 @@ namespace Hearthvale.GameCode.Entities.NPCs.Components
                 return baseName;
             }
 
-            string suffix = direction switch
+            CardinalDirection primary = direction.ToFourWay();
+            string suffix = primary switch
             {
                 CardinalDirection.North => "Up",
                 CardinalDirection.East => "Right",

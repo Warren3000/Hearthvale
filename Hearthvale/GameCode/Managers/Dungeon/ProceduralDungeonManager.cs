@@ -325,5 +325,44 @@ namespace Hearthvale.GameCode.Managers.Dungeon
                 return MathHelper.Clamp(0.45f + loot.Row * 0.00005f, 0f, 1f);
             });
         }
+
+        public MonoGameLibrary.Graphics.Tilemap GenerateOpenArena(
+            ContentManager content,
+            int columns, int rows,
+            Tileset wallTileset, XDocument wallAutotileXml,
+            Tileset floorTileset, XDocument floorAutotileXml)
+        {
+            // Create the tilemap with wall tileset as default
+            var tilemap = new MonoGameLibrary.Graphics.Tilemap(wallTileset, columns, rows);
+
+            // Initialize with all walls
+            int initialWallTileId = 15; 
+            for (int x = 0; x < columns; x++)
+            {
+                for (int y = 0; y < rows; y++)
+                {
+                    tilemap.SetTile(x, y, initialWallTileId);
+                }
+            }
+
+            // Create a large central arena
+            // Leave a border of walls
+            int border = 5;
+            Rectangle arena = new Rectangle(border, border, columns - (border * 2), rows - (border * 2));
+            
+            _rooms.Clear();
+            _rooms.Add(arena);
+            
+            CarveRoom(tilemap, arena);
+
+            // Apply autotiling
+            ApplyAutotiling(tilemap, initialWallTileId, wallTileset, wallAutotileXml, floorTileset, floorAutotileXml);
+
+            // Place dungeon elements (maybe fewer or specific ones for arena)
+            // For now, let's skip random chests in the arena or place them specifically
+            // PlaceDungeonElements(tilemap); 
+
+            return tilemap;
+        }
     }
 }

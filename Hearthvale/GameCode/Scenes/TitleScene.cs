@@ -88,6 +88,8 @@ public class TitleScene : Scene
     // Scene selector buttons
     private AnimatedButton _gameSceneButton;
     private AnimatedButton _autotileTestSceneButton;
+    private AnimatedButton _combatTestSceneButton;
+    private AnimatedButton _decorationsTestSceneButton;
 
     public override void Initialize()
     {
@@ -307,6 +309,7 @@ public class TitleScene : Scene
             if (_sceneSelectorBackButton != null) _sceneSelectorBackButton.Click -= HandleSceneSelectorBackClicked;
             if (_gameSceneButton != null) _gameSceneButton.Click -= HandleGameSceneClicked;
             if (_autotileTestSceneButton != null) _autotileTestSceneButton.Click -= HandleAutotileTestSceneClicked;
+            if (_decorationsTestSceneButton != null) _decorationsTestSceneButton.Click -= HandleDecorationsTestSceneClicked;
 
             // Remove all UI elements from the global Gum root
             // to prevent them from capturing input in other scenes.
@@ -413,15 +416,23 @@ public class TitleScene : Scene
         _autotileTestSceneButton.Click += HandleAutotileTestSceneClicked;
         sceneButtonsContainer.AddChild(_autotileTestSceneButton);
 
-        // Add more scene buttons here as needed
-        // Example:
-        // _anotherSceneButton = new AnimatedButton(_atlas);
-        // _anotherSceneButton.Text = "ANOTHER SCENE";
-        // _anotherSceneButton.Width = 300f;
-        // _anotherSceneButton.Height = 50f;
-        // _anotherSceneButton.Y = 140f;
-        // _anotherSceneButton.Click += HandleAnotherSceneClicked;
-        // sceneButtonsContainer.AddChild(_anotherSceneButton);
+        // Combat Test Scene button
+        _combatTestSceneButton = new AnimatedButton(_atlas);
+        _combatTestSceneButton.Text = "COMBAT TEST";
+        _combatTestSceneButton.Width = 300f;
+        _combatTestSceneButton.Height = 50f;
+        _combatTestSceneButton.Y = 140f;
+        _combatTestSceneButton.Click += HandleCombatTestSceneClicked;
+        sceneButtonsContainer.AddChild(_combatTestSceneButton);
+
+        // Decorations Test Scene button
+        _decorationsTestSceneButton = new AnimatedButton(_atlas);
+        _decorationsTestSceneButton.Text = "DECORATIONS TEST";
+        _decorationsTestSceneButton.Width = 300f;
+        _decorationsTestSceneButton.Height = 50f;
+        _decorationsTestSceneButton.Y = 210f;
+        _decorationsTestSceneButton.Click += HandleDecorationsTestSceneClicked;
+        sceneButtonsContainer.AddChild(_decorationsTestSceneButton);
 
         // Back button
         _sceneSelectorBackButton = new AnimatedButton(_atlas);
@@ -538,6 +549,22 @@ public class TitleScene : Scene
 
         // Change to the autotile test scene
         SceneManager.ChangeScene(new AutotileTestScene());
+    }
+
+    private void HandleCombatTestSceneClicked(object sender, EventArgs e)
+    {
+        Core.Audio.PlaySoundEffect(_uiSoundEffect);
+
+        // Use the factory to create a properly initialized CombatTestScene
+        SceneManager.ChangeScene(GameSceneFactory.CreateCombatTestScene());
+    }
+
+    private void HandleDecorationsTestSceneClicked(object sender, EventArgs e)
+    {
+        Core.Audio.PlaySoundEffect(_uiSoundEffect);
+
+        // Use the factory to create a properly initialized DecorationsTestScene
+        SceneManager.ChangeScene(GameSceneFactory.CreateDecorationsTestScene());
     }
 
     private void HandleOptionsClicked(object sender, EventArgs e)

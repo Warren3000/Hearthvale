@@ -17,8 +17,8 @@ namespace Hearthvale.GameCode.Managers
         private readonly CollisionWorld _collisionWorld;
         private readonly float _defaultMinDistanceFromPlayer;
         private readonly float _defaultMinDistanceBetweenNpcs;
-        private const float SpawnBoundsHalfWidth = 6f;
-        private const float SpawnBoundsHalfHeight = 6f;
+        private const float SpawnBoundsHalfWidth = 12f;
+        private const float SpawnBoundsHalfHeight = 18f;
 
         public NpcSpawnValidator(
             Rectangle bounds,
@@ -31,6 +31,9 @@ namespace Hearthvale.GameCode.Managers
             _defaultMinDistanceFromPlayer = defaultMinDistanceFromPlayer;
             _defaultMinDistanceBetweenNpcs = defaultMinDistanceBetweenNpcs;
         }
+
+        public float DefaultMinDistanceFromPlayer => _defaultMinDistanceFromPlayer;
+        public float DefaultMinDistanceBetweenNpcs => _defaultMinDistanceBetweenNpcs;
 
         public bool IsValidSpawnPosition(
             string npcType,
@@ -73,24 +76,7 @@ namespace Hearthvale.GameCode.Managers
                 position = validPosition;
 
             var npcBounds = CreateNpcBounds(position);
-            
-            // Use CollisionWorld instead of CollisionWorldManager
-            if (_collisionWorld != null)
-            {
-                var candidates = _collisionWorld.GetActorsInBounds(npcBounds);
-                foreach (var actor in candidates)
-                {
-                    // Check for blocking actors (walls, chests, other characters)
-                    if (actor is WallCollisionActor || actor is ChestCollisionActor ||
-                        actor is PlayerCollisionActor || actor is NpcCollisionActor)
-                    {
-                        if (actor.Bounds.BoundingRectangle.Intersects(npcBounds))
-                            return false;
-                    }
-                }
-            }
-            
-            return true;
+            return !IsAreaBlocked(npcBounds);
         }
 
         public Vector2 GetValidSpawnPosition(Vector2 position)
@@ -109,6 +95,59 @@ namespace Hearthvale.GameCode.Managers
             return new RectangleF(left, top, width, height);
         }
 
+        public bool IsAreaBlocked(RectangleF bounds)
+        {
+            if (_collisionWorld == null)
+            {
+                return false;
+            }
+
+            var actors = _collisionWorld.GetActorsInBounds(bounds);
+            foreach (var actor in actors)
+            {
+                if (IsBlockingActor(actor))
+                {
+                    RectangleF actorBounds;
+                    if (actor.Bounds is RectangleF rectF)
+                    {
+                        actorBounds = rectF;
+                    }
+                    else if (actor.Bounds != null)
+                    {
+                        var rect = actor.Bounds.BoundingRectangle;
+                        actorBounds = new RectangleF(rect.X, rect.Y, rect.Width, rect.Height);
+                    }
+                    else
+                    {
+                        actorBounds = RectangleF.Empty;
+                    }
+
+                    if (!actorBounds.IsEmpty && actorBounds.Intersects(bounds))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
         private static Vector2 GetSpawnCenter(Vector2 position) => position;
+
+        private static bool IsBlockingActor(ICollisionActor actor)
+        {
+            switch (actor)
+            {
+                case WallCollisionActor:
+                case ChestCollisionActor:
+                    return true;
+                case PlayerCollisionActor playerActor:
+                    return playerActor.Player is { IsDefeated: false };
+                case NpcCollisionActor npcActor:
+                    return npcActor.Npc is { IsDefeated: false };
+                default:
+                    return false;
+            }
+        }
     }
 }

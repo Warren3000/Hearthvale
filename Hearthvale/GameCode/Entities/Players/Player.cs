@@ -37,19 +37,49 @@ namespace Hearthvale.GameCode.Entities.Players
 
             _atlas = atlas;
 
-            // Add all 4-directional idle and run animations
-            var idleDown = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Idle_Down"), 2.0f);
-            var idleUp = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Idle_Up"), 2.0f);
-            var idleRight = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Idle_Right"), 2.0f);
-            var idleLeft = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Idle_Left"), 2.0f);
-            var runDown = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Run_Down"), 2.0f);
-            var runUp = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Run_Up"), 2.0f);
-            var runRight = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Run_Right"), 2.0f);
-            var runLeft = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Run_Left"), 2.0f);
-            var attackDown = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Attack_01_Down"), 1.0f);
-            var attackUp = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Attack_01_Up"), 1.0f);
-            var attackRight = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Attack_01_Right"), 1.0f);
-            var attackLeft = AnimationUtils.WithDelayFactor(atlas.GetAnimation("Attack_01_Left"), 1.0f);
+            Animation ResolveAnimation(string requiredName, params string[] fallbacks)
+            {
+                if (_atlas != null && _atlas.HasAnimation(requiredName))
+                {
+                    return _atlas.GetAnimation(requiredName);
+                }
+
+                if (fallbacks != null)
+                {
+                    foreach (var candidate in fallbacks)
+                    {
+                        if (!string.IsNullOrWhiteSpace(candidate) && _atlas.HasAnimation(candidate))
+                        {
+                            return _atlas.GetAnimation(candidate);
+                        }
+                    }
+                }
+
+                if (_atlas?.Texture != null)
+                {
+                    var texture = _atlas.Texture;
+                    int width = Math.Max(1, texture.Width);
+                    int height = Math.Max(1, texture.Height);
+                    var placeholderRegion = new TextureRegion(texture, 0, 0, width, height);
+                    return new Animation(new List<TextureRegion> { placeholderRegion }, TimeSpan.FromSeconds(0.1f));
+                }
+
+                throw new ArgumentException($"Texture atlas is missing required animation '{requiredName}'. Provide one of: {string.Join(", ", new[] { requiredName }.Concat(fallbacks ?? Array.Empty<string>()))}", nameof(atlas));
+            }
+
+            // Add all 4-directional idle and run animations with graceful fallbacks
+            var idleDown = AnimationUtils.WithDelayFactor(ResolveAnimation("Idle_Down", "Idle", "Mage_Idle"), 2.0f);
+            var idleUp = AnimationUtils.WithDelayFactor(ResolveAnimation("Idle_Up", "Idle", "Mage_Idle"), 2.0f);
+            var idleRight = AnimationUtils.WithDelayFactor(ResolveAnimation("Idle_Right", "Idle", "Mage_Idle"), 2.0f);
+            var idleLeft = AnimationUtils.WithDelayFactor(ResolveAnimation("Idle_Left", "Idle", "Mage_Idle"), 2.0f);
+            var runDown = AnimationUtils.WithDelayFactor(ResolveAnimation("Run_Down", "Run", "Walk", "Mage_Walk", "Mage_Idle"), 2.0f);
+            var runUp = AnimationUtils.WithDelayFactor(ResolveAnimation("Run_Up", "Run", "Walk", "Mage_Walk", "Mage_Idle"), 2.0f);
+            var runRight = AnimationUtils.WithDelayFactor(ResolveAnimation("Run_Right", "Run", "Walk", "Mage_Walk", "Mage_Idle"), 2.0f);
+            var runLeft = AnimationUtils.WithDelayFactor(ResolveAnimation("Run_Left", "Run", "Walk", "Mage_Walk", "Mage_Idle"), 2.0f);
+            var attackDown = AnimationUtils.WithDelayFactor(ResolveAnimation("Attack_01_Down", "Attack", "Mage_Attack", "Mage_Walk", "Mage_Idle"), 1.0f);
+            var attackUp = AnimationUtils.WithDelayFactor(ResolveAnimation("Attack_01_Up", "Attack", "Mage_Attack", "Mage_Walk", "Mage_Idle"), 1.0f);
+            var attackRight = AnimationUtils.WithDelayFactor(ResolveAnimation("Attack_01_Right", "Attack", "Mage_Attack", "Mage_Walk", "Mage_Idle"), 1.0f);
+            var attackLeft = AnimationUtils.WithDelayFactor(ResolveAnimation("Attack_01_Left", "Attack", "Mage_Attack", "Mage_Walk", "Mage_Idle"), 1.0f);
 
             this.AnimationComponent.SetSprite(new AnimatedSprite(idleDown));
             this.AnimationComponent.AddAnimation("Idle_Down", idleDown);
@@ -79,6 +109,10 @@ namespace Hearthvale.GameCode.Entities.Players
 
             // Set sprite position immediately
             this.MovementComponent.SetPosition(position);
+
+            // Set default collision box (14x14 at feet)
+            // Assuming standard 32x32 sprite, centered at (9, 18) relative to top-left
+            this.SetCollisionBox(new Rectangle(9, 18, 14, 14));
         }
 
         public override bool TakeDamage(int amount, Vector2? knockback = null)
@@ -218,12 +252,6 @@ namespace Hearthvale.GameCode.Entities.Players
             return MovementComponent.FacingDirection.ToVector();
         }
 
-        public override Rectangle Bounds 
-        { 
-            get 
-            {
-                return this.GetTightSpriteBounds();
-            }
-        }
+        public override Rectangle Bounds => GetCollisionBoundsAt(Position);
     }
 }

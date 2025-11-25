@@ -396,6 +396,11 @@ namespace Hearthvale.GameCode.Collision
 
         private (XnaVector2 pushA, XnaVector2 pushB) CalculateRepulsionVectors(ICollisionActor actorA, ICollisionActor actorB)
         {
+            if (IsActorDefeated(actorA) || IsActorDefeated(actorB))
+            {
+                return (XnaVector2.Zero, XnaVector2.Zero);
+            }
+
             if (actorA is ProjectileCollisionActor || actorB is ProjectileCollisionActor)
             {
                 return (XnaVector2.Zero, XnaVector2.Zero);
@@ -556,7 +561,22 @@ namespace Hearthvale.GameCode.Collision
 
         private static bool IsDynamicActor(ICollisionActor actor)
         {
-            return actor is IDynamicCollisionActor;
+            return actor switch
+            {
+                PlayerCollisionActor playerActor => playerActor.Player is { IsDefeated: false },
+                NpcCollisionActor npcActor => npcActor.Npc is { IsDefeated: false },
+                _ => actor is IDynamicCollisionActor
+            };
+        }
+
+        private static bool IsActorDefeated(ICollisionActor actor)
+        {
+            return actor switch
+            {
+                PlayerCollisionActor playerActor => playerActor.Player?.IsDefeated == true,
+                NpcCollisionActor npcActor => npcActor.Npc?.IsDefeated == true,
+                _ => false
+            };
         }
 
         private static bool TryGetRectangle(ICollisionActor actor, out RectangleF rectangle)

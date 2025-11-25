@@ -23,10 +23,12 @@ namespace Hearthvale.GameCode.Input
         private readonly Action _meleeAttackCallback;
         private readonly Action _rotateWeaponLeftCallback;
         private readonly Action _rotateWeaponRightCallback;
+        private readonly Action _debugSlowSwingCallback;
         private readonly Action _interactionCallback;
 
         // Add new callbacks for debug and UI functions
         private readonly Action _toggleDebugModeCallback;
+        private readonly Action _toggleDebugGridCallback;
         private readonly Action _pauseGameCallback;
         private readonly Action _resumeGameCallback;
         private readonly Func<bool> _isPausedCallback;
@@ -49,6 +51,7 @@ namespace Hearthvale.GameCode.Input
             Action rotateWeaponLeftCallback,
             Action rotateWeaponRightCallback,
             Action interactionCallback,
+            Action debugSlowSwingCallback,
             Action toggleDebugModeCallback,
             Action toggleDebugGridCallback,
             Action pauseGameCallback,
@@ -62,10 +65,12 @@ namespace Hearthvale.GameCode.Input
             _spawnNPCCallback = spawnNpcCallback;
             _projectileAttackCallback = projectileAttackCallback;
             _meleeAttackCallback = meleeAttackCallback;
+            _debugSlowSwingCallback = debugSlowSwingCallback;
             _rotateWeaponLeftCallback = rotateWeaponLeftCallback;
             _rotateWeaponRightCallback = rotateWeaponRightCallback;
             _interactionCallback = interactionCallback;
             _toggleDebugModeCallback = toggleDebugModeCallback;
+            _toggleDebugGridCallback = toggleDebugGridCallback;
             _pauseGameCallback = pauseGameCallback;
             _resumeGameCallback = resumeGameCallback;
             _isPausedCallback = isPausedCallback;
@@ -82,6 +87,7 @@ namespace Hearthvale.GameCode.Input
             Action rotateWeaponLeftCallback,
             Action rotateWeaponRightCallback,
             Action interactionCallback,
+            Action debugSlowSwingCallback = null,
             Action toggleDebugModeCallback = null,
             Action toggleDebugGridCallback = null,
             Action pauseGameCallback = null,
@@ -94,6 +100,7 @@ namespace Hearthvale.GameCode.Input
                 movementSpeed, movePlayerCallback, spawnNpcCallback,
                 projectileAttackCallback, meleeAttackCallback,
                 rotateWeaponLeftCallback, rotateWeaponRightCallback, interactionCallback,
+                debugSlowSwingCallback,
                 toggleDebugModeCallback, toggleDebugGridCallback, pauseGameCallback,
                 resumeGameCallback, isPausedCallback, closeDialogCallback, isDialogOpenCallback);
         }
@@ -218,14 +225,28 @@ namespace Hearthvale.GameCode.Input
             // Debug Mode Controls
             if (ProcessKeyPress(Keys.F1, keyboard))
             {
-                DebugManager.Instance.ToggleDebugMode();
+                if (_toggleDebugModeCallback != null)
+                {
+                    _toggleDebugModeCallback();
+                }
+                else
+                {
+                    DebugManager.Instance.ToggleDebugMode();
+                }
                 return false;
             }
 
             // Toggle UIDebugGrid
             if (ProcessKeyPress(Keys.F2, keyboard))
             {
-                DebugManager.Instance.ShowUIDebugGrid = !DebugManager.Instance.ShowUIDebugGrid;
+                if (_toggleDebugGridCallback != null)
+                {
+                    _toggleDebugGridCallback();
+                }
+                else
+                {
+                    DebugManager.Instance.ShowUIDebugGrid = !DebugManager.Instance.ShowUIDebugGrid;
+                }
                 return false;
             }
 
@@ -341,6 +362,12 @@ namespace Hearthvale.GameCode.Input
                 _meleeAttackCallback?.Invoke();
             }
 
+            if (ProcessKeyPress(Keys.G, keyboard))
+            {
+                System.Diagnostics.Debug.WriteLine("G KEY PROCESSED - DEBUG SLOW SWING");
+                _debugSlowSwingCallback?.Invoke();
+            }
+
             if (ProcessKeyPress(Keys.Space, keyboard))
             {
                 System.Diagnostics.Debug.WriteLine("SPACE KEY PROCESSED - PROJECTILE ATTACK");
@@ -432,6 +459,11 @@ namespace Hearthvale.GameCode.Input
                 else
                     _pauseGameCallback?.Invoke();
             }
+        }
+
+        public bool IsNewKeyPress(Keys key)
+        {
+            return ProcessKeyPress(key, Core.Input.Keyboard);
         }
     }
 }

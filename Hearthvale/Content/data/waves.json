@@ -1,0 +1,47 @@
+{
+  "waves": [
+    {
+      "waveNumber": 1,
+      "spawnDelay": 2.0,
+      "groups": [
+        {
+          "enemyType": "skeleton-grunt",
+          "count": 5,
+          "spawnInterval": 1.0
+        }
+      ]
+    },
+    {
+      "waveNumber": 2,
+      "spawnDelay": 5.0,
+      "groups": [
+        {
+          "enemyType": "goblin-berserker",
+          "count": 4,
+          "spawnInterval": 1.5
+        },
+        {
+          "enemyType": "skeleton-grunt",
+          "count": 8,
+          "spawnInterval": 0.5
+        }
+      ]
+    },
+    {
+      "waveNumber": 3,
+      "spawnDelay": 5.0,
+      "groups": [
+        {
+          "enemyType": "lucifer-warrior",
+          "count": 2,
+          "spawnInterval": 0.0
+        },
+        {
+          "enemyType": "goblin-berserker",
+          "count": 10,
+          "spawnInterval": 0.5
+        }
+      ]
+    }
+  ]
+}

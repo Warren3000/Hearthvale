@@ -57,5 +57,23 @@ namespace Hearthvale.GameCode.Managers
                 throw new InvalidDataException($"Configuration {path} missing required element: {requiredRootElement}");
             }
         }
+
+        /// <summary>
+        /// Loads and deserializes a JSON configuration file
+        /// </summary>
+        public T LoadConfiguration<T>(string path)
+        {
+            try
+            {
+                using var stream = TitleContainer.OpenStream(path);
+                using var reader = new StreamReader(stream);
+                var json = reader.ReadToEnd();
+                return System.Text.Json.JsonSerializer.Deserialize<T>(json);
+            }
+            catch (Exception ex)
+            {
+                throw new FileNotFoundException($"Failed to load JSON configuration from {path}: {ex.Message}", ex);
+            }
+        }
     }
 }

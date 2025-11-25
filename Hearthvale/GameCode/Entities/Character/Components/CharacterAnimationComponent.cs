@@ -56,6 +56,27 @@ namespace Hearthvale.GameCode.Entities.Components
             _animations[name] = animation;
         }
 
+        public bool HasAnimation(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return false;
+            }
+
+            return _animations.ContainsKey(name);
+        }
+
+        public bool TryGetAnimation(string name, out Animation animation)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                animation = null;
+                return false;
+            }
+
+            return _animations.TryGetValue(name, out animation);
+        }
+
         public bool SetAnimation(string animationName)
         {
             if (_sprite == null || string.IsNullOrEmpty(animationName))
@@ -122,7 +143,7 @@ namespace Hearthvale.GameCode.Entities.Components
         public void UpdateAnimation(bool isMoving)
         {
             // Get current cardinal direction from movement component
-            var direction = _character.MovementComponent.FacingDirection;
+            var direction = _character.MovementComponent.FacingDirection.ToFourWay();
             bool isAttacking = _character.IsAttacking;
             bool shouldLoop = !isAttacking;
 

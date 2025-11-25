@@ -171,6 +171,16 @@ namespace Hearthvale.GameCode.UI
                 _shakeOffset = Vector2.Zero;
             }
         }
+
+        public Vector2 ScreenToWorld(Vector2 screenPosition)
+        {
+            return Vector2.Transform(screenPosition, Matrix.Invert(GetViewMatrix()));
+        }
+
+        public Vector2 WorldToScreen(Vector2 worldPosition)
+        {
+            return Vector2.Transform(worldPosition, GetViewMatrix());
+        }
     }
 }
 

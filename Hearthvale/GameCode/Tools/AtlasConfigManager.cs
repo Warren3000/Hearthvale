@@ -177,6 +177,9 @@ namespace Hearthvale.GameCode.Tools
             if (config.TransparencyThreshold < 0 || config.TransparencyThreshold > 255)
                 throw new ArgumentException("TransparencyThreshold must be between 0 and 255");
 
+            if (config.MarginLeft < 0 || config.MarginTop < 0)
+                throw new ArgumentException("Margins cannot be negative");
+
             // Validate animation configurations
             foreach (var anim in config.Animations)
             {

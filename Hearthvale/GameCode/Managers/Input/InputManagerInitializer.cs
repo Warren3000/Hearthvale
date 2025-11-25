@@ -20,7 +20,8 @@ namespace Hearthvale.GameCode.Managers
                 meleeAttackCallback: () => { },
                 rotateWeaponLeftCallback: () => { },
                 rotateWeaponRightCallback: () => { },
-                interactionCallback: () => { }
+                interactionCallback: () => { },
+                debugSlowSwingCallback: () => { }
             );
         }
 
@@ -44,14 +45,15 @@ namespace Hearthvale.GameCode.Managers
                 rotateWeaponLeftCallback,
                 rotateWeaponRightCallback,
                 interactionCallback,
+                debugSlowSwingCallback: () => { },
                 // Debug and UI callbacks
-                () => DebugManager.Instance.ToggleDebugMode(),
-                () => DebugManager.Instance.ShowUIDebugGrid = !DebugManager.Instance.ShowUIDebugGrid,
-                () => GameUIManager.Instance.PauseGame(),
-                () => GameUIManager.Instance.ResumeGame(null),
-                () => GameUIManager.Instance.IsPausePanelVisible,
-                () => GameUIManager.Instance.HideDialog(),
-                () => GameUIManager.Instance.IsDialogOpen
+                toggleDebugModeCallback: () => DebugManager.Instance.ToggleDebugMode(),
+                toggleDebugGridCallback: () => DebugManager.Instance.ShowUIDebugGrid = !DebugManager.Instance.ShowUIDebugGrid,
+                pauseGameCallback: () => GameUIManager.Instance.PauseGame(),
+                resumeGameCallback: () => GameUIManager.Instance.ResumeGame(null),
+                isPausedCallback: () => GameUIManager.Instance.IsPausePanelVisible,
+                closeDialogCallback: () => GameUIManager.Instance.HideDialog(),
+                isDialogOpenCallback: () => GameUIManager.Instance.IsDialogOpen
             );
         }
     }

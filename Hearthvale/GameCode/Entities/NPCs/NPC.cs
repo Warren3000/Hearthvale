@@ -1,7 +1,10 @@
-﻿using Hearthvale.GameCode.Entities.Animations;
+﻿using Hearthvale.GameCode.Data.Atlases.Models;
+using Hearthvale.GameCode.Data.Models;
+using Hearthvale.GameCode.Entities.Animations;
 using Hearthvale.GameCode.Entities.Components;
 using Hearthvale.GameCode.Entities.Interfaces;
 using Hearthvale.GameCode.Entities.NPCs.Components;
+using Hearthvale.GameCode.Entities;
 using Hearthvale.GameCode.Managers;
 using Hearthvale.GameCode.Utils;
 using Microsoft.Xna.Framework;
@@ -43,10 +46,12 @@ namespace Hearthvale.GameCode.Entities.NPCs
         private Character _currentPlayer;
         private List<Rectangle> _cachedObstacles = new List<Rectangle>();
         private bool _disposed = false;
+        private static readonly Random _random = new Random();
 
         // Properties
         public string Name { get; private set; }
         public NpcClass Class { get; private set; }
+        public string CurrentAttackProfileId { get; set; }
         
         public bool CanAttack => _combatComponent.CanAttack;
         public bool IsReadyToRemove => IsDefeated && _npcAnimationComponent.HasCompletedFadeOut;
@@ -82,7 +87,20 @@ namespace Hearthvale.GameCode.Entities.NPCs
 
             if (!animations.TryGetValue("Idle_Down", out var idleDownAnimation))
             {
-                throw new ArgumentException("NPC animations must include an 'Idle_Down' entry", nameof(animations));
+                if (animations.TryGetValue("Idle", out var fallbackIdle))
+                {
+                    idleDownAnimation = fallbackIdle;
+                    animations["Idle_Down"] = idleDownAnimation;
+                }
+                else if (animations.Count > 0)
+                {
+                    idleDownAnimation = animations.Values.First();
+                    animations["Idle_Down"] = idleDownAnimation;
+                }
+                else
+                {
+                    throw new ArgumentException("NPC animations must include an 'Idle_Down' entry", nameof(animations));
+                }
             }
 
             var sprite = new AnimatedSprite(idleDownAnimation);
@@ -106,9 +124,10 @@ namespace Hearthvale.GameCode.Entities.NPCs
                 _ => NpcClass.Skeleton
             };
 
-            var aiType = name.ToLower() switch
+            var aiType = Class switch
             {
-                "skeleton" => NpcAiType.ChasePlayer,
+                NpcClass.Skeleton => NpcAiType.ChasePlayer,
+                NpcClass.Goblin => NpcAiType.ChasePlayer,
                 _ => NpcAiType.Wander
             };
             _aiComponent.AiType = aiType;
@@ -133,9 +152,18 @@ namespace Hearthvale.GameCode.Entities.NPCs
                 fleeSpeed: Math.Min(speedProfile.FleeSpeed * 3f, 90f)
             );
             MovementComponent.ValidateSpeeds();
+            _lastAnimPosition = position;
 
             // Apply per-type attack buffs at spawn
             _buffComponent.ConfigureTypeAttackBuffs();
+        }
+
+        public void SetCollisionProfile(NpcCollisionProfile profile)
+        {
+            if (profile.Hitbox != Rectangle.Empty)
+            {
+                SetCollisionBox(profile.Hitbox);
+            }
         }
 
         public void Update(GameTime gameTime, IEnumerable<NPC> allNpcs, Character player, IEnumerable<Rectangle> rectangles)
@@ -144,8 +172,7 @@ namespace Hearthvale.GameCode.Entities.NPCs
             _frameCounter++;
 
             float elapsed = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            float weaponLength = EquippedWeapon?.Length ?? 32f;
-            float attackRange = weaponLength * 1.5f;
+            float attackRange = GetEffectiveAttackRange();
 
             // Update knockback first
             UpdateKnockback(gameTime);
@@ -193,6 +220,7 @@ namespace Hearthvale.GameCode.Entities.NPCs
         private void UpdateAttackState(GameTime gameTime, Character player, float attackRange)
         {
             float elapsed = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            bool wasAttacking = IsAttacking;
 
             // Check for player hit
             _combatComponent.CheckPlayerHit(player);
@@ -204,6 +232,7 @@ namespace Hearthvale.GameCode.Entities.NPCs
                 if (_attackAnimTimer <= 0)
                 {
                     IsAttacking = false;
+                    CurrentAttackProfileId = null;
                 }
             }
 
@@ -223,7 +252,36 @@ namespace Hearthvale.GameCode.Entities.NPCs
                     MovementComponent.FacingDirection = _facingDir;
                 }
 
+                // SelectAttackProfile();
                 StartAttack();
+            }
+
+            if (wasAttacking && !IsAttacking)
+            {
+                CollisionComponent?.ClearProfileCollider();
+            }
+        }
+
+        private void SelectAttackProfile()
+        {
+            // Reset to default
+            CurrentAttackProfileId = null;
+
+            // 30% chance to use special attack
+            if (_random.NextDouble() < 0.3)
+            {
+                switch (Class)
+                {
+                    case NpcClass.Warrior:
+                        CurrentAttackProfileId = "warrior_spin";
+                        break;
+                    case NpcClass.Goblin:
+                        CurrentAttackProfileId = "goblin_leap";
+                        break;
+                    case NpcClass.Skeleton:
+                        CurrentAttackProfileId = "skeleton_lunge";
+                        break;
+                }
             }
         }
 
@@ -261,15 +319,19 @@ namespace Hearthvale.GameCode.Entities.NPCs
         // Attack-related fields
         private float _attackAnimTimer = 0f;
         private const float DefaultAttackAnimDuration = 0.25f;
+        private const float DefaultAttackRangeBuffer = 6f;
+        private const float DefaultMinAttackRange = 24f;
+        private const float DefaultWeaponLengthScale = 0.85f;
         private static readonly string[] AttackAnimationPrefixes = { "Attack", "Attack_01" };
         private CardinalDirection _facingDir = CardinalDirection.East;
-        private Vector2 _lastAnimPosition;
+        private Vector2 _lastAnimPosition = Vector2.Zero;
 
         public void StartAttack()
         {
             IsAttacking = true;
             _attackAnimTimer = GetAttackAnimationDurationSeconds(_facingDir);
-            WeaponComponent?.StartSwing(_facingDir);
+            var swingProfile = ResolveSwingProfile(_facingDir);
+            WeaponComponent?.StartSwing(_facingDir, swingProfile);
             ResetAttackTimer();
         }
 
@@ -328,20 +390,7 @@ namespace Hearthvale.GameCode.Entities.NPCs
 
         private static CardinalDirection AngleToCardinal(float angleRadians)
         {
-            float normalizedAngle = angleRadians;
-            while (normalizedAngle < 0) normalizedAngle += MathF.Tau;
-            while (normalizedAngle >= MathF.Tau) normalizedAngle -= MathF.Tau;
-
-            float degrees = normalizedAngle * (180f / MathF.PI);
-
-            return degrees switch
-            {
-                >= 315f or < 45f => CardinalDirection.East,
-                >= 45f and < 135f => CardinalDirection.South,
-                >= 135f and < 225f => CardinalDirection.West,
-                >= 225f and < 315f => CardinalDirection.North,
-                _ => CardinalDirection.East
-            };
+            return CardinalDirectionExtensions.FromAngle(angleRadians);
         }
 
         public void UpdateObstacles(IEnumerable<Rectangle> obstacleRects, IEnumerable<NPC> allNpcs, Character player)
@@ -377,6 +426,54 @@ namespace Hearthvale.GameCode.Entities.NPCs
             GC.SuppressFinalize(this);
         }
 
+        public float GetEffectiveAttackRange()
+        {
+            AttackTimingProfile timingProfile = TryGetAttackTimingProfile();
+
+            float rangeBuffer = timingProfile?.RangeBuffer ?? DefaultAttackRangeBuffer;
+            float minRange = timingProfile?.MinRange ?? DefaultMinAttackRange;
+            float weaponLengthScale = timingProfile?.WeaponLengthScale ?? DefaultWeaponLengthScale;
+
+            if (timingProfile?.RangeOverride is float overrideRange && overrideRange > 0f)
+            {
+                return overrideRange;
+            }
+
+            var weapon = EquippedWeapon;
+            if (weapon == null)
+            {
+                return minRange;
+            }
+
+            Rectangle tightBounds = GetTightSpriteBounds();
+            Vector2 center = new Vector2(
+                tightBounds.Left + tightBounds.Width / 2f,
+                tightBounds.Top + tightBounds.Height / 2f
+            );
+
+            var polygon = weapon.GetTransformedHitPolygon(center);
+            float maxDistance = 0f;
+
+            if (polygon != null && polygon.Count > 0)
+            {
+                for (int i = 0; i < polygon.Count; i++)
+                {
+                    float distance = Vector2.Distance(polygon[i], center);
+                    if (distance > maxDistance)
+                    {
+                        maxDistance = distance;
+                    }
+                }
+            }
+
+            if (maxDistance <= 0f)
+            {
+                maxDistance = weapon.Length > 0f ? weapon.Length * weaponLengthScale : minRange;
+            }
+
+            return MathF.Max(maxDistance + rangeBuffer, minRange);
+        }
+
         private float GetAttackAnimationDurationSeconds(CardinalDirection direction)
         {
             if (AnimationComponent == null)
@@ -408,9 +505,61 @@ namespace Hearthvale.GameCode.Entities.NPCs
             return DefaultAttackAnimDuration;
         }
 
+        private WeaponSwingProfile ResolveSwingProfile(CardinalDirection direction)
+        {
+            AttackTimingProfile timingProfile = TryGetAttackTimingProfile();
+            if (timingProfile == null || AnimationComponent == null)
+            {
+                return WeaponSwingProfile.Default;
+            }
+
+            string animationName = ResolveAttackAnimationName(direction);
+            if (string.IsNullOrWhiteSpace(animationName))
+            {
+                return WeaponSwingProfile.Default;
+            }
+
+            if (!AnimationComponent.TryGetAnimation(animationName, out var animation))
+            {
+                return WeaponSwingProfile.Default;
+            }
+
+            return WeaponSwingProfileFactory.FromAttackTiming(timingProfile, animation);
+        }
+
+        private string ResolveAttackAnimationName(CardinalDirection direction)
+        {
+            if (AnimationComponent == null)
+            {
+                return null;
+            }
+
+            string suffix = GetDirectionSuffix(direction);
+
+            foreach (var prefix in AttackAnimationPrefixes)
+            {
+                string directional = $"{prefix}_{suffix}";
+                if (AnimationComponent.HasAnimation(directional))
+                {
+                    return directional;
+                }
+            }
+
+            foreach (var prefix in AttackAnimationPrefixes)
+            {
+                if (AnimationComponent.HasAnimation(prefix))
+                {
+                    return prefix;
+                }
+            }
+
+            return null;
+        }
+
         private static string GetDirectionSuffix(CardinalDirection direction)
         {
-            return direction switch
+            CardinalDirection primary = direction.ToFourWay();
+            return primary switch
             {
                 CardinalDirection.North => "Up",
                 CardinalDirection.South => "Down",
@@ -418,6 +567,51 @@ namespace Hearthvale.GameCode.Entities.NPCs
                 CardinalDirection.West => "Left",
                 _ => "Down"
             };
+        }
+
+        private AttackTimingProfile TryGetAttackTimingProfile()
+        {
+            try
+            {
+                var manager = DataManager.Instance;
+                if (!string.IsNullOrEmpty(CurrentAttackProfileId))
+                {
+                    var profile = manager.GetEnemyAttackProfile(CurrentAttackProfileId);
+                    if (profile != null) return profile;
+                }
+                return manager.GetEnemyAttackProfile(Name) ?? manager.GetEnemyAttackProfile(Class.ToString().ToLowerInvariant());
+            }
+            catch (InvalidOperationException)
+            {
+                return null;
+            }
+        }
+
+        private static Vector2 ComputeSeparationVector(Rectangle rectA, Rectangle rectB)
+        {
+            if (!rectA.Intersects(rectB))
+            {
+                return Vector2.Zero;
+            }
+
+            float overlapLeft = rectA.Right - rectB.Left;
+            float overlapRight = rectB.Right - rectA.Left;
+            float overlapTop = rectA.Bottom - rectB.Top;
+            float overlapBottom = rectB.Bottom - rectA.Top;
+
+            float minXOverlap = MathF.Min(overlapLeft, overlapRight);
+            float minYOverlap = MathF.Min(overlapTop, overlapBottom);
+
+            bool preferHorizontal = minXOverlap <= minYOverlap + 0.001f;
+
+            if (preferHorizontal)
+            {
+                float direction = rectA.Center.X < rectB.Center.X ? -1f : 1f;
+                return new Vector2(minXOverlap * direction, 0f);
+            }
+
+            float verticalDirection = rectA.Center.Y < rectB.Center.Y ? -1f : 1f;
+            return new Vector2(0f, minYOverlap * verticalDirection);
         }
 
         protected virtual void Dispose(bool disposing)

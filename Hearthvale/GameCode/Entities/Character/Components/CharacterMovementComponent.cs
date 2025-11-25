@@ -91,7 +91,11 @@ namespace Hearthvale.GameCode.Entities.Components
         public CardinalDirection FacingDirection
         {
             get => _facingDirection;
-            set => _facingDirection = value;
+            set
+            {
+                _facingDirection = value;
+                _facingRight = value.IsRightFacing();
+            }
         }
         
         public Vector2 LastMovementVector
@@ -103,7 +107,7 @@ namespace Hearthvale.GameCode.Entities.Components
                 if (value != Vector2.Zero)
                 {
                     _facingDirection = value.ToCardinalDirection();
-                    _facingRight = (_facingDirection == CardinalDirection.East);
+                    _facingRight = _facingDirection.IsRightFacing();
                 }
             }
         }
@@ -144,9 +148,26 @@ namespace Hearthvale.GameCode.Entities.Components
             }
         }
 
+        private Vector2 GetCurrentCenter()
+        {
+            if (_character == null)
+            {
+                return _position;
+            }
+
+            var bounds = _character.Bounds;
+            if (bounds.Width <= 0 || bounds.Height <= 0)
+            {
+                return _position;
+            }
+
+            return new Vector2(bounds.Center.X, bounds.Center.Y);
+        }
+
         private void UpdateAIState(float elapsed)
         {
             AIState newState = _currentState;
+            Vector2 currentCenter = GetCurrentCenter();
 
             // State transition logic based on conditions
             switch (_currentState)
@@ -168,19 +189,19 @@ namespace Hearthvale.GameCode.Entities.Components
                 case AIState.Chasing:
                     if (!_chaseTarget.HasValue)
                         newState = AIState.Investigating;
-                    else if (Vector2.Distance(_position, _chaseTarget.Value) > _loseTargetRange)
+                    else if (Vector2.Distance(currentCenter, _chaseTarget.Value) > _loseTargetRange)
                         newState = AIState.Investigating;
                     break;
 
                 case AIState.Investigating:
-                    if (_chaseTarget.HasValue && Vector2.Distance(_position, _chaseTarget.Value) < _chaseRange)
+                    if (_chaseTarget.HasValue && Vector2.Distance(currentCenter, _chaseTarget.Value) < _chaseRange)
                         newState = AIState.Chasing;
                     else if (_stateTimer > 3f) // Investigate for 3 seconds
                         newState = AIState.Wandering;
                     break;
 
                 case AIState.Fleeing:
-                    if (!_chaseTarget.HasValue || Vector2.Distance(_position, _chaseTarget.Value) > _fleeRange * 2f)
+                    if (!_chaseTarget.HasValue || Vector2.Distance(currentCenter, _chaseTarget.Value) > _fleeRange * 2f)
                         newState = AIState.Wandering;
                     break;
             }
@@ -219,6 +240,7 @@ namespace Hearthvale.GameCode.Entities.Components
             // Only make decisions after reaction time
             if (_reactionTimer > 0f) return;
 
+            Vector2 currentCenter = GetCurrentCenter();
             Vector2 targetDirection = Vector2.Zero;
             float targetSpeed = 0f;
 
@@ -242,18 +264,9 @@ namespace Hearthvale.GameCode.Entities.Components
                     if (_chaseTarget.HasValue && _pathRecalculationTimer <= 0f)
                     {
                         // Get direction from our center to target center
-                        Vector2 myCenter = _position;
-                        if (_character.Sprite != null)
-                        {
-                            myCenter = new Vector2(
-                                _position.X + _character.Sprite.Width * 0.5f,
-                                _position.Y + _character.Sprite.Height * 0.5f
-                            );
-                        }
-                        
-                        Vector2 direction = _chaseTarget.Value - myCenter;
+                        Vector2 direction = _chaseTarget.Value - currentCenter;
                         float distance = direction.Length();
-                        
+
                         // Only move if we're not already at the target
                         if (distance > 2f) // Small threshold to prevent jitter
                         {
@@ -275,7 +288,7 @@ namespace Hearthvale.GameCode.Entities.Components
                 case AIState.Investigating:
                     if (_investigationTarget.HasValue)
                     {
-                        Vector2 direction = _investigationTarget.Value - _position;
+                        Vector2 direction = _investigationTarget.Value - currentCenter;
                         if (direction.LengthSquared() > 4f) // Close enough threshold
                         {
                             direction.Normalize();
@@ -298,7 +311,7 @@ namespace Hearthvale.GameCode.Entities.Components
                 case AIState.Fleeing:
                     if (_chaseTarget.HasValue)
                     {
-                        Vector2 fleeDirection = _position - _chaseTarget.Value;
+                        Vector2 fleeDirection = currentCenter - _chaseTarget.Value;
                         if (fleeDirection.LengthSquared() > 0.1f)
                         {
                             fleeDirection.Normalize();
@@ -410,7 +423,7 @@ namespace Hearthvale.GameCode.Entities.Components
             if (_velocity.LengthSquared() > 0.01f)
             {
                 _facingDirection = VelocityToCardinal(_velocity);
-                _facingRight = (_facingDirection == CardinalDirection.East);
+                _facingRight = _facingDirection.IsRightFacing();
             }
         }
 
@@ -473,7 +486,7 @@ namespace Hearthvale.GameCode.Entities.Components
         public void MoveInDirection(CardinalDirection direction, float deltaTime)
         {
             _facingDirection = direction;
-            _facingRight = (direction == CardinalDirection.East);
+            _facingRight = direction.IsRightFacing();
 
             Vector2 movement = direction.ToVector() * _movementSpeed * deltaTime;
             _position += movement;
@@ -559,20 +572,7 @@ namespace Hearthvale.GameCode.Entities.Components
                 return CardinalDirection.South;
 
             float angle = MathF.Atan2(velocity.Y, velocity.X);
-            
-            while (angle < 0) angle += MathF.Tau;
-            while (angle >= MathF.Tau) angle -= MathF.Tau;
-
-            float degrees = angle * (180f / MathF.PI);
-
-            return degrees switch
-            {
-                >= 315f or < 45f => CardinalDirection.East,
-                >= 45f and < 135f => CardinalDirection.South,
-                >= 135f and < 225f => CardinalDirection.West,
-                >= 225f and < 315f => CardinalDirection.North,
-                _ => CardinalDirection.East
-            };
+            return CardinalDirectionExtensions.FromAngle(angle);
         }
 
         public void ClampToBounds(Rectangle bounds)

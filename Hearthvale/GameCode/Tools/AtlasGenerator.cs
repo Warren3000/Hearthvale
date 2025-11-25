@@ -33,6 +33,8 @@ namespace Hearthvale.GameCode.Tools
             public bool TrimTransparency { get; set; } = true;
             public int TransparencyThreshold { get; set; } = 0;
             public bool IsGridBased { get; set; } = true;
+            public int MarginLeft { get; set; } = 0;
+            public int MarginTop { get; set; } = 0;
         }
 
         /// <summary>
@@ -89,6 +91,9 @@ namespace Hearthvale.GameCode.Tools
         {
             var regions = new List<SpriteRegion>();
 
+            var marginLeft = Math.Max(0, config.MarginLeft);
+            var marginTop = Math.Max(0, config.MarginTop);
+
             // Auto-detect grid size if not specified
             int gridWidth = config.GridWidth;
             int gridHeight = config.GridHeight;
@@ -103,7 +108,10 @@ namespace Hearthvale.GameCode.Tools
             if (gridWidth == 0 || gridHeight == 0)
                 throw new InvalidOperationException("Could not auto-detect grid size. Please specify GridWidth and GridHeight manually.");
 
-            int cols = bitmap.Width / gridWidth;
+            int usableWidth = Math.Max(0, bitmap.Width - marginLeft);
+            int usableHeight = Math.Max(0, bitmap.Height - marginTop);
+            int cols = Math.Max(1, (usableWidth + gridWidth - 1) / gridWidth);
+            int rows = Math.Max(1, (usableHeight + gridHeight - 1) / gridHeight);
             
             // Collect all unique frame names from all animations
             var allFrameNames = new HashSet<string>();
@@ -124,8 +132,24 @@ namespace Hearthvale.GameCode.Tools
             {
                 int row = frameIndex / cols;
                 int col = frameIndex % cols;
+
+                if (row >= rows)
+                {
+                    break;
+                }
                 
-                var bounds = new DrawingRectangle(col * gridWidth, row * gridHeight, gridWidth, gridHeight);
+                int x = marginLeft + col * gridWidth;
+                int y = marginTop + row * gridHeight;
+                int width = Math.Min(gridWidth, bitmap.Width - x);
+                int height = Math.Min(gridHeight, bitmap.Height - y);
+
+                if (width <= 0 || height <= 0)
+                {
+                    frameIndex++;
+                    continue;
+                }
+
+                var bounds = new DrawingRectangle(x, y, width, height);
                 
                 // Check if this region contains non-transparent pixels
                 if (!IsRegionEmpty(bitmap, bounds, config.TransparencyThreshold))
@@ -168,6 +192,9 @@ namespace Hearthvale.GameCode.Tools
         {
             var regions = new List<SpriteRegion>();
 
+            var marginLeft = Math.Max(0, config.MarginLeft);
+            var marginTop = Math.Max(0, config.MarginTop);
+
             // Auto-detect grid size if not specified
             int gridWidth = config.GridWidth;
             int gridHeight = config.GridHeight;
@@ -182,14 +209,26 @@ namespace Hearthvale.GameCode.Tools
             if (gridWidth == 0 || gridHeight == 0)
                 throw new InvalidOperationException("Could not auto-detect grid size. Please specify GridWidth and GridHeight manually.");
 
-            int cols = bitmap.Width / gridWidth;
-            int rows = bitmap.Height / gridHeight;
+            int usableWidth = Math.Max(0, bitmap.Width - marginLeft);
+            int usableHeight = Math.Max(0, bitmap.Height - marginTop);
+            int cols = Math.Max(1, (usableWidth + gridWidth - 1) / gridWidth);
+            int rows = Math.Max(1, (usableHeight + gridHeight - 1) / gridHeight);
 
             for (int row = 0; row < rows; row++)
             {
                 for (int col = 0; col < cols; col++)
                 {
-                    var bounds = new DrawingRectangle(col * gridWidth, row * gridHeight, gridWidth, gridHeight);
+                    int x = marginLeft + col * gridWidth;
+                    int y = marginTop + row * gridHeight;
+                    int width = Math.Min(gridWidth, bitmap.Width - x);
+                    int height = Math.Min(gridHeight, bitmap.Height - y);
+
+                    if (width <= 0 || height <= 0)
+                    {
+                        continue;
+                    }
+
+                    var bounds = new DrawingRectangle(x, y, width, height);
                     
                     // Check if this region contains non-transparent pixels
                     if (!IsRegionEmpty(bitmap, bounds, config.TransparencyThreshold))

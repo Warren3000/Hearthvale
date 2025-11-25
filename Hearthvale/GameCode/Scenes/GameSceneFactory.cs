@@ -80,6 +80,7 @@ namespace Hearthvale.Scenes
                 rotateWeaponLeftCallback: () => { /* Will be set by GameScene */ },
                 rotateWeaponRightCallback: () => { /* Will be set by GameScene */ },
                 interactionCallback: () => { /* Will be set by GameScene */ },
+                debugSlowSwingCallback: () => { /* Will be set by GameScene */ },
                 toggleDebugModeCallback: () => DebugManager.Instance.ToggleDebugMode(),
                 toggleDebugGridCallback: () => DebugManager.Instance.ShowUIDebugGrid = !DebugManager.Instance.ShowUIDebugGrid,
                 pauseGameCallback: () => GameUIManager.Instance.PauseGame(),
@@ -95,6 +96,151 @@ namespace Hearthvale.Scenes
                 CameraManager.Instance,
                 InputHandler.Instance
             );
+        }
+
+        /// <summary>
+        /// Creates a fully initialized CombatTestScene with all dependencies set up.
+        /// </summary>
+        /// <returns>A ready-to-use CombatTestScene instance.</returns>
+        public static CombatTestScene CreateCombatTestScene()
+        {
+            // Load required assets
+            var atlas = TextureAtlas.FromFile(Core.Content, "images/xml/atlas-definition.xml");
+            var font = Core.Content.Load<SpriteFont>("fonts/04B_30");
+            var debugFont = Core.Content.Load<SpriteFont>("fonts/DebugFont");
+            var uiSoundEffect = Core.Content.Load<SoundEffect>("audio/ui");
+
+            // Initialize the camera
+            var camera = new Camera2D(Core.GraphicsDevice.Viewport) { Zoom = 3.0f };
+
+            // Set the camera's initial position to a reasonable default
+            camera.Position = new Vector2(1296, 256); // This should be updated when the actual player spawn is known
+
+            CameraManager.Initialize(camera);
+
+            // Initialize CombatEffectsManager
+            var combatEffectsManager = new CombatEffectsManager();
+            CombatEffectsManager.Initialize();
+
+            // Initialize other required singletons
+            TilesetManager.Initialize();
+
+            // Initialize GameUIManager
+            GameUIManager.Initialize(
+                atlas,
+                font,
+                debugFont,
+                () => GameUIManager.Instance.ResumeGame(uiSoundEffect),
+                () => GameUIManager.Instance.QuitGame(uiSoundEffect, () => SceneManager.ChangeScene(new TitleScene()))
+            );
+
+            // Initialize DebugManager
+            var whitePixel = new Texture2D(Core.GraphicsDevice, 1, 1);
+            whitePixel.SetData(new[] { Color.White });
+            DebugManager.Initialize(whitePixel);
+
+            // Initialize DataManager
+            DataManager.Initialize();
+
+            // Initialize ScoreManager
+            var scorePosition = new Vector2(Core.GraphicsDevice.Viewport.Width - 150, 25);
+            var scoreOrigin = Vector2.Zero;
+            ScoreManager.Initialize(font, scorePosition, scoreOrigin);
+
+            // Initialize InputHandler with placeholder callbacks
+            InputHandler.Initialize(
+                movementSpeed: MOVEMENT_SPEED,
+                movePlayerCallback: movement => { /* Will be set by GameScene */ },
+                spawnNpcCallback: () => { /* Will be set by GameScene */ },
+                projectileAttackCallback: () => { /* Will be set by GameScene */ },
+                meleeAttackCallback: () => { /* Will be set by GameScene */ },
+                rotateWeaponLeftCallback: () => { /* Will be set by GameScene */ },
+                rotateWeaponRightCallback: () => { /* Will be set by GameScene */ },
+                interactionCallback: () => { /* Will be set by GameScene */ },
+                debugSlowSwingCallback: () => { /* Will be set by GameScene */ },
+                toggleDebugModeCallback: () => DebugManager.Instance.ToggleDebugMode(),
+                toggleDebugGridCallback: () => DebugManager.Instance.ShowUIDebugGrid = !DebugManager.Instance.ShowUIDebugGrid,
+                pauseGameCallback: () => GameUIManager.Instance.PauseGame(),
+                resumeGameCallback: () => GameUIManager.Instance.ResumeGame(null),
+                isPausedCallback: () => GameUIManager.Instance.IsPausePanelVisible,
+                closeDialogCallback: () => GameUIManager.Instance.HideDialog(),
+                isDialogOpenCallback: () => GameUIManager.Instance.IsDialogOpen
+            );
+
+            // Return a new CombatTestScene instance
+            return new CombatTestScene(
+                combatEffectsManager,
+                CameraManager.Instance,
+                InputHandler.Instance
+            );
+        }
+
+        /// <summary>
+        /// Creates a fully initialized DecorationsTestScene with all dependencies set up.
+        /// </summary>
+        /// <returns>A ready-to-use DecorationsTestScene instance.</returns>
+        public static DecorationsTestScene CreateDecorationsTestScene()
+        {
+            // Load required assets
+            var atlas = TextureAtlas.FromFile(Core.Content, "images/xml/atlas-definition.xml");
+            var font = Core.Content.Load<SpriteFont>("fonts/04B_30");
+            var debugFont = Core.Content.Load<SpriteFont>("fonts/DebugFont");
+            var uiSoundEffect = Core.Content.Load<SoundEffect>("audio/ui");
+
+            // Initialize the camera
+            var camera = new Camera2D(Core.GraphicsDevice.Viewport) { Zoom = 3.0f };
+            CameraManager.Initialize(camera);
+
+            // Initialize CombatEffectsManager
+            var combatEffectsManager = new CombatEffectsManager();
+            CombatEffectsManager.Initialize();
+
+            // Initialize other required singletons
+            TilesetManager.Initialize();
+
+            // Initialize GameUIManager
+            GameUIManager.Initialize(
+                atlas,
+                font,
+                debugFont,
+                () => GameUIManager.Instance.ResumeGame(uiSoundEffect),
+                () => GameUIManager.Instance.QuitGame(uiSoundEffect, () => SceneManager.ChangeScene(new TitleScene()))
+            );
+
+            // Initialize DebugManager
+            var whitePixel = new Texture2D(Core.GraphicsDevice, 1, 1);
+            whitePixel.SetData(new[] { Color.White });
+            DebugManager.Initialize(whitePixel);
+
+            // Initialize DataManager
+            DataManager.Initialize();
+
+            // Initialize ScoreManager
+            var scorePosition = new Vector2(Core.GraphicsDevice.Viewport.Width - 150, 25);
+            var scoreOrigin = Vector2.Zero;
+            ScoreManager.Initialize(font, scorePosition, scoreOrigin);
+
+            // Initialize InputHandler with placeholder callbacks
+            InputHandler.Initialize(
+                movementSpeed: MOVEMENT_SPEED,
+                movePlayerCallback: movement => { },
+                spawnNpcCallback: () => { },
+                projectileAttackCallback: () => { },
+                meleeAttackCallback: () => { },
+                rotateWeaponLeftCallback: () => { },
+                rotateWeaponRightCallback: () => { },
+                interactionCallback: () => { },
+                debugSlowSwingCallback: () => { },
+                toggleDebugModeCallback: () => DebugManager.Instance.ToggleDebugMode(),
+                toggleDebugGridCallback: () => DebugManager.Instance.ShowUIDebugGrid = !DebugManager.Instance.ShowUIDebugGrid,
+                pauseGameCallback: () => GameUIManager.Instance.PauseGame(),
+                resumeGameCallback: () => GameUIManager.Instance.ResumeGame(null),
+                isPausedCallback: () => GameUIManager.Instance.IsPausePanelVisible,
+                closeDialogCallback: () => GameUIManager.Instance.HideDialog(),
+                isDialogOpenCallback: () => GameUIManager.Instance.IsDialogOpen
+            );
+
+            return new DecorationsTestScene();
         }
     }
 }

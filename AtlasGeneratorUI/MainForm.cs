@@ -10,10 +10,14 @@ namespace Hearthvale.AtlasGeneratorUI
 {
     public partial class MainForm : Form
     {
+        private const float LeftPanelRatio = 0.33f;
         private AtlasGenerator.AtlasConfig _currentConfig = null!;
+        private string? _currentConfigPath;
         private Bitmap? _spritesheetImage;
         private List<AtlasGenerator.SpriteRegion> _detectedRegions = new();
         private bool _isGenerating = false;
+        private bool _isNpcConfig;
+        private NpcConfigContext? _npcContext;
 
         // UI Controls
         private MenuStrip menuStrip = null!;
@@ -26,6 +30,7 @@ namespace Hearthvale.AtlasGeneratorUI
         private SplitContainer mainSplitContainer = null!;
         private SplitContainer leftSplitContainer = null!;
         private SplitContainer rightSplitContainer = null!;
+        private FlowLayoutPanel leftPanelFlow = null!;
         
         // Left panel controls
         private GroupBox configGroupBox = null!;
@@ -36,6 +41,8 @@ namespace Hearthvale.AtlasGeneratorUI
         private TextBox texturePathTextBox = null!;
         private NumericUpDown gridWidthNumeric = null!;
         private NumericUpDown gridHeightNumeric = null!;
+        private NumericUpDown marginLeftNumeric = null!;
+        private NumericUpDown marginTopNumeric = null!;
         private TextBox namingPatternTextBox = null!;
         private CheckBox trimTransparencyCheckBox = null!;
         private NumericUpDown transparencyThresholdNumeric = null!;
@@ -75,7 +82,7 @@ namespace Hearthvale.AtlasGeneratorUI
         private void InitializeComponent()
         {
             this.Text = "Atlas Generator";
-            this.Size = new Size(1200, 800);
+            this.ClientSize = new Size(1920, 1080);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.MinimumSize = new Size(1000, 600);
 
@@ -99,6 +106,7 @@ namespace Hearthvale.AtlasGeneratorUI
             mainSplitContainer.BringToFront();
             
             this.Load += MainForm_Load;
+            this.Resize += MainForm_Resize;
         }
 
         private void CreateMenuStrip()
@@ -201,11 +209,12 @@ namespace Hearthvale.AtlasGeneratorUI
             mainSplitContainer.Panel1.Controls.Add(leftSplitContainer);
             mainSplitContainer.Panel2.Controls.Add(rightSplitContainer);
             this.Controls.Add(mainSplitContainer);
+            UpdateLeftPanelWidth();
         }
 
         private void CreateLeftPanel()
         {
-            var mainFlowPanel = new FlowLayoutPanel
+            leftPanelFlow = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 FlowDirection = FlowDirection.TopDown,
@@ -213,19 +222,22 @@ namespace Hearthvale.AtlasGeneratorUI
                 WrapContents = false,
                 Padding = new Padding(10)
             };
+            leftPanelFlow.Resize += (_, __) => LayoutLeftPanelSections();
 
             // Preset GroupBox
             var presetGroupBox = new GroupBox
             {
                 Text = "Configuration Preset",
                 AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 Dock = DockStyle.Top,
-                Padding = new Padding(10)
+                Padding = new Padding(10),
+                Margin = new Padding(0, 0, 0, 10)
             };
-            var presetPanel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, AutoSize = true };
-            presetPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140));
+            var presetPanel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink };
+            presetPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 160));
             presetPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            presetPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110));
+            presetPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 120));
             
             presetComboBox = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Anchor = AnchorStyles.Left | AnchorStyles.Right, Margin = new Padding(3, 6, 3, 3) };
             loadPresetButton = new Button { Text = "Load", Size = new Size(100, 28), BackColor = Color.LightBlue, FlatStyle = FlatStyle.Flat, Anchor = AnchorStyles.None };
@@ -236,20 +248,22 @@ namespace Hearthvale.AtlasGeneratorUI
             presetPanel.Controls.Add(presetComboBox, 1, 0);
             presetPanel.Controls.Add(loadPresetButton, 2, 0);
             presetGroupBox.Controls.Add(presetPanel);
-            mainFlowPanel.Controls.Add(presetGroupBox);
+            leftPanelFlow.Controls.Add(presetGroupBox);
 
             // File Paths GroupBox
             var filePathsGroupBox = new GroupBox
             {
                 Text = "File Paths",
                 AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 Dock = DockStyle.Top,
-                Padding = new Padding(10)
+                Padding = new Padding(10),
+                Margin = new Padding(0, 0, 0, 10)
             };
-            var filePathsPanel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, AutoSize = true };
-            filePathsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140));
+            var filePathsPanel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink };
+            filePathsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 160));
             filePathsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            filePathsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110));
+            filePathsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130));
 
             spritesheetPathTextBox = new TextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right };
             browseSpritesheetButton = new Button { Text = "📁 Browse", Size = new Size(100, 28), BackColor = Color.LightGreen, FlatStyle = FlatStyle.Flat, Font = new Font(this.Font.FontFamily, 9, FontStyle.Bold), Anchor = AnchorStyles.None };
@@ -271,20 +285,21 @@ namespace Hearthvale.AtlasGeneratorUI
             filePathsPanel.Controls.Add(browseOutputButton, 2, 1);
             filePathsPanel.Controls.Add(new Label { Text = "Texture Reference Path:", Anchor = AnchorStyles.Left, AutoSize = true }, 0, 2);
             filePathsPanel.Controls.Add(texturePathTextBox, 1, 2);
-            
             filePathsGroupBox.Controls.Add(filePathsPanel);
-            mainFlowPanel.Controls.Add(filePathsGroupBox);
+            leftPanelFlow.Controls.Add(filePathsGroupBox);
 
             // Sprite Detection GroupBox
             var detectionGroupBox = new GroupBox
             {
                 Text = "Sprite Detection",
                 AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 Dock = DockStyle.Top,
-                Padding = new Padding(10)
+                Padding = new Padding(10),
+                Margin = new Padding(0, 0, 0, 10)
             };
-            var detectionPanel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, AutoSize = true };
-            detectionPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140));
+            var detectionPanel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink };
+            detectionPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 160));
             detectionPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
             var gridPanel = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true };
@@ -297,6 +312,17 @@ namespace Hearthvale.AtlasGeneratorUI
             gridPanel.Controls.Add(gridHeightNumeric);
             gridPanel.Controls.Add(new Label { Text = "px", ForeColor = Color.Gray, AutoSize = true, Margin = new Padding(3, 6, 3, 3) });
 
+            var marginPanel = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true };
+            marginLeftNumeric = new NumericUpDown { Width = 60, Minimum = 0, Maximum = 2000, Value = 0 };
+            marginTopNumeric = new NumericUpDown { Width = 60, Minimum = 0, Maximum = 2000, Value = 0 };
+            marginLeftNumeric.ValueChanged += Margins_Changed;
+            marginTopNumeric.ValueChanged += Margins_Changed;
+            marginPanel.Controls.Add(new Label { Text = "Left", AutoSize = true, Margin = new Padding(0, 6, 4, 3) });
+            marginPanel.Controls.Add(marginLeftNumeric);
+            marginPanel.Controls.Add(new Label { Text = "Top", AutoSize = true, Margin = new Padding(10, 6, 4, 3) });
+            marginPanel.Controls.Add(marginTopNumeric);
+            marginPanel.Controls.Add(new Label { Text = "px offset", ForeColor = Color.Gray, AutoSize = true, Margin = new Padding(6, 6, 3, 3) });
+
             var transparencyPanel = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true };
             trimTransparencyCheckBox = new CheckBox { Text = "Auto-trim", Checked = true };
             transparencyThresholdNumeric = new NumericUpDown { Width = 60, Minimum = 0, Maximum = 255, Value = 0 };
@@ -306,22 +332,26 @@ namespace Hearthvale.AtlasGeneratorUI
 
             detectionPanel.Controls.Add(new Label { Text = "Sprite Grid Size:", Anchor = AnchorStyles.Left, AutoSize = true }, 0, 0);
             detectionPanel.Controls.Add(gridPanel, 1, 0);
-            detectionPanel.Controls.Add(new Label { Text = "Transparency:", Anchor = AnchorStyles.Left, AutoSize = true }, 0, 1);
-            detectionPanel.Controls.Add(transparencyPanel, 1, 1);
+            detectionPanel.Controls.Add(new Label { Text = "Sheet Margins:", Anchor = AnchorStyles.Left, AutoSize = true }, 0, 1);
+            detectionPanel.Controls.Add(marginPanel, 1, 1);
+            detectionPanel.Controls.Add(new Label { Text = "Transparency:", Anchor = AnchorStyles.Left, AutoSize = true }, 0, 2);
+            detectionPanel.Controls.Add(transparencyPanel, 1, 2);
             
             detectionGroupBox.Controls.Add(detectionPanel);
-            mainFlowPanel.Controls.Add(detectionGroupBox);
+            leftPanelFlow.Controls.Add(detectionGroupBox);
 
             // Sprite Naming GroupBox
             var namingGroupBox = new GroupBox
             {
                 Text = "Sprite Naming",
                 AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 Dock = DockStyle.Top,
-                Padding = new Padding(10)
+                Padding = new Padding(10),
+                Margin = new Padding(0, 0, 0, 10)
             };
-            var namingPanel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, AutoSize = true };
-            namingPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140));
+            var namingPanel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink };
+            namingPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 160));
             namingPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             namingPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 40));
             
@@ -334,9 +364,9 @@ namespace Hearthvale.AtlasGeneratorUI
             namingPanel.Controls.Add(namingHelp, 2, 0);
             
             namingGroupBox.Controls.Add(namingPanel);
-            mainFlowPanel.Controls.Add(namingGroupBox);
+            leftPanelFlow.Controls.Add(namingGroupBox);
 
-            leftSplitContainer.Panel1.Controls.Add(mainFlowPanel);
+            leftSplitContainer.Panel1.Controls.Add(leftPanelFlow);
 
             // Animation panel
             animationGroupBox = new GroupBox()
@@ -393,6 +423,7 @@ namespace Hearthvale.AtlasGeneratorUI
             leftSplitContainer.Panel2.Controls.Add(animationGroupBox);
 
             PopulatePresets();
+            LayoutLeftPanelSections();
         }
 
         private void CreatePreviewPanel()
@@ -461,7 +492,7 @@ namespace Hearthvale.AtlasGeneratorUI
                 BorderStyle = BorderStyle.FixedSingle
             };
 
-            gridDisplayLabel = new Label { Text = "Grid: 32x32 px", Font = new Font(this.Font.FontFamily, 9, FontStyle.Regular), ForeColor = Color.DarkSlateGray, Anchor = AnchorStyles.Left };
+            gridDisplayLabel = new Label { Text = "Grid: 32x32 px | Margin: 0px left, 0px top", Font = new Font(this.Font.FontFamily, 9, FontStyle.Regular), ForeColor = Color.DarkSlateGray, Anchor = AnchorStyles.Left };
             infoPanel.Controls.Add(gridDisplayLabel);
 
 
@@ -571,7 +602,21 @@ namespace Hearthvale.AtlasGeneratorUI
         private void InitializeConfig()
         {
             _currentConfig = AtlasConfigManager.CreateSampleConfig("", "", "");
+            _currentConfigPath = null;
+            _isNpcConfig = false;
+            _npcContext = null;
             UpdateUI();
+            if (generateButton != null) generateButton.Enabled = true;
+            if (saveConfigButton != null) saveConfigButton.Enabled = true;
+        }
+
+        private void UpdateLeftPanelWidth()
+        {
+            if (mainSplitContainer == null) return;
+            var target = (int)(ClientSize.Width * LeftPanelRatio);
+            if (target <= 0) return;
+            mainSplitContainer.SplitterDistance = Math.Clamp(target, 200, Math.Max(200, ClientSize.Width - 400));
+            LayoutLeftPanelSections();
         }
 
         private void PopulatePresets()
@@ -587,6 +632,27 @@ namespace Hearthvale.AtlasGeneratorUI
                 "UI Elements"
             });
             presetComboBox.SelectedIndex = 0;
+        }
+
+        private void LayoutLeftPanelSections()
+        {
+            if (leftPanelFlow == null) return;
+            var availableWidth = leftPanelFlow.ClientSize.Width - leftPanelFlow.Padding.Horizontal;
+            if (availableWidth <= 0) return;
+
+            foreach (Control control in leftPanelFlow.Controls)
+            {
+                if (control is GroupBox group)
+                {
+                    var width = availableWidth - group.Margin.Horizontal;
+                    if (width <= 0) continue;
+
+                    var preferred = group.GetPreferredSize(new Size(width, 0));
+                    group.MinimumSize = new Size(width, 0);
+                    group.MaximumSize = new Size(width, 0);
+                    group.Size = new Size(width, preferred.Height);
+                }
+            }
         }
 
         // Event handlers will be implemented in the next part...

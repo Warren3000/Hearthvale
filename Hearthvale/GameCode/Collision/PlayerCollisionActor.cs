@@ -56,7 +56,7 @@ namespace Hearthvale.GameCode.Collision
                 return RectangleF.Empty;
             }
 
-            var bounds = Player.GetSpriteBoundsAt(Player.Position);
+            var bounds = Player.GetCollisionBoundsAt(Player.Position);
             var rectF = new RectangleF(bounds.X, bounds.Y, bounds.Width, bounds.Height);
             _boundsCache = rectF;
             return rectF;

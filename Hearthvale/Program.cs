@@ -1,2 +1,14 @@
-﻿using var game = new Hearthvale.Game1();
-game.Run();
+﻿using System;
+
+namespace Hearthvale
+{
+    public static class Program
+    {
+        [STAThread]
+        static void Main()
+        {
+            using var game = new Game1();
+            game.Run();
+        }
+    }
+}

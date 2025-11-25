@@ -30,6 +30,8 @@ namespace Hearthvale.GameCode.Managers
         protected readonly List<IDungeonElement> _elements = new();
         protected readonly Dictionary<string, HashSet<string>> _elementTags = new();
 
+        public event Action<IDungeonElement> ElementAdded;
+
         /// <summary>
         /// Initializes the singleton instance with the base DungeonManager.
         /// </summary>
@@ -57,7 +59,16 @@ namespace Hearthvale.GameCode.Managers
         /// </summary>
         protected DungeonManager() { }
 
-        public void AddElement(IDungeonElement element) => _elements.Add(element);
+        public void AddElement(IDungeonElement element)
+        {
+            if (element == null)
+            {
+                throw new ArgumentNullException(nameof(element));
+            }
+
+            _elements.Add(element);
+            ElementAdded?.Invoke(element);
+        }
 
         public virtual void Update(GameTime gameTime)
         {

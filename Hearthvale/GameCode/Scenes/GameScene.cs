@@ -108,6 +108,7 @@ namespace Hearthvale.Scenes
             // Create the procedural dungeon manager and initialize it as the singleton
             _dungeonManager = new ProceduralDungeonManager();
             DungeonManager.Initialize(_dungeonManager);
+            DungeonManager.Instance.ElementAdded += OnDungeonElementAdded;
 
             // Define dungeon assets and dimensions
             int dungeonColumns = 100;
@@ -172,17 +173,7 @@ namespace Hearthvale.Scenes
             System.Diagnostics.Debug.WriteLine($"✅ MapManager created with RoomBounds: {_mapManager.RoomBounds}");
 
             // Gather dungeon element rectangles
-            var dungeonRects = _dungeonManager.GetAllElements()
-                .Select(e => {
-                    var boundsProp = e.GetType().GetProperty("Bounds");
-                    return boundsProp != null ? (Rectangle)boundsProp.GetValue(e) : Rectangle.Empty;
-                })
-                .Where(r => r != Rectangle.Empty)
-                .ToList();
-
-            // Gather wall rectangles using MapUtils - this now properly handles autotiled walls
-            var wallRects = MapUtils.GetWallRectangles(_tilemap);
-            allObstacles = wallRects.Concat(dungeonRects).ToList();
+            RebuildObstacleCache();
 
             // Create player BEFORE spawning NPCs
             _player = new Player(
@@ -201,6 +192,13 @@ namespace Hearthvale.Scenes
                 _weaponAtlas,
                 _arrowAtlas);
 
+            if (!_npcManager.EnsureCharacterSpawnClear(_player))
+            {
+                System.Diagnostics.Debug.WriteLine("⚠️ Player spawn position is obstructed; using initial placement.");
+            }
+
+            _playerStart = _player.Position;
+
             // Register player with physics collision system so walls/chests block movement
             _npcManager.RegisterPlayer(_player);
 
@@ -211,6 +209,7 @@ namespace Hearthvale.Scenes
 
             // Spawn NPC test set and sync weapon manager
             _npcManager.SpawnAllNpcTypesTest(_player);
+            EvaluateEntitiesAfterSpawn();
             _weaponManager.UpdateNpcList(_npcManager.Npcs);
 
             InputManagerInitializer.InitializeForGameScene(
@@ -224,7 +223,11 @@ namespace Hearthvale.Scenes
                     _npcManager.Npcs,
                     allObstacles ?? new List<Rectangle>()
                 ),
-                () => _npcManager.SpawnRandomNpcAroundPlayer(_player),
+                () =>
+                {
+                    _npcManager.SpawnRandomNpcAroundPlayer(_player);
+                    EvaluateEntitiesAfterSpawn();
+                },
                 () => _player.CombatController.StartProjectileAttack(),
                 () => _player.CombatController.StartMeleeAttack(),
                 RotatePlayerWeaponLeft,
@@ -530,6 +533,18 @@ private void DebugDrawWeaponProbe()
 
             if (disposing)
             {
+                try
+                {
+                    if (_dungeonManager != null)
+                    {
+                        DungeonManager.Instance.ElementAdded -= OnDungeonElementAdded;
+                    }
+                }
+                catch (InvalidOperationException)
+                {
+                    // DungeonManager already shut down; nothing to unsubscribe.
+                }
+
                 // Remove all UI elements from the global Gum root
                 // to prevent them from capturing input in other scenes.
                 GumService.Default.Root.Children.Clear();
@@ -569,51 +584,55 @@ private void DebugDrawWeaponProbe()
                 InputHandler.Instance
             ));
         }
-    }
 
-    /// <summary>
-    /// Simple MapManager implementation that wraps a Tilemap for CameraManager compatibility
-    /// </summary>
-    public class TilemapMapManager : MapManager
-    {
-        private readonly Tilemap _tilemap;
-        private readonly Vector2 _playerSpawnPoint;
-
-        public TilemapMapManager(Tilemap tilemap, Vector2 playerSpawnPoint)
-            : base() // Use the protected parameterless constructor
+        private void OnDungeonElementAdded(IDungeonElement element)
         {
-            _tilemap = tilemap ?? throw new ArgumentNullException(nameof(tilemap));
-            _playerSpawnPoint = playerSpawnPoint;
+            if (element == null || _tilemap == null)
+            {
+                return;
+            }
+
+            if (element is DungeonLoot loot && _npcManager != null)
+            {
+                _npcManager.CollisionManager.RegisterChest(loot);
+                _npcManager.CollisionManager.SyncChestPositions();
+            }
+
+            RebuildObstacleCache();
+            EvaluateEntitiesAfterSpawn();
         }
 
-        // Override properties to use our tilemap
-        public override int MapWidthInPixels => _tilemap.Columns * (int)_tilemap.TileWidth;
-        public override int MapHeightInPixels => _tilemap.Rows * (int)_tilemap.TileHeight;
-        public override int TileWidth => (int)_tilemap.TileWidth;
-        public override int TileHeight => (int)_tilemap.TileHeight;
-        
-        // Override RoomBounds to calculate from our tilemap
-        public new Rectangle RoomBounds => new Rectangle(0, 0, MapWidthInPixels, MapHeightInPixels);
-
-        public override void Update(GameTime gameTime)
+        private void RebuildObstacleCache()
         {
-            // No update needed for static tilemap - don't call base
+            if (_tilemap == null)
+            {
+                return;
+            }
+
+            var wallRects = MapUtils.GetWallRectangles(_tilemap);
+
+            IEnumerable<Rectangle> dungeonRects = Enumerable.Empty<Rectangle>();
+            if (_dungeonManager != null)
+            {
+                dungeonRects = _dungeonManager.GetAllElements()
+                    .Select(e =>
+                    {
+                        var boundsProp = e.GetType().GetProperty("Bounds");
+                        return boundsProp != null ? (Rectangle)boundsProp.GetValue(e) : Rectangle.Empty;
+                    })
+                    .Where(r => r != Rectangle.Empty);
+            }
+
+            allObstacles = wallRects.Concat(dungeonRects).ToList();
         }
 
-        public override void Draw(Matrix transform)
+        private void EvaluateEntitiesAfterSpawn()
         {
-            // Drawing is handled separately in GameScene - don't call base
+            if (_npcManager != null && allObstacles != null)
+            {
+                _npcManager.ReevaluateEntities(_player, allObstacles);
+            }
         }
 
-        public override Vector2 GetPlayerSpawnPoint()
-        {
-            return _playerSpawnPoint;
-        }
-
-        public override TiledMapObjectLayer GetObjectLayer(string name)
-        {
-            // Not applicable for procedural tilemaps
-            return null;
-        }
     }
 }

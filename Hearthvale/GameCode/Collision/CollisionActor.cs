@@ -89,7 +89,7 @@ namespace Hearthvale.GameCode.Collision
                 return RectangleF.Empty;
             }
 
-            var bounds = Npc.GetSpriteBoundsAt(Npc.Position);
+            var bounds = Npc.GetCollisionBoundsAt(Npc.Position);
             var rectF = new RectangleF(bounds.X, bounds.Y, bounds.Width, bounds.Height);
             _boundsCache = rectF;
             return rectF;

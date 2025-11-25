@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 2,
+  "profiles": {
+    "default": {
+      "activeStartFrame": 2,
+      "activeFrameCount": 1,
+      "setupFrameCount": 1,
+      "recoveryFrameCount": 1,
+      "windUpAngleDegrees": 45,
+      "slashArcDegrees": 90,
+      "recoveryAngleDegrees": 45,
+      "minRange": 20,
+      "rangeBuffer": 5,
+      "weaponLengthScale": 1.0,
+      "shape": {
+        "type": "Arc"
+      }
+    }
+  }
+}

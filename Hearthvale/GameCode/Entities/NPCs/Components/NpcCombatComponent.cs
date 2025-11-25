@@ -1,5 +1,7 @@
-﻿using Hearthvale.GameCode.Entities;
+﻿using Hearthvale.GameCode.Data.Models;
+using Hearthvale.GameCode.Entities;
 using Hearthvale.GameCode.Entities.NPCs;
+using Hearthvale.GameCode.Managers;
 using Hearthvale.GameCode.Utils;
 using Microsoft.Xna.Framework;
 
@@ -9,6 +11,7 @@ namespace Hearthvale.GameCode.Entities.Components
     {
         private readonly NPC _owner;
         private bool _hasHitPlayerThisSwing = false;
+        private bool _magicTriggeredThisSwing = false;
 
         public int AttackPower { get; set; } = 1;
         public bool CanAttack { get; private set; } = true;
@@ -36,6 +39,7 @@ namespace Hearthvale.GameCode.Entities.Components
             if (!_owner.IsAttacking)
             {
                 _hasHitPlayerThisSwing = false;
+                _magicTriggeredThisSwing = false;
             }
         }
 
@@ -51,6 +55,8 @@ namespace Hearthvale.GameCode.Entities.Components
             if (!_owner.IsAttacking || _hasHitPlayerThisSwing || _owner.EquippedWeapon?.IsSlashing != true)
                 return false;
 
+            TryTriggerMagicEffect();
+
             var weaponPolygon = _owner.WeaponComponent.GetCombatHitPolygon();
             if (weaponPolygon.Count == 0)
                 return false;
@@ -65,6 +71,29 @@ namespace Hearthvale.GameCode.Entities.Components
             }
 
             return false;
+        }
+
+        private void TryTriggerMagicEffect()
+        {
+            if (_magicTriggeredThisSwing)
+            {
+                return;
+            }
+
+            var magic = _owner.WeaponComponent.GetActiveMagicEffect();
+            if (magic == null || magic.Type == MagicEffectKind.None)
+            {
+                return;
+            }
+
+            Rectangle bounds = _owner.GetTightSpriteBounds();
+            Vector2 center = new Vector2(
+                bounds.Left + bounds.Width / 2f,
+                bounds.Top + bounds.Height / 2f
+            );
+
+            CombatManager.Instance.TriggerMagicEffect(_owner, magic, center);
+            _magicTriggeredThisSwing = true;
         }
     }
 }

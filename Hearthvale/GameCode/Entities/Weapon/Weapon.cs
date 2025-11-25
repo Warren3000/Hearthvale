@@ -36,6 +36,8 @@ public class Weapon
         }
     }
     
+    private float _baseScale = 1.0f;
+    
     // Dynamic hitbox generated from texture
     private List<Vector2> _generatedHitPolygon;
     private Rectangle _opaqueRegionBounds;
@@ -60,22 +62,30 @@ public class Weapon
         };
     }
 
-    // Unified debug/damage visualization parameters
-    public const float DefaultHandleOffset = 8;
-    public const float DefaultHitThickness = 16f;
-    public const int DefaultDebugArcSegments = 24;
-
     // Visual art faces ~45° and is drawn upright; compensate consistently everywhere
-    public static readonly float ArtRotationOffset = MathHelper.PiOver2 + MathHelper.PiOver4;
+    public static readonly float ArtRotationOffset = MathHelper.Pi;
+    private const float HitPolygonRotationOffset = MathHelper.Pi + MathHelper.PiOver2;
 
-    private enum SwingState { Idle, WindingUp, Slashing }
+    private enum SwingState { Idle, WindingUp, Slashing, Recovering }
     private SwingState _currentSwingState = SwingState.Idle;
     private float _swingTimer = 0f;
-    private const float WindUpDuration = 0.15f;
-    private const float SlashDuration = 0.1f;
+    private float _currentWindUpDuration;
+    private float _currentSlashDuration;
+    private float _currentRecoveryDuration;
+    private float _swingSpeedMultiplier = 1f;
+    private float? _pendingSwingSpeedMultiplier;
     private float _baseRotation = 0f;
     private bool _swingClockwise = true;
+    private float _swingDirectionSign = 1f;
     private string _currentAnimation = "Idle";
+    private WeaponSwingProfile _currentSwingProfile = WeaponSwingProfile.Default;
+    private WeaponSwingProfile _pendingSwingProfile;
+    private float _currentWindUpAngle;
+    private float _currentSlashArc;
+    private float _currentRecoveryAngle;
+    private float _windUpTargetRotation;
+    private float _activeEndRotation;
+    private float _recoveryStartRotation;
 
     // Track the region we successfully bound to (important when names vary)
     private readonly string _resolvedRegionName;
@@ -148,9 +158,11 @@ public class Weapon
             var s = stats?.Scale ?? 1f;
             if (s <= 0f) s = 1f;
             Scale = s;
+            _baseScale = s;
 
             Length = region.Height * Scale;
             SetAnimation("Idle");
+            ApplySwingProfile(WeaponSwingProfile.Default);
 
             // Generate a per-weapon hit polygon from the texture data so swing detection
             // reflects the actual animated blade rather than a generic arc.
@@ -229,36 +241,57 @@ public class Weapon
 
         if (_currentSwingState == SwingState.Idle) return;
 
-        _swingTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-        float direction = _swingClockwise ? 1 : -1;
+        float elapsed = (float)gameTime.ElapsedGameTime.TotalSeconds * _swingSpeedMultiplier;
+        _swingTimer += elapsed;
+        switch (_currentSwingState)
+        {
+            case SwingState.WindingUp:
+                if (_currentWindUpDuration <= float.Epsilon)
+                {
+                    SetSwingState(DeterminePostWindUpState());
+                    return;
+                }
 
-        if (_currentSwingState == SwingState.WindingUp)
-        {
-            if (_swingTimer >= WindUpDuration)
-            {
-                _swingTimer = 0f;
-                _currentSwingState = SwingState.Slashing;
-            }
-            else
-            {
-                float windUpAngle = MathHelper.PiOver2;
-                Rotation = MathHelper.Lerp(_baseRotation, _baseRotation - windUpAngle * direction, _swingTimer / WindUpDuration);
-            }
-        }
-        else if (_currentSwingState == SwingState.Slashing)
-        {
-            if (_swingTimer >= SlashDuration)
-            {
-                _currentSwingState = SwingState.Idle;
-                Rotation = _baseRotation;
-                SetAnimation("Idle");
-            }
-            else
-            {
-                float startAngle = _baseRotation - MathHelper.PiOver2 * direction;
-                float endAngle = _baseRotation + MathHelper.PiOver2 * direction;
-                Rotation = MathHelper.Lerp(startAngle, endAngle, _swingTimer / SlashDuration);
-            }
+                float windUpT = MathHelper.Clamp(_swingTimer / _currentWindUpDuration, 0f, 1f);
+                Rotation = MathHelper.Lerp(_baseRotation, _windUpTargetRotation, windUpT);
+
+                if (_swingTimer >= _currentWindUpDuration)
+                {
+                    SetSwingState(DeterminePostWindUpState());
+                }
+                break;
+
+            case SwingState.Slashing:
+                if (_currentSlashDuration <= float.Epsilon)
+                {
+                    SetSwingState(DeterminePostSlashState());
+                    return;
+                }
+
+                float slashT = MathHelper.Clamp(_swingTimer / _currentSlashDuration, 0f, 1f);
+                Rotation = MathHelper.Lerp(_windUpTargetRotation, _activeEndRotation, slashT);
+
+                if (_swingTimer >= _currentSlashDuration)
+                {
+                    SetSwingState(DeterminePostSlashState());
+                }
+                break;
+
+            case SwingState.Recovering:
+                if (_currentRecoveryDuration <= float.Epsilon)
+                {
+                    SetSwingState(SwingState.Idle);
+                    return;
+                }
+
+                float recoveryT = MathHelper.Clamp(_swingTimer / _currentRecoveryDuration, 0f, 1f);
+                Rotation = MathHelper.Lerp(_recoveryStartRotation, _baseRotation, recoveryT);
+
+                if (_swingTimer >= _currentRecoveryDuration)
+                {
+                    SetSwingState(SwingState.Idle);
+                }
+                break;
         }
     }
 
@@ -297,7 +330,7 @@ public class Weapon
 
         Vector2 origin = ownerCenter + Offset + ManualOffset;
         float uniformScale = Scale;
-        float totalRotation = Sprite != null ? Sprite.Rotation : Rotation + ArtRotationOffset;
+        float totalRotation = Rotation + HitPolygonRotationOffset;
         Matrix rotationMatrix = Matrix.CreateRotationZ(totalRotation);
 
         foreach (var pt in HitPolygon)
@@ -331,46 +364,6 @@ public class Weapon
         WeaponHitboxGenerator.DrawRectangleOutline(spriteBatch, pixel, scaledBounds, color);
     }
 
-    // Unified debug/damage visualization parameters
-    public readonly struct SwingDebugSpec
-    {
-        public readonly float StartAngle;
-        public readonly float EndAngle;
-        public readonly float HandleOffset;
-        public readonly float BladeLength;
-        public readonly float Thickness;
-
-        public SwingDebugSpec(float startAngle, float endAngle, float handleOffset, float bladeLength, float thickness)
-        {
-            StartAngle = startAngle;
-            EndAngle = endAngle;
-            HandleOffset = handleOffset;
-            BladeLength = bladeLength;
-            Thickness = thickness;
-        }
-    }
-
-    /// <summary>
-    /// Returns a unified set of parameters for drawing/debugging the swing arc.
-    /// </summary>
-    public SwingDebugSpec GetDebugSwingSpec(float? halfArcOverrideRadians = null)
-    {
-        float handleOffset = DefaultHandleOffset;
-        float bladeLength = MathF.Max(0f, Length - handleOffset);
-        float thickness = DefaultHitThickness;
-
-        float halfArc = halfArcOverrideRadians ?? MathHelper.PiOver2;
-
-        // Center arc on the blade axis, not the art's X-axis
-        // Blade points along (0,-1) in local, so subtract Pi/2 from the sprite rotation
-        float bladeAxis = (Sprite != null ? Sprite.Rotation : (Rotation + ArtRotationOffset)) - MathHelper.PiOver2;
-
-        float start = bladeAxis - halfArc;
-        float end = bladeAxis + halfArc;
-
-        return new SwingDebugSpec(start, end, handleOffset, bladeLength, thickness);
-    }
-
     private void DrawLine(SpriteBatch spriteBatch, Texture2D pixel, Vector2 a, Vector2 b, Color color)
     {
         var distance = Vector2.Distance(a, b);
@@ -378,16 +371,122 @@ public class Weapon
         spriteBatch.Draw(pixel, a, null, color, angle, Vector2.Zero, new Vector2(distance, 1), SpriteEffects.None, 0);
     }
 
+    private void ApplySwingProfile(WeaponSwingProfile profile)
+    {
+        profile ??= WeaponSwingProfile.Default;
+        _currentSwingProfile = profile;
+        _currentWindUpDuration = profile.WindUpDuration;
+        _currentSlashDuration = profile.ActiveDuration;
+        _currentRecoveryDuration = profile.RecoveryDuration;
+        _currentWindUpAngle = profile.WindUpAngleRadians;
+        _currentSlashArc = profile.SlashArcRadians;
+        _currentRecoveryAngle = profile.RecoveryAngleRadians;
+        Scale = _baseScale * profile.WeaponLengthScale;
+    }
+
+    private void InitializeSwingRotations()
+    {
+        _windUpTargetRotation = _baseRotation - _currentWindUpAngle * _swingDirectionSign;
+        _activeEndRotation = _windUpTargetRotation + _currentSlashArc * _swingDirectionSign;
+        _recoveryStartRotation = _currentRecoveryDuration > float.Epsilon
+            ? _activeEndRotation + _currentRecoveryAngle * _swingDirectionSign
+            : _baseRotation;
+    }
+
+    private SwingState DeterminePostWindUpState()
+    {
+        if (_currentSlashDuration > float.Epsilon)
+        {
+            return SwingState.Slashing;
+        }
+
+        if (_currentRecoveryDuration > float.Epsilon)
+        {
+            return SwingState.Recovering;
+        }
+
+        return SwingState.Idle;
+    }
+
+    private SwingState DeterminePostSlashState()
+    {
+        if (_currentRecoveryDuration > float.Epsilon)
+        {
+            return SwingState.Recovering;
+        }
+
+        return SwingState.Idle;
+    }
+
+    private void SetSwingState(SwingState newState)
+    {
+        if (_currentSwingState == newState && newState != SwingState.Idle)
+        {
+            _swingTimer = 0f;
+            return;
+        }
+
+        _currentSwingState = newState;
+        _swingTimer = 0f;
+
+        switch (newState)
+        {
+            case SwingState.Idle:
+                Rotation = _baseRotation;
+                SetAnimation("Idle");
+                _swingSpeedMultiplier = 1f;
+                Scale = _baseScale;
+                break;
+            case SwingState.WindingUp:
+                Rotation = _baseRotation;
+                if (_currentWindUpDuration <= float.Epsilon)
+                {
+                    SetSwingState(DeterminePostWindUpState());
+                }
+                break;
+            case SwingState.Slashing:
+                Rotation = _windUpTargetRotation;
+                if (_currentSlashDuration <= float.Epsilon)
+                {
+                    SetSwingState(DeterminePostSlashState());
+                }
+                break;
+            case SwingState.Recovering:
+                Rotation = _recoveryStartRotation;
+                if (_currentRecoveryDuration <= float.Epsilon)
+                {
+                    SetSwingState(SwingState.Idle);
+                }
+                break;
+        }
+    }
+
     public void StartSwing(bool clockwise)
     {
-        if (_currentSwingState == SwingState.Idle && Sprite != null)
+        if (_currentSwingState != SwingState.Idle || Sprite == null)
+            return;
+
+        var profileToApply = _pendingSwingProfile ?? _currentSwingProfile ?? WeaponSwingProfile.Default;
+        ApplySwingProfile(profileToApply);
+        _pendingSwingProfile = null;
+
+        _swingClockwise = clockwise;
+        _swingDirectionSign = _swingClockwise ? 1f : -1f;
+        _baseRotation = Rotation;
+
+        if (_pendingSwingSpeedMultiplier.HasValue)
         {
-            _currentSwingState = SwingState.WindingUp;
-            _swingTimer = 0f;
-            _swingClockwise = clockwise;
-            _baseRotation = Rotation;
-            SetAnimation("Swing");
+            _swingSpeedMultiplier = MathF.Max(0.01f, _pendingSwingSpeedMultiplier.Value);
+            _pendingSwingSpeedMultiplier = null;
         }
+        else
+        {
+            _swingSpeedMultiplier = 1f;
+        }
+
+        SetAnimation("Swing");
+        InitializeSwingRotations();
+        SetSwingState(SwingState.WindingUp);
     }
 
     public Projectile Fire(Vector2 direction, Vector2 spawnPosition)
@@ -439,5 +538,20 @@ public class Weapon
         }
 
         return false;
+    }
+
+    public void SetNextSwingSpeedMultiplier(float multiplier)
+    {
+        if (multiplier <= 0f)
+        {
+            multiplier = 0.01f;
+        }
+
+        _pendingSwingSpeedMultiplier = multiplier;
+    }
+
+    public void SetNextSwingProfile(WeaponSwingProfile profile)
+    {
+        _pendingSwingProfile = profile ?? WeaponSwingProfile.Default;
     }
 }

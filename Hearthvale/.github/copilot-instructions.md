@@ -58,7 +58,6 @@ NPCs add: `NpcCombatComponent`, `NpcAnimationComponent`, `NpcBuffComponent`
 
 ### Data Management
 `DataManager` loads all game data on initialization from `Content/data/`:
-- Character stats: `Characters/CharacterStats.json` (JSON dictionaries)
 - Weapons: `Items/Weapons/WeaponStats.json`
 - Enemies: `Characters/Enemies/enemies.xml` (XML - legacy, consider migrating to JSON)
 - Access: `DataManager.Instance.GetCharacterStats("player")`, `GetWeaponStats("Dagger-Copper")`

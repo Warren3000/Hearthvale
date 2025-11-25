@@ -1,4 +1,6 @@
-﻿using Hearthvale.GameCode.Entities.NPCs;
+﻿using Hearthvale.GameCode.Data.Models;
+using Hearthvale.GameCode.Entities.NPCs;
+using Hearthvale.GameCode.Entities.Players;
 using Hearthvale.GameCode.Managers;
 using Hearthvale.GameCode.Utils;
 using Microsoft.Xna.Framework;
@@ -36,6 +38,24 @@ namespace Hearthvale.GameCode.Entities.Components
         public void SetCollisionWorld(CollisionWorld collisionWorld)
         {
             _collisionWorld = collisionWorld;
+        }
+
+        public void ApplyProfileCollider(AttackShapeDefinition defensiveShape)
+        {
+            if (defensiveShape == null)
+            {
+                ClearProfileCollider();
+                return;
+            }
+
+            _character.SetCollisionBodyOverride(defensiveShape);
+            SyncCollisionActorBounds();
+        }
+
+        public void ClearProfileCollider()
+        {
+            _character.ClearCollisionBodyOverride();
+            SyncCollisionActorBounds();
         }
 
         public void SetKnockback(Vector2 velocity)
@@ -297,7 +317,38 @@ namespace Hearthvale.GameCode.Entities.Components
             return false;
         }
 
-        public Rectangle GetBoundsAtPosition(Vector2 position) => _character.GetSpriteBoundsAt(position);
+        public Rectangle GetBoundsAtPosition(Vector2 position) => _character.GetCollisionBoundsAt(position);
+        private void SyncCollisionActorBounds()
+        {
+            if (_collisionWorld == null)
+            {
+                return;
+            }
+
+            var bounds = _character.GetCollisionBoundsAt(_character.Position);
+            var rectF = new RectangleF(bounds.X, bounds.Y, bounds.Width, bounds.Height);
+
+            if (_character is Player player)
+            {
+                var actor = _collisionWorld.GetActorsOfType<PlayerCollisionActor>()
+                    .FirstOrDefault(a => a.Player == player);
+                if (actor != null)
+                {
+                    actor.Bounds = rectF;
+                    _collisionWorld.UpdateActorPosition(actor, player.Position);
+                }
+            }
+            else if (_character is NPC npc)
+            {
+                var actor = _collisionWorld.GetActorsOfType<NpcCollisionActor>()
+                    .FirstOrDefault(a => a.Npc == npc);
+                if (actor != null)
+                {
+                    actor.Bounds = rectF;
+                    _collisionWorld.UpdateActorPosition(actor, npc.Position);
+                }
+            }
+        }
 
         /// <summary>
         /// Physics-based collision detection using pre-fetched candidates for performance.
@@ -347,10 +398,18 @@ namespace Hearthvale.GameCode.Entities.Components
         /// </summary>
         private bool IsBlockingActor(ICollisionActor actor)
         {
-            return actor is WallCollisionActor || 
-                   actor is ChestCollisionActor ||
-                   actor is PlayerCollisionActor || 
-                   actor is NpcCollisionActor;
+            switch (actor)
+            {
+                case WallCollisionActor:
+                case ChestCollisionActor:
+                    return true;
+                case PlayerCollisionActor playerActor:
+                    return playerActor.Player is { IsDefeated: false };
+                case NpcCollisionActor npcActor:
+                    return npcActor.Npc is { IsDefeated: false };
+                default:
+                    return false;
+            }
         }
 
         /// <summary>

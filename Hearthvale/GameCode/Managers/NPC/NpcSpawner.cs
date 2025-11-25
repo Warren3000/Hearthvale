@@ -57,6 +57,13 @@ namespace Hearthvale.GameCode.Managers
 
                 var npc = new NPC(npcType, animations, spawnPos, bounds, defeatSound, config.Health);
 
+                // Apply collision profile if available
+                if (!string.IsNullOrWhiteSpace(config.ManifestId) && 
+                    _npcAtlasCatalog.TryGetDefinition(config.ManifestId, out var definition))
+                {
+                    npc.SetCollisionProfile(definition.Collision);
+                }
+
                 // Equip weapon to the NPC
                 var weapon = new Weapon("Dagger-Copper", DataManager.Instance.GetWeaponStats("Dagger-Copper"), _weaponAtlas, _arrowAtlas);
                 _weaponManager.EquipWeapon(npc, weapon);
@@ -171,8 +178,11 @@ namespace Hearthvale.GameCode.Managers
         private static readonly Dictionary<string, NpcConfig> Configurations = new()
         {
             { "skeleton", new NpcConfig("skeleton_grunt", "Skeleton", 10) },
+            { "skeleton-grunt", new NpcConfig("skeleton_grunt", "Skeleton", 10) },
             { "goblin", new NpcConfig("goblin", "Goblin", 15) },
+            { "goblin-berserker", new NpcConfig("goblin", "Goblin", 15) },
             { "warrior", new NpcConfig("warrior_hero", "Warrior", 30) },
+            { "lucifer-warrior", new NpcConfig("warrior_hero", "Warrior", 30) },
             { "defaultnpctype", new NpcConfig("skeleton_grunt", "Skeleton", 10) }
         };
 
